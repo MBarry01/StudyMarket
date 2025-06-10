@@ -1,0 +1,349 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: transparent;
+  cursor: pointer;
+  transition: border-color 0.25s;
+  border-color: black;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+@layer base {
+  :root {
+    /* 🎨 COULEURS DE BACKGROUND - MODIFIEZ ICI */
+    --background: 0 0% 98%;           /* Background principal (blanc cassé) */
+    --foreground: 222.2 84% 4.9%;     /* Texte principal */
+    --card: 0 0% 100%;                /* Background des cartes */
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 217 91% 60%;           /* Bleu principal */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 160 84% 39%;         /* Vert secondaire */
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;             /* Background sections muted */
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 27 96% 61%;             /* Orange accent */
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 217 91% 60%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    /* 🌙 COULEURS DARK MODE - MODIFIEZ ICI */
+    --background: 222.2 84% 4.9%;     /* Background principal dark */
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;           /* Background des cartes dark */
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 160 84% 39%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;       /* Background sections muted dark */
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 27 96% 61%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217 91% 60%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom utility classes */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Smooth animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground));
+}
+
+/* Ensure proper contrast for badges and buttons */
+.badge-contrast {
+  @apply text-white;
+}
+
+.badge-contrast.bg-green-100 {
+  @apply bg-green-600 text-white;
+}
+
+.badge-contrast.bg-blue-100 {
+  @apply bg-blue-600 text-white;
+}
+
+.badge-contrast.bg-yellow-100 {
+  @apply bg-yellow-600 text-white;
+}
+
+.badge-contrast.bg-orange-100 {
+  @apply bg-orange-600 text-white;
+}
+
+.badge-contrast.bg-red-100 {
+  @apply bg-red-600 text-white;
+}
+
+.badge-contrast.bg-purple-100 {
+  @apply bg-purple-600 text-white;
+}
+
+.badge-contrast.bg-emerald-100 {
+  @apply bg-emerald-600 text-white;
+}
+
+.badge-contrast.bg-amber-100 {
+  @apply bg-amber-600 text-white;
+}
+
+/* Dark mode adjustments */
+.dark .badge-contrast.bg-green-100 {
+  @apply bg-green-500 text-white;
+}
+
+.dark .badge-contrast.bg-blue-100 {
+  @apply bg-blue-500 text-white;
+}
+
+.dark .badge-contrast.bg-yellow-100 {
+  @apply bg-yellow-500 text-black;
+}
+
+.dark .badge-contrast.bg-orange-100 {
+  @apply bg-orange-500 text-white;
+}
+
+.dark .badge-contrast.bg-red-100 {
+  @apply bg-red-500 text-white;
+}
+
+.dark .badge-contrast.bg-purple-100 {
+  @apply bg-purple-500 text-white;
+}
+
+.dark .badge-contrast.bg-emerald-100 {
+  @apply bg-emerald-500 text-white;
+}
+
+.dark .badge-contrast.bg-amber-100 {
+  @apply bg-amber-500 text-black;
+}
+
+/* Ensure text is always visible on colored backgrounds */
+.text-contrast-safe {
+  color: hsl(var(--foreground)) !important;
+}
+
+.bg-safe-green {
+  @apply bg-green-600 text-white;
+}
+
+.bg-safe-blue {
+  @apply bg-blue-600 text-white;
+}
+
+.bg-safe-purple {
+  @apply bg-purple-600 text-white;
+}
+
+.bg-safe-orange {
+  @apply bg-orange-600 text-white;
+}
+
+.bg-safe-red {
+  @apply bg-red-600 text-white;
+}
+
+.bg-safe-yellow {
+  @apply bg-yellow-600 text-white;
+}
+
+.bg-safe-emerald {
+  @apply bg-emerald-600 text-white;
+}
+
+.bg-safe-amber {
+  @apply bg-amber-600 text-white;
+}
+
+/* Dark mode safe colors */
+.dark .bg-safe-green {
+  @apply bg-green-500 text-white;
+}
+
+.dark .bg-safe-blue {
+  @apply bg-blue-500 text-white;
+}
+
+.dark .bg-safe-purple {
+  @apply bg-purple-500 text-white;
+}
+
+.dark .bg-safe-orange {
+  @apply bg-orange-500 text-white;
+}
+
+.dark .bg-safe-red {
+  @apply bg-red-500 text-white;
+}
+
+.dark .bg-safe-yellow {
+  @apply bg-yellow-400 text-black;
+}
+
+.dark .bg-safe-emerald {
+  @apply bg-emerald-500 text-white;
+}
+
+.dark .bg-safe-amber {
+  @apply bg-amber-400 text-black;
+}
+
+/* 🎨 EXEMPLES DE BACKGROUNDS PERSONNALISÉS */
+
+/* Background avec gradient subtil */
+.bg-gradient-subtle {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%);
+}
+
+/* Background avec texture */
+.bg-textured {
+  background-color: hsl(var(--background));
+  background-image: 
+    radial-gradient(circle at 1px 1px, hsl(var(--muted)) 1px, transparent 0);
+  background-size: 20px 20px;
+}
+
+/* Background coloré pour sections spéciales */
+.bg-primary-subtle {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--secondary) / 0.05) 100%);
+}

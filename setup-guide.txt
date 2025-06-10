@@ -1,0 +1,642 @@
+# GUIDE DE CONFIGURATION STUDYMARKET
+# =================================
+
+Ce guide explique comment configurer entièrement le projet StudyMarket, une plateforme d'échange entre étudiants vérifiés.
+
+## 🔹 1. FRONTEND
+
+### Technologies utilisées
+- React 18.3.1 (avec TypeScript)
+- Vite 5.4.8 comme bundler
+- Tailwind CSS 3.4.13 pour les styles
+- ShadCN/UI pour les composants d'interface
+- React Router 6.20.1 pour la navigation
+- Zustand 4.4.7 pour la gestion d'état global
+- Lucide React pour les icônes
+- React Hook Form + Zod pour la validation des formulaires
+- Date-fns pour la manipulation des dates
+- React Hot Toast pour les notifications
+
+### Structure des fichiers
+```
+/src
+  /components        # Composants réutilisables
+    /auth            # Composants liés à l'authentification
+    /checkout        # Composants liés au paiement Stripe
+    /layout          # Composants de structure (Header, Footer)
+    /listing         # Composants liés aux annonces
+    /messaging       # Composants de messagerie
+    /payment         # Composants de paiement P2P
+    /profile         # Composants de profil utilisateur
+    /ui              # Composants UI de base (ShadCN)
+  /contexts          # Contextes React (AuthContext, etc.)
+  /data              # Données statiques et exemples
+  /hooks             # Hooks personnalisés
+  /lib               # Utilitaires et services
+    firebase.ts      # Configuration Firebase
+    stripe.ts        # Configuration Stripe
+    supabase.ts      # Configuration Supabase
+    utils.ts         # Fonctions utilitaires
+  /pages             # Pages principales de l'application
+  /stores            # Stores Zustand (état global)
+  /types             # Types TypeScript
+  /utils             # Fonctions utilitaires
+  App.tsx            # Composant racine avec routes
+  main.tsx           # Point d'entrée
+```
+
+### Composants principaux
+
+#### AuthContext.tsx
+Gère l'authentification utilisateur avec Firebase Auth:
+- `currentUser`: Utilisateur connecté
+- `userProfile`: Données complètes du profil
+- `signIn`, `signUp`, `signInWithGoogle`, `logout`: Méthodes d'authentification
+- `updateUserProfile`: Mise à jour du profil
+
+#### Header.tsx
+Barre de navigation principale avec:
+- Logo et recherche
+- Menu utilisateur avec notifications
+- Compteur de messages non lus
+- Panier d'achat
+- Thème clair/sombre
+
+#### ListingCard.tsx
+Carte d'annonce avec:
+- Image, titre, prix, état
+- Badge de type de transaction (vente, don, échange)
+- Boutons favoris et partage
+- Infos vendeur et impact écologique
+
+#### ContactButton.tsx
+Bouton de contact vendeur:
+- Ouvre une boîte de dialogue pour envoyer un message
+- Crée une conversation dans Firestore
+- Envoie une notification email au vendeur
+- Option de demande de paiement
+
+#### MessageBox.tsx
+Interface de messagerie complète:
+- Liste des conversations
+- Zone de chat avec messages
+- Marquage des messages comme lus
+- Notifications en temps réel
+
+### Stores Zustand
+
+#### useListingStore
+Gestion des annonces:
+- `listings`: Liste des annonces
+- `fetchListings`: Récupère les annonces
+- `createListing`: Crée une nouvelle annonce
+- `updateListing`: Met à jour une annonce
+- `deleteListing`: Supprime une annonce
+
+#### useMessageStore
+Gestion des messages:
+- `conversations`: Liste des conversations
+- `messages`: Messages de la conversation actuelle
+- `sendMessage`: Envoie un message
+- `markMessagesAsSeen`: Marque les messages comme lus
+
+#### usePaymentStore
+Gestion des paiements P2P:
+- `paymentMethods`: Méthodes de paiement disponibles
+- `createPaymentRequest`: Crée une demande de paiement
+- `updatePaymentStatus`: Met à jour le statut d'un paiement
+
+#### useCartStore
+Gestion du panier d'achat:
+- `cart`: Articles dans le panier
+- `addToCart`: Ajoute un article
+- `removeFromCart`: Retire un article
+- `updateQuantity`: Met à jour la quantité
+- `clearCart`: Vide le panier
+
+### Routing / Navigation
+Utilise React Router v6 avec structure de routes dans App.tsx:
+- Routes publiques: `/`, `/listings`, `/listing/:id`, `/auth`, etc.
+- Routes protégées: `/profile`, `/messages`, `/create`, etc.
+- Composant `<ProtectedRoute>` qui vérifie l'authentification
+
+### Installation et démarrage
+
+1. Cloner le dépôt:
+```bash
+git clone https://github.com/votre-repo/studymarket.git
+cd studymarket
+```
+
+2. Installer les dépendances:
+```bash
+npm install
+```
+
+3. Créer un fichier `.env` à la racine:
+```
+# Firebase
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+
+# Supabase (pour les Edge Functions)
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Stripe (pour les paiements)
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+```
+
+4. Démarrer le serveur de développement:
+```bash
+npm run dev
+```
+
+5. Pour construire pour la production:
+```bash
+npm run build
+```
+
+### Gestion des erreurs
+- Utilisation de try/catch pour les opérations asynchrones
+- Toast notifications pour les erreurs utilisateur
+- Fallbacks pour les images et données manquantes
+- Validation des formulaires avec Zod
+
+### Exemple pour ajouter une page
+1. Créer un nouveau fichier dans `/src/pages`, par exemple `NewFeaturePage.tsx`
+2. Ajouter la route dans `App.tsx`:
+```tsx
+<Route path="/new-feature" element={<NewFeaturePage />} />
+```
+3. Pour une route protégée:
+```tsx
+<Route
+  path="/new-feature"
+  element={
+    <ProtectedRoute>
+      <NewFeaturePage />
+    </ProtectedRoute>
+  }
+/>
+```
+
+## 🔹 2. BACKEND
+
+### Services utilisés
+- Firebase Authentication: Gestion des utilisateurs
+- Firestore: Base de données NoSQL
+- Firebase Storage: Stockage des images
+- Supabase Edge Functions: Fonctions serverless
+- Stripe: Paiements par carte bancaire
+
+### Fichiers principaux
+
+#### firebase.ts
+Configuration de Firebase:
+```typescript
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+```
+
+#### AuthContext.tsx
+Gestion de l'authentification:
+- Connexion/inscription avec email/mot de passe
+- Connexion avec Google
+- Vérification des emails universitaires
+- Stockage des profils utilisateurs dans Firestore
+
+#### Règles Firestore
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est le propriétaire du document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Utilisateurs
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Pas de suppression de compte
+    }
+    
+    // Annonces
+    match /listings/{listingId} {
+      allow read: if true; // Lecture publique
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.sellerId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.sellerId == request.auth.uid;
+    }
+    
+    // Conversations
+    match /conversations/{conversationId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow delete: if false; // Pas de suppression de conversations
+      
+      // Messages dans les conversations
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow update, delete: if false; // Pas de modification/suppression de messages
+      }
+    }
+    
+    // Favoris
+    match /favorites/{favoriteId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if false; // Pas de modification de favoris
+    }
+    
+    // Demandes de paiement
+    match /paymentRequests/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.buyerId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      allow delete: if false; // Pas de suppression de demandes
+    }
+  }
+}
+```
+
+### Gestion des utilisateurs
+- Inscription avec email universitaire (vérification du domaine)
+- Stockage des profils dans la collection `users`
+- Champs principaux: displayName, email, university, isVerified, etc.
+- Vérification automatique des emails universitaires
+
+### Gestion des annonces
+- Collection `listings` pour stocker les annonces
+- Champs principaux: title, description, price, images, sellerId, etc.
+- Types de transactions: vente, don, échange, service
+- Stockage des images dans Firebase Storage
+
+### Gestion des messages
+- Collection `conversations` pour les conversations
+- Sous-collection `messages` pour les messages
+- Notifications en temps réel avec onSnapshot
+- Marquage des messages comme lus
+
+### Notifications par email
+Utilise Supabase Edge Functions pour envoyer des emails:
+
+#### send-message-notification
+```typescript
+// supabase/functions/send-message-notification/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+
+serve(async (req) => {
+  try {
+    const { recipientEmail, recipientName, senderName, messagePreview, conversationUrl } = await req.json();
+    
+    // Configuration SMTP
+    const client = new SmtpClient();
+    await client.connectTLS({
+      hostname: "smtp.gmail.com",
+      port: 465,
+      username: Deno.env.get("GMAIL_USER"),
+      password: Deno.env.get("GMAIL_APP_PASSWORD"),
+    });
+    
+    // Envoi de l'email
+    await client.send({
+      from: "StudyMarket <notifications@studymarket.fr>",
+      to: recipientEmail,
+      subject: `Nouveau message de ${senderName} sur StudyMarket`,
+      content: `
+        <h1>Bonjour ${recipientName},</h1>
+        <p>Vous avez reçu un nouveau message de <strong>${senderName}</strong> sur StudyMarket.</p>
+        <p>Message: "${messagePreview}"</p>
+        <p><a href="${conversationUrl}">Cliquez ici pour répondre</a></p>
+      `,
+      html: true,
+    });
+    
+    await client.close();
+    
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+});
+```
+
+### Paiements avec Stripe
+Utilise Supabase Edge Functions pour les paiements:
+
+#### create-checkout
+```typescript
+// supabase/functions/create-checkout/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@12.0.0";
+
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"), {
+  apiVersion: "2022-11-15",
+});
+
+serve(async (req) => {
+  try {
+    const { priceId, successUrl, cancelUrl } = await req.json();
+    
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+    
+    return new Response(JSON.stringify({ sessionId: session.id, url: session.url }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+});
+```
+
+#### webhook
+```typescript
+// supabase/functions/webhook/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@12.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY"), {
+  apiVersion: "2022-11-15",
+});
+
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL"),
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+);
+
+serve(async (req) => {
+  const signature = req.headers.get("stripe-signature");
+  const body = await req.text();
+  
+  try {
+    const event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      Deno.env.get("STRIPE_WEBHOOK_SECRET")
+    );
+    
+    // Traiter l'événement (paiement réussi, etc.)
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      
+      // Mettre à jour la base de données
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "paid" })
+        .eq("checkout_session_id", session.id);
+      
+      if (error) throw error;
+    }
+    
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+});
+```
+
+### Configuration des variables d'environnement
+
+#### Variables Firebase
+```
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+```
+
+#### Variables Supabase
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+#### Variables Stripe
+```
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+```
+
+#### Variables pour les Edge Functions
+Dans le dashboard Supabase > Settings > Edge Functions:
+```
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+GMAIL_USER=your_gmail_address
+GMAIL_APP_PASSWORD=your_gmail_app_password
+```
+
+### Vérification des emails universitaires
+La logique de vérification des emails est implémentée dans `AuthContext.tsx`:
+```typescript
+// Vérification du domaine universitaire
+const isUniversityEmail = (email: string) => {
+  const universityDomains = [
+    'univ-', 'edu', 'ac.', 'student.', 'etudiant.', 'etu.',
+    'sorbonne-universite.fr', 'dauphine.psl.eu', 'polytechnique.edu',
+    'ens.fr', 'centralesupelec.fr', 'mines-paristech.fr'
+  ];
+  return universityDomains.some(domain => email.includes(domain));
+};
+```
+
+### Sécurité et rôles Firestore
+- Règles Firestore basées sur l'authentification
+- Vérification des propriétaires des documents
+- Protection des conversations et messages
+- Pas de suppression directe des données sensibles
+
+## 🔹 3. EXEMPLES DE REQUÊTES
+
+### Créer une annonce
+```typescript
+const createListing = async (listingData) => {
+  try {
+    // Nettoyer les données
+    const cleanedData = {
+      ...listingData,
+      views: 0,
+      likes: 0,
+      saves: 0,
+      reportCount: 0,
+      moderationStatus: 'approved',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Ajouter à Firestore
+    const docRef = await addDoc(collection(db, 'listings'), cleanedData);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating listing:', error);
+    throw error;
+  }
+};
+```
+
+### Récupérer les messages
+```typescript
+const fetchMessages = (conversationId) => {
+  try {
+    // Requête sans orderBy pour éviter les problèmes d'index
+    const q = query(
+      collection(db, 'conversations', conversationId, 'messages')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        sentAt: safeToDate(doc.data().sentAt),
+      }));
+
+      // Trier côté client
+      messages.sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
+      
+      setMessages(messages);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+  }
+};
+```
+
+### Créer une demande de paiement
+```typescript
+const createPaymentRequest = async (requestData) => {
+  try {
+    // Générer un code de sécurité
+    const securityCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const paymentRequest = {
+      ...requestData,
+      securityCode,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    const docRef = await addDoc(collection(db, 'paymentRequests'), paymentRequest);
+    return docRef.id;
+  } catch (error) {
+    console.error('Erreur lors de la création de la demande de paiement:', error);
+    throw error;
+  }
+};
+```
+
+### Paiement avec Stripe
+```typescript
+const createCheckoutSession = async (priceId, mode = 'payment') => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        priceId,
+        successUrl: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=${mode}`,
+        cancelUrl: `${window.location.origin}/checkout/cancel`,
+        mode
+      })
+    });
+
+    const { sessionId, url } = await response.json();
+    
+    // Rediriger vers Stripe Checkout
+    window.location.href = url;
+  } catch (error) {
+    console.error('Checkout error:', error);
+    throw error;
+  }
+};
+```
+
+## 🔹 CHECKLIST RAPIDE
+
+### Configuration initiale
+- [ ] Cloner le dépôt
+- [ ] Installer les dépendances avec `npm install`
+- [ ] Créer un projet Firebase
+- [ ] Créer un projet Supabase
+- [ ] Configurer les variables d'environnement dans `.env`
+- [ ] Déployer les Edge Functions Supabase
+- [ ] Configurer Stripe (optionnel)
+
+### Développement
+- [ ] Démarrer le serveur avec `npm run dev`
+- [ ] Vérifier que l'authentification fonctionne
+- [ ] Tester la création d'annonce
+- [ ] Tester la messagerie
+- [ ] Tester les paiements P2P
+- [ ] Tester les paiements Stripe (si configuré)
+
+### Production
+- [ ] Construire l'application avec `npm run build`
+- [ ] Déployer sur votre hébergeur préféré
+- [ ] Vérifier les règles de sécurité Firestore
+- [ ] Configurer les webhooks Stripe en production
