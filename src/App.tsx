@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -25,6 +25,7 @@ import { OrdersPage } from './components/checkout/OrdersPage';
 import { OrderConfirmationPage } from './components/checkout/OrderConfirmationPage';
 import { ProductsPage } from './components/checkout/ProductsPage';
 import { CheckoutSuccessPage } from './components/checkout/CheckoutSuccessPage';
+import EditListingPage from './pages/EditListingPage';
 import './App.css';
 
 function App() {
@@ -133,6 +134,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/edit-listing/:id" element={<EditListingPage />} />
               </Routes>
             </main>
             <Footer />

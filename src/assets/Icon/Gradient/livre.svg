@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 48 48">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#Studymarket);
+        stroke-width: 0px;
+      }
+    </style>
+    <linearGradient id="Studymarket" x1="2.28" y1="24" x2="45.89" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2ecc71"/>
+      <stop offset="1" stop-color="#4a90e2"/>
+    </linearGradient>
+  </defs>
+  <path class="cls-1" d="m43.93,5.27c-1.27-1.05-2.95-1.48-4.57-1.16l-7.49,1.82c-3.46.63-5.97,3.64-5.97,7.15v26.89l-1.82.33-1.82-.33V13.08c.01-3.48-2.45-6.47-5.86-7.13l-7.7-1.87c-2.96-.54-5.8,1.43-6.34,4.39-.06.32-.09.65-.09.97v30.58l21.8,3.97,21.8-3.97V9.45c0-1.61-.72-3.15-1.96-4.18Z"/>
+</svg>

@@ -38,6 +38,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMessageStore } from '../../stores/useMessageStore';
 import { useCartStore } from '../../stores/useCartStore';
+import { ImUser } from "react-icons/im";
+import GradientIcon from "@/components/ui/GradientIcon";
 
 export const Header: React.FC = () => {
   const { currentUser, userProfile, logout } = useAuth();

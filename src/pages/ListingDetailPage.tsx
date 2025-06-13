@@ -374,10 +374,12 @@ export const ListingDetailPage: React.FC = () => {
                       </>
                     ) : (
                       <div className="space-y-2">
+                        <Link to={`/edit-listing/${listing.id}`}>
                         <Button variant="outline" className="w-full">
                           <User className="w-4 h-4 mr-2" />
                           Modifier l'annonce
                         </Button>
+                        </Link>
                         <p className="text-sm text-muted-foreground text-center">
                           C'est votre annonce
                         </p>

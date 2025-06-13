@@ -29,6 +29,22 @@ import { Badge } from '@/components/ui/badge';
 import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
 import { PopulateDataButton } from '../components/admin/PopulateDataButton';
+import { ImBook, ImGift, ImHome, ImLocation, ImMobile, ImSpinner, ImSpinner9, ImUser, ImUsers, ImUserTie } from "react-icons/im";
+import GradientIcon from "@/components/ui/GradientIcon";
+
+const categoryIcons = {
+  electronics: "/src/assets/icon/Gradient/electronic.svg",
+  books: "/src/assets/icon/Gradient/livre.svg",
+  furniture: "/src/assets/icon/Gradient/mobilier.svg",
+  housing: "/src/assets/icon/Gradient/logement.svg",
+  services: "/src/assets/icon/Gradient/services.svg",
+  jobs: "/src/assets/icon/Gradient/job.svg",
+  donations: "/src/assets/icon/Gradient/don.svg",
+  exchange: "/src/assets/icon/Gradient/troc.svg",
+};
+
+<GradientIcon icon={ImMobile} gradientId="gradient-electronics" size={32} />
+
 const TrendingUpIcon = () => (
   <img 
     src="/src/assets/icon/Gradient/launch.svg" 
@@ -61,56 +77,56 @@ const studentCategories = [
   { 
     id: 'electronics', 
     name: 'Électronique', 
-    icon: Smartphone, 
+    icon: ImMobile, 
     color: 'text-blue-600',
     description: 'Ordinateurs, téléphones, accessoires tech'
   },
   { 
     id: 'books', 
     name: 'Livres & Cours', 
-    icon: BookOpen, 
+    icon: ImBook, 
     color: 'text-blue-600',
     description: 'Manuels, livres, notes de cours'
   },
   { 
     id: 'furniture', 
     name: 'Mobilier', 
-    icon: Home, 
+    icon: ImHome, 
     color: 'text-blue-600',
     description: 'Meubles, déco, électroménager'
   },
   { 
     id: 'housing', 
     name: 'Logement', 
-    icon: MapPin, 
+    icon: ImLocation, 
     color: 'text-blue-600',
     description: 'Colocations, studios, chambres'
   },
   { 
     id: 'services', 
     name: 'Services', 
-    icon: Users, 
+    icon: ImUsers, 
     color: 'text-blue-600',
     description: 'Cours particuliers, aide, babysitting'
   },
   { 
     id: 'jobs', 
     name: 'Jobs & Stages', 
-    icon: Briefcase, 
+    icon: ImUserTie, 
     color: 'text-blue-600',
     description: 'Petits boulots, stages, missions'
   },
   { 
     id: 'donations', 
     name: 'Dons', 
-    icon: Gift, 
+    icon: ImGift, 
     color: 'text-blue-600',
     description: 'Objets gratuits, entraide'
   },
   { 
     id: 'exchange', 
     name: 'Troc', 
-    icon: RefreshCw, 
+    icon: ImSpinner9, 
     color: 'text-blue-600',
     description: 'Échanges de services et objets'
   },
@@ -255,7 +271,11 @@ export const HomePage: React.FC = () => {
               >
                 <Card className="h-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-primary/20">
                   <CardContent className="p-6 text-center">
-                    <category.icon className={`w-8 h-8 mx-auto mb-3 ${category.color} group-hover:scale-110 transition-transform`} />
+                    <img
+                      src={categoryIcons[category.id]}
+                      alt={category.name}
+                      className="w-16 h-16 mx-auto mb-4"
+                    />
                     <h3 className="font-semibold text-sm mb-2">{category.name}</h3>
                     <p className="text-xs text-muted-foreground">{category.description}</p>
                   </CardContent>

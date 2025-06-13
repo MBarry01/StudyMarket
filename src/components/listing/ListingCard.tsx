@@ -19,7 +19,6 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
     if (listing.transactionType === 'donation') return 'Gratuit';
     if (listing.transactionType === 'exchange') return 'Échange';
     
-    // Default to EUR if no currency is provided
     const currencyCode = currency || 'EUR';
     
     try {
@@ -28,7 +27,6 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
         currency: currencyCode,
       }).format(price);
     } catch (error) {
-      // Fallback if currency formatting fails
       return `${price} €`;
     }
   };
@@ -36,17 +34,17 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
   const getConditionColor = (condition: string) => {
     switch (condition) {
       case 'new':
-        return 'bg-safe-green';
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'like-new':
-        return 'bg-safe-blue';
+        return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'good':
-        return 'bg-safe-yellow';
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       case 'fair':
-        return 'bg-safe-orange';
+        return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'poor':
-        return 'bg-safe-red';
+        return 'bg-red-100 text-red-700 border-red-200';
       default:
-        return 'bg-gray-600 text-white';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -70,9 +68,9 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
   const getTransactionIcon = () => {
     switch (listing.transactionType) {
       case 'donation':
-        return <Gift className="w-4 h-4" />;
+        return <Gift className="w-3 h-3" />;
       case 'exchange':
-        return <RefreshCw className="w-4 h-4" />;
+        return <RefreshCw className="w-3 h-3" />;
       default:
         return null;
     }
@@ -81,42 +79,33 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
   const getTransactionColor = () => {
     switch (listing.transactionType) {
       case 'donation':
-        return 'bg-safe-green';
+        return 'bg-green-500 text-white hover:bg-green-600';
       case 'exchange':
-        return 'bg-safe-purple';
+        return 'bg-purple-500 text-white hover:bg-purple-600';
       default:
-        return 'bg-primary hover:bg-primary/90 text-white';
+        return 'bg-primary text-white hover:bg-primary/90';
     }
   };
 
-  // Safe date formatting function
   const formatSafeDate = (date: any) => {
     try {
-      // Handle various date formats
       let validDate: Date;
       
-      if (!date) {
-        return 'Date inconnue';
-      }
+      if (!date) return 'Date inconnue';
       
       if (date instanceof Date) {
         validDate = date;
       } else if (typeof date === 'string' || typeof date === 'number') {
         validDate = new Date(date);
       } else if (date && typeof date.toDate === 'function') {
-        // Firestore Timestamp
         validDate = date.toDate();
       } else if (date && typeof date === 'object' && date.seconds) {
-        // Firestore timestamp object
         validDate = new Date(date.seconds * 1000);
       } else {
         return 'Date inconnue';
       }
       
-      // Check if the date is valid
-      if (isNaN(validDate.getTime())) {
-        return 'Date inconnue';
-      }
+      if (isNaN(validDate.getTime())) return 'Date inconnue';
       
       return formatDistanceToNow(validDate, { 
         addSuffix: true, 
@@ -128,48 +117,44 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
     }
   };
 
-  // Safe access to listing properties with defaults
   const safePrice = listing.price || 0;
   const safeCurrency = listing.currency || 'EUR';
   const safeCondition = listing.condition || 'good';
   const safeTransactionType = listing.transactionType || 'sale';
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-      <Link to={`/listing/${listing.id}`}>
-        <div className="relative aspect-[4/3] overflow-hidden">
-          {listing.images?.[0] ? (
-            <img
-              src={listing.images[0]}
-              alt={listing.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full bg-muted flex items-center justify-center">
-              <span className="text-muted-foreground">Aucune image</span>
-            </div>
-          )}
+    <Card className="group relative bg-white rounded-xl border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden w-full max-w-sm">
+      {/* Image Section */}
+      <Link to={`/listing/${listing.id}`} className="block">
+        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+          <img
+            src={listing.images?.[0] || '/placeholder.jpg'}
+            alt={listing.title}
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+          />
+          
+          {/* Gradient Overlay for better badge visibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/20 pointer-events-none" />
           
           {/* Action Buttons */}
-          <div className="absolute top-2 right-0 flex flex-col gap-1">
+          <div className="absolute top-3 right-3 flex flex-col gap-2">
             <FavoriteButton 
               listing={listing} 
               size="sm"
-              className="bg-white hover:bg-muted p-1"
-
+              className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm border-0 rounded-full p-2"
             />
             <ShareButton 
               listing={listing} 
               size="sm"
-              className="bg-white hover:bg-muted p-1"
+              className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm border-0 rounded-full p-2"
             />
           </div>
 
           {/* Transaction Type Badge */}
           {safeTransactionType !== 'sale' && (
-            <Badge className={`absolute top-2 left-2 text-white ${getTransactionColor()} border-0`}>
+            <Badge className={`absolute top-3 left-3 ${getTransactionColor()} border-0 shadow-sm font-medium px-3 py-1.5 rounded-full`}>
               {getTransactionIcon()}
-              <span className="ml-1">
+              <span className="ml-1.5 text-sm">
                 {safeTransactionType === 'donation' ? 'Don' : 'Troc'}
               </span>
             </Badge>
@@ -177,111 +162,110 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
 
           {/* Condition Badge */}
           {safeTransactionType === 'sale' && (
-            <Badge className={`absolute top-2 left-2 ${getConditionColor(safeCondition)} border-0`}>
+            <Badge className={`absolute top-3 left-3 ${getConditionColor(safeCondition)} font-medium px-3 py-1.5 rounded-full shadow-sm`}>
               {getConditionLabel(safeCondition)}
             </Badge>
           )}
 
           {/* Environmental Impact */}
           {listing.environmentalImpact && (
-            <Badge className="absolute bottom-2 left-2 bg-safe-emerald border-0">
-              <Leaf className="w-3 h-3 mr-1" />
+            <Badge className="absolute bottom-3 left-3 bg-emerald-500 text-white border-0 shadow-sm font-medium px-3 py-1.5 rounded-full">
+              <Leaf className="w-3 h-3 mr-1.5" />
               -{listing.environmentalImpact.co2Saved}kg CO₂
             </Badge>
           )}
 
           {/* Image Count */}
           {listing.images && listing.images.length > 1 && (
-            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+            <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm text-white text-sm px-2.5 py-1 rounded-full font-medium">
               +{listing.images.length - 1}
             </div>
           )}
         </div>
       </Link>
 
-      <CardContent className="p-4">
-        <Link to={`/listing/${listing.id}`} className="group">
-          <div className="space-y-3">
-            {/* Price */}
-            <div className="flex items-center justify-between">
-              <span className={`text-xl font-bold ${
-                safeTransactionType === 'donation' ? 'text-green-600' :
-                safeTransactionType === 'exchange' ? 'text-purple-600' :
-                'text-primary'
-              }`}>
-                {formatPrice(safePrice, safeCurrency)}
+      {/* Content Section */}
+      <CardContent className="p-6 space-y-4">
+        <Link to={`/listing/${listing.id}`} className="block">
+          {/* Price and Views */}
+          <div className="flex items-center justify-between mb-3">
+            <span className={`text-2xl font-bold ${
+              safeTransactionType === 'donation' ? 'text-green-600' :
+              safeTransactionType === 'exchange' ? 'text-purple-600' :
+              'text-slate-900'
+            }`}>
+              {formatPrice(safePrice, safeCurrency)}
+            </span>
+            <div className="flex items-center gap-1 text-sm text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="font-medium">{listing.views || 0}</span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 mb-3 leading-tight text-left">
+            {listing.title || 'Sans titre'}
+          </h3>
+
+          {/* Exchange Info */}
+          {safeTransactionType === 'exchange' && listing.exchangeFor && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 bg-purple-50 px-3 py-2 rounded-lg mb-4">
+              <RefreshCw className="w-4 h-4 text-purple-500" />
+              <span><span className="font-medium">Contre:</span> {listing.exchangeFor}</span>
+            </div>
+          )}
+
+          {/* Location and Date */}
+          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="truncate">
+                {listing.location?.campus || 
+                 (listing.location?.city && listing.location?.state ? 
+                  `${listing.location.city}, ${listing.location.state}` : 
+                  'Localisation non spécifiée')}
               </span>
-              <div className="flex items-center text-xs text-muted-foreground space-x-2">
-                <Eye className="w-3 h-3" />
-                <span>{listing.views || 0}</span>
-              </div>
             </div>
-
-            {/* Title */}
-            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-              {listing.title || 'Sans titre'}
-            </h3>
-
-            {/* Exchange info */}
-            {safeTransactionType === 'exchange' && listing.exchangeFor && (
-              <p className="text-sm text-muted-foreground">
-                <RefreshCw className="w-3 h-3 inline mr-1" />
-                Contre: {listing.exchangeFor}
-              </p>
-            )}
-
-            {/* Location and Date */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center space-x-1">
-                <MapPin className="w-3 h-3" />
-                <span className="truncate">
-                  {listing.location?.campus || 
-                   (listing.location?.city && listing.location?.state ? 
-                    `${listing.location.city}, ${listing.location.state}` : 
-                    'Localisation non spécifiée')}
-                </span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Clock className="w-3 h-3" />
-                <span>
-                  {formatSafeDate(listing.createdAt)}
-                </span>
-              </div>
-            </div>
-
-            {/* Seller Info */}
-            <div className="flex items-center justify-between pt-2 border-t border-border">
-              <div className="flex items-center space-x-2">
-                <Avatar className="w-6 h-6">
-                  <AvatarImage src={listing.sellerAvatar} />
-                  <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                    {listing.sellerName?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <div className="flex items-center space-x-1">
-                    <span className="text-sm text-foreground truncate">
-                      {listing.sellerName || 'Utilisateur'}
-                    </span>
-                    {listing.sellerVerified && (
-                      <Shield className="w-3 h-3 text-green-600" />
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {listing.sellerUniversity || 'Université non spécifiée'}
-                  </span>
-                </div>
-              </div>
-              
-              {/* AI Price Estimate */}
-              {listing.aiPriceEstimate && safeTransactionType === 'sale' && (
-                <Badge variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
-                  Prix juste ✓
-                </Badge>
-              )}
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="whitespace-nowrap">
+                {formatSafeDate(listing.createdAt)}
+              </span>
             </div>
           </div>
         </Link>
+
+        {/* Seller Section */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Avatar className="w-9 h-9 border-2 border-gray-100">
+              <AvatarImage src={listing.sellerAvatar} />
+              <AvatarFallback className="text-sm bg-gray-100 text-gray-600 font-medium">
+                {listing.sellerName?.[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-gray-900 truncate">
+                  {listing.sellerName || 'Utilisateur'}
+                </span>
+                {listing.sellerVerified && (
+                  <Shield className="w-4 h-4 text-green-500 flex-shrink-0" />
+                )}
+              </div>
+              <span className="text-xs text-gray-500 truncate block text-left">
+                {listing.sellerUniversity || 'Université non spécifiée'}
+              </span>
+            </div>
+          </div>
+          
+          {/* AI Price Estimate */}
+          {listing.aiPriceEstimate && safeTransactionType === 'sale' && (
+            <Badge className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ml-2">
+              Prix juste ✓
+            </Badge>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

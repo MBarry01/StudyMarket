@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 48 48">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#Studymarket-2);
+      }
+
+      .cls-1, .cls-2 {
+        stroke-width: 0px;
+      }
+
+      .cls-2 {
+        fill: url(#Studymarket);
+      }
+    </style>
+    <linearGradient id="Studymarket" x1="19.41" y1="35.47" x2="28.59" y2="35.47" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2ecc71"/>
+      <stop offset="1" stop-color="#4a90e2"/>
+    </linearGradient>
+    <linearGradient id="Studymarket-2" data-name="Studymarket" x1="5.64" y1="24" x2="42.36" y2="24" xlink:href="#Studymarket"/>
+  </defs>
+  <path class="cls-2" d="m24,28.58c-2.54,0-4.59,2.06-4.59,4.59v9.18h9.18v-9.18c0-2.54-2.06-4.59-4.59-4.59Z"/>
+  <g>
+    <path class="cls-1" d="m31.65,33.17v9.18h6.12c2.54,0,4.59-2.06,4.59-4.59v-13.96c0-.79-.31-1.56-.86-2.13l-13-14.06c-2.29-2.48-6.17-2.63-8.65-.34-.12.11-.23.22-.34.34l-12.98,14.05c-.57.57-.89,1.35-.89,2.16v13.93c0,2.54,2.06,4.59,4.59,4.59h6.12v-9.18c.03-4.17,3.4-7.58,7.47-7.68,4.2-.1,7.81,3.36,7.84,7.68Z"/>
+    <path class="cls-2" d="m24,28.58c-2.54,0-4.59,2.06-4.59,4.59v9.18h9.18v-9.18c0-2.54-2.06-4.59-4.59-4.59Z"/>
+  </g>
+</svg>

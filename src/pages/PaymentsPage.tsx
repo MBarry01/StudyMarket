@@ -27,6 +27,7 @@ import { PaymentStatusCard } from '../components/payment/PaymentStatusCard';
 import { usePaymentStore, PaymentRequest } from '../stores/usePaymentStore';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
 interface PaymentStats {
   totalRequests: number;
