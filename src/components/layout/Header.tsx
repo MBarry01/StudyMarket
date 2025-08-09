@@ -40,6 +40,7 @@ import { useMessageStore } from '../../stores/useMessageStore';
 import { useCartStore } from '../../stores/useCartStore';
 import { ImUser } from "react-icons/im";
 import GradientIcon from "@/components/ui/GradientIcon";
+import ChatbotWidget from '../chatbot/ChatbotWidget';
 
 export const Header: React.FC = () => {
   const { currentUser, userProfile, logout } = useAuth();
@@ -420,6 +421,9 @@ export const Header: React.FC = () => {
           </DropdownMenu>
         </div>
       </div>
+      
+      {/* Chatbot Widget - disponible sur toutes les pages */}
+      <ChatbotWidget />
     </header>
   );
 };
