@@ -5,18 +5,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateProfile } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../lib/firebase';
+import { UploadService, UploadProgress } from '../../services/uploadService';
 import toast from 'react-hot-toast';
 
 interface ProfilePhotoUploadProps {
   currentPhotoURL?: string;
   displayName: string;
+  onPhotoUpdate?: (url: string | undefined) => void;
 }
 
 export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   currentPhotoURL,
-  displayName
+  displayName,
+  onPhotoUpdate
 }) => {
   const { currentUser, updateUserProfile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -24,6 +25,8 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,13 +60,17 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
     setIsUploading(true);
 
     try {
-      // Créer une référence unique pour l'image
-      const fileName = `profile-photos/${currentUser.uid}-${Date.now()}.${selectedFile.name.split('.').pop()}`;
-      const storageRef = ref(storage, fileName);
-
-      // Upload du fichier
-      const snapshot = await uploadBytes(storageRef, selectedFile);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      // Upload vers Firebase Storage avec UploadService
+      const downloadURL = await UploadService.uploadProfilePhoto(
+        currentUser.uid,
+        selectedFile,
+        (progress: UploadProgress) => {
+          // Gérer la progression si nécessaire
+          if (progress.error) {
+            toast.error(progress.error);
+          }
+        }
+      );
 
       // Mettre à jour le profil Firebase Auth
       await updateProfile(currentUser, {
@@ -71,18 +78,34 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       });
 
       // Mettre à jour le profil utilisateur dans Firestore
-      await updateUserProfile({
-        photoURL: downloadURL
-      });
+      await updateUserProfile({ photoURL: downloadURL });
 
-      toast.success('Photo de profil mise à jour !');
+      // Appeler le callback si fourni
+      if (onPhotoUpdate) {
+        onPhotoUpdate(downloadURL);
+      }
+
+      toast.success('Photo de profil mise à jour avec succès !');
       setIsOpen(false);
       setPreviewUrl(null);
       setSelectedFile(null);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erreur lors de l\'upload:', error);
-      toast.error('Erreur lors de la mise à jour de la photo');
+      
+      let message = 'Erreur lors de la mise à jour de la photo';
+      
+      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+        if (error.message.includes('duplicate')) {
+          message = 'Une photo avec ce nom existe déjà, réessayez';
+        } else if (error.message.includes('size')) {
+          message = 'Fichier trop volumineux';
+        } else if (error.message.includes('type')) {
+          message = 'Type de fichier non supporté';
+        }
+      }
+      
+      toast.error(message);
     } finally {
       setIsUploading(false);
     }
@@ -96,13 +119,18 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
     try {
       // Mettre à jour le profil Firebase Auth
       await updateProfile(currentUser, {
-        photoURL: null
+        photoURL: undefined
       });
 
       // Mettre à jour le profil utilisateur dans Firestore
       await updateUserProfile({
-        photoURL: null
+        photoURL: undefined
       });
+
+      // Appeler le callback si fourni
+      if (onPhotoUpdate) {
+        onPhotoUpdate(undefined);
+      }
 
       toast.success('Photo de profil supprimée');
       setIsOpen(false);
@@ -129,7 +157,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
         <div className="relative group cursor-pointer">
           <Avatar className="h-20 w-20">
             <AvatarImage src={currentPhotoURL || ''} />
-            <AvatarFallback className="text-lg bg-gradient-to-br from-primary to-secondary text-white">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xl font-semibold">
               {displayName[0]?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
@@ -207,40 +235,28 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
 
                 <div className="flex gap-2">
                   <Button
-                    onClick={resetSelection}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isUploading}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
                     onClick={handleUpload}
-                    className="flex-1"
                     disabled={isUploading}
+                    className="flex-1"
                   >
                     {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Upload...
-                      </>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Confirmer
-                      </>
+                      <Upload className="w-4 h-4 mr-2" />
                     )}
+                    {isUploading ? 'Upload en cours...' : 'Uploader'}
+                  </Button>
+
+                  <Button
+                    onClick={resetSelection}
+                    variant="outline"
+                    disabled={isUploading}
+                  >
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Conseils */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>• Formats acceptés : JPG, PNG, GIF</p>
-            <p>• Taille maximale : 5MB</p>
-            <p>• Recommandé : image carrée, minimum 200x200px</p>
           </div>
         </div>
       </DialogContent>

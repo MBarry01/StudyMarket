@@ -4,23 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Separator } from '../components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
+import { Link } from 'react-router-dom';
 import { 
-  User, 
   MapPin, 
   Calendar, 
   Star, 
   Heart, 
   Package,
-  AlertCircle,
-  ExternalLink,
   Shield,
   Leaf,
   TrendingUp,
-  MessageCircle
+  MessageCircle,
+  GraduationCap,
+  User,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import { 
   collection, 
@@ -29,13 +27,20 @@ import {
   getDocs, 
   doc, 
   getDoc,
-  limit
+  limit,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Listing } from '../types';
 import { ListingCard } from '../components/listing/ListingCard';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
+import { Checkbox } from '../components/ui/checkbox';
+import { Label } from '../components/ui/label';
+import { toast } from 'react-hot-toast';
+import { Textarea } from '../components/ui/textarea';
+import { Input } from '../components/ui/input';
 
 interface ProfileStats {
   totalListings: number;
@@ -55,40 +60,47 @@ interface Review {
   reviewType: 'buyer' | 'seller';
   isPublic: boolean;
   helpfulCount: number;
-  createdAt: any;
+  createdAt: unknown;
   reviewerName?: string;
+  replies: {
+    userId: string;
+    comment: string;
+    createdAt: Date;
+  }[];
+  likes: string[];
+  dislikes: string[];
 }
 
 interface Favorite {
   id: string;
   userId: string;
   listingId: string;
-  createdAt: any;
+  createdAt: unknown;
 }
 
 // Helper function to safely convert dates
-const safeToDate = (date: any): Date => {
+const safeToDate = (date: unknown): Date => {
   if (!date) return new Date();
-  
+
   if (date instanceof Date) return date;
-  
-  if (date && typeof date.toDate === 'function') {
+
+  if (typeof date === 'object' && date !== null && 'toDate' in date && typeof (date as { toDate: unknown }).toDate === 'function') {
     try {
-      return date.toDate();
-    } catch (error) {
+      return (date as { toDate: () => Date }).toDate();
+    } catch {
       return new Date();
     }
   }
-  
+
   if (typeof date === 'string' || typeof date === 'number') {
     const parsedDate = new Date(date);
     return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
   }
-  
-  if (date && typeof date === 'object' && date.seconds) {
-    return new Date(date.seconds * 1000);
+
+  if (typeof date === 'object' && date !== null && 'seconds' in date && typeof (date as { seconds: unknown }).seconds === 'number') {
+    return new Date((date as { seconds: number }).seconds * 1000);
   }
-  
+
   return new Date();
 };
 
@@ -97,6 +109,7 @@ export const ProfilePage: React.FC = () => {
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([]);
+  const [profileData, setProfileData] = useState<Record<string, unknown> | null>(null);
   const [stats, setStats] = useState<ProfileStats>({
     totalListings: 0,
     activeListings: 0,
@@ -105,16 +118,50 @@ export const ProfilePage: React.FC = () => {
     totalFavorites: 0
   });
   const [loading, setLoading] = useState({
-    profile: false,
+    profile: true,
     listings: true,
     reviews: true,
     favorites: true
   });
-  const [errors, setErrors] = useState<string[]>([]);
+  const [reviewerProfiles, setReviewerProfiles] = useState<Record<string, { displayName: string; photoURL?: string }>>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [firstName, setFirstName] = useState<string>(profileData?.firstName as string || '');
+  const [lastName, setLastName] = useState<string>(profileData?.lastName as string || '');
+
+  // Charger les données du profil depuis Firestore
+  const loadUserProfile = async () => {
+    if (!currentUser) return;
+
+    try {
+      setLoading(prev => ({ ...prev, profile: true }));
+      
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setProfileData({
+          ...data,
+          createdAt: safeToDate(data.createdAt),
+          updatedAt: safeToDate(data.updatedAt)
+        });
+      } else {
+        console.log('Aucun document utilisateur trouvé dans Firestore');
+        setProfileData(null);
+      }
+    } catch (error: unknown) {
+      console.error('Erreur lors du chargement du profil:', error);
+      setProfileData(null);
+    } finally {
+      setLoading(prev => ({ ...prev, profile: false }));
+    }
+  };
 
   useEffect(() => {
     if (currentUser) {
-      // Charger les données en parallèle avec un chargement progressif
+      // Charger le profil en premier
+      loadUserProfile();
+      // Puis charger les autres données
       loadUserListings();
       loadUserReviews();
       loadUserFavorites();
@@ -148,7 +195,7 @@ export const ProfilePage: React.FC = () => {
       });
       
       // Trier côté client par date de création
-      listings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      listings.sort((a, b) => safeToDate(b.createdAt).getTime() - safeToDate(a.createdAt).getTime());
       
       setUserListings(listings);
       
@@ -160,11 +207,8 @@ export const ProfilePage: React.FC = () => {
         activeListings: activeListings.length
       }));
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erreur lors du chargement des annonces:', error);
-      if (error.message?.includes('index')) {
-        setErrors(prev => [...prev, 'listings']);
-      }
     } finally {
       setLoading(prev => ({ ...prev, listings: false }));
     }
@@ -191,14 +235,45 @@ export const ProfilePage: React.FC = () => {
         reviews.push({ 
           id: doc.id, 
           ...data,
+          replies: Array.isArray(data.replies)
+            ? data.replies.map((reply) => ({
+                ...reply,
+                createdAt: reply.createdAt instanceof Date
+                  ? reply.createdAt
+                  : (reply.createdAt && typeof reply.createdAt.toDate === 'function')
+                    ? reply.createdAt.toDate()
+                    : new Date()
+              }))
+            : [],
+          likes: Array.isArray(data.likes) ? data.likes : [],
+          dislikes: Array.isArray(data.dislikes) ? data.dislikes : [],
           createdAt: safeToDate(data.createdAt)
         } as Review);
       });
       
       // Trier côté client par date
-      reviews.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      reviews.sort((a, b) => safeToDate(b.createdAt).getTime() - safeToDate(a.createdAt).getTime());
       
       setUserReviews(reviews);
+      
+      // Fetch reviewer profiles
+      const uniqueReviewerIds = Array.from(new Set(reviews.map(r => r.reviewerId)));
+      const newProfiles: Record<string, { displayName: string; photoURL?: string }> = { ...reviewerProfiles };
+      await Promise.all(uniqueReviewerIds.map(async (uid) => {
+        if (!newProfiles[uid]) {
+          const userDoc = await getDoc(doc(db, 'users', uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            newProfiles[uid] = {
+              displayName: userData.displayName || 'Utilisateur',
+              photoURL: userData.photoURL || undefined,
+            };
+          } else {
+            newProfiles[uid] = { displayName: '' };
+          }
+        }
+      }));
+      setReviewerProfiles(newProfiles);
       
       // Calculer les stats des avis
       const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
@@ -210,11 +285,8 @@ export const ProfilePage: React.FC = () => {
         averageRating: Math.round(averageRating * 10) / 10
       }));
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erreur lors du chargement des avis:', error);
-      if (error.message?.includes('index')) {
-        setErrors(prev => [...prev, 'reviews']);
-      }
     } finally {
       setLoading(prev => ({ ...prev, reviews: false }));
     }
@@ -246,7 +318,7 @@ export const ProfilePage: React.FC = () => {
       });
       
       // Trier côté client
-      favorites.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      favorites.sort((a, b) => safeToDate(b.createdAt).getTime() - safeToDate(a.createdAt).getTime());
       
       setStats(prev => ({
         ...prev,
@@ -278,17 +350,14 @@ export const ProfilePage: React.FC = () => {
         setFavoriteListings(listings.filter(listing => listing !== null) as Listing[]);
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erreur lors du chargement des favoris:', error);
-      if (error.message?.includes('index')) {
-        setErrors(prev => [...prev, 'favorites']);
-      }
     } finally {
       setLoading(prev => ({ ...prev, favorites: false }));
     }
   };
 
-  const formatDate = (date: any) => {
+  const formatDate = (date: unknown) => {
     if (!date) return 'Date inconnue';
     
     try {
@@ -302,7 +371,7 @@ export const ProfilePage: React.FC = () => {
         addSuffix: true, 
         locale: fr 
       });
-    } catch (error) {
+    } catch {
       return 'Date invalide';
     }
   };
@@ -318,7 +387,203 @@ export const ProfilePage: React.FC = () => {
     ));
   };
 
-  const isLoading = loading.listings || loading.reviews || loading.favorites;
+  // Ajout de la logique de fallback comme dans le Header
+  const pendingUserData = localStorage.getItem('pendingUserData');
+  const fallbackData = pendingUserData ? JSON.parse(pendingUserData) : {};
+
+  let displayName = profileData?.displayName || userProfile?.displayName || fallbackData.displayName || '';
+  if (!displayName && currentUser?.displayName) displayName = currentUser.displayName;
+  if (!displayName && currentUser?.email) displayName = currentUser.email.split('@')[0];
+  if (!displayName) displayName = 'Utilisateur';
+
+  let university = profileData?.university || userProfile?.university || fallbackData.university || '';
+  if ((profileData?.university === 'Autre université' && (profileData as Record<string, unknown>).otherUniversity) || (userProfile?.university === 'Autre université' && (userProfile as unknown as Record<string, unknown>).otherUniversity) || (fallbackData.university === 'Autre université' && fallbackData.otherUniversity)) {
+    const profileOtherUni = (profileData as Record<string, unknown>)?.otherUniversity as string;
+    const userOtherUni = (userProfile as unknown as Record<string, unknown>)?.otherUniversity as string;
+    const fallbackOtherUni = fallbackData.otherUniversity as string;
+    university = profileOtherUni || userOtherUni || fallbackOtherUni || "Université personnalisée";
+  }
+  if (!university) university = "Université spécifiée lors de l'inscription";
+
+  let fieldOfStudy = profileData?.fieldOfStudy || userProfile?.fieldOfStudy || fallbackData.fieldOfStudy || '';
+  if ((profileData?.fieldOfStudy === 'Autre' && (profileData as Record<string, unknown>).otherFieldOfStudy) || (userProfile?.fieldOfStudy === 'Autre' && (userProfile as unknown as Record<string, unknown>).otherFieldOfStudy) || (fallbackData.fieldOfStudy === 'Autre' && fallbackData.otherFieldOfStudy)) {
+    const profileOtherField = (profileData as Record<string, unknown>)?.otherFieldOfStudy as string;
+    const userOtherField = (userProfile as unknown as Record<string, unknown>)?.otherFieldOfStudy as string;
+    const fallbackOtherField = fallbackData.otherFieldOfStudy as string;
+    fieldOfStudy = profileOtherField || userOtherField || fallbackOtherField || "Filière personnalisée";
+  }
+  if (!fieldOfStudy) fieldOfStudy = "Filière non spécifiée";
+
+  const graduationYear = profileData?.graduationYear || userProfile?.graduationYear || fallbackData.graduationYear || '';
+  const email = profileData?.email || userProfile?.email || fallbackData.email || currentUser?.email || '';
+  const photoURL = (profileData?.photoURL || userProfile?.photoURL || '') as string;
+  const createdAt = profileData?.createdAt || userProfile?.createdAt;
+  const isVerified = profileData?.isVerified || userProfile?.isVerified;
+  const location = (profileData?.location || userProfile?.location || '') as string;
+  const co2Saved = (profileData?.co2Saved || userProfile?.co2Saved || 0) as number;
+
+  // Détecter si on consulte son propre profil
+  const isOwnProfile = currentUser && userProfile && currentUser.uid === userProfile.id;
+
+  const handleLike = async (reviewId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const reviewRef = doc(db, 'reviews', reviewId);
+      const review = userReviews.find(r => r.id === reviewId);
+      
+      if (!review) return;
+      
+      const newLikes = review.likes || [];
+      const newDislikes = review.dislikes || [];
+      
+      if (newLikes.includes(currentUser.uid)) {
+        // Unlike
+        await updateDoc(reviewRef, {
+          likes: newLikes.filter(id => id !== currentUser.uid)
+        });
+      } else {
+        // Like
+        await updateDoc(reviewRef, {
+          likes: [...newLikes, currentUser.uid],
+          dislikes: newDislikes.filter(id => id !== currentUser.uid)
+        });
+      }
+      
+      // Update local state
+      setUserReviews(prev => prev.map(r => {
+        if (r.id === reviewId) {
+          const updatedLikes = r.likes || [];
+          const updatedDislikes = r.dislikes || [];
+          
+          if (updatedLikes.includes(currentUser.uid)) {
+            return {
+              ...r,
+              likes: updatedLikes.filter(id => id !== currentUser.uid)
+            };
+          } else {
+            return {
+              ...r,
+              likes: [...updatedLikes, currentUser.uid],
+              dislikes: updatedDislikes.filter(id => id !== currentUser.uid)
+            };
+          }
+        }
+        return r;
+      }));
+    } catch (error) {
+      console.error('Error liking review:', error);
+      toast.error('Erreur lors du like');
+    }
+  };
+
+  const handleDislike = async (reviewId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const reviewRef = doc(db, 'reviews', reviewId);
+      const review = userReviews.find(r => r.id === reviewId);
+      
+      if (!review) return;
+      
+      const newLikes = review.likes || [];
+      const newDislikes = review.dislikes || [];
+      
+      if (newDislikes.includes(currentUser.uid)) {
+        // Remove dislike
+        await updateDoc(reviewRef, {
+          dislikes: newDislikes.filter(id => id !== currentUser.uid)
+        });
+      } else {
+        // Add dislike
+        await updateDoc(reviewRef, {
+          dislikes: [...newDislikes, currentUser.uid],
+          likes: newLikes.filter(id => id !== currentUser.uid)
+        });
+      }
+      
+      // Update local state
+      setUserReviews(prev => prev.map(r => {
+        if (r.id === reviewId) {
+          const updatedLikes = r.likes || [];
+          const updatedDislikes = r.dislikes || [];
+          
+          if (updatedDislikes.includes(currentUser.uid)) {
+            return {
+              ...r,
+              dislikes: updatedDislikes.filter(id => id !== currentUser.uid)
+            };
+          } else {
+            return {
+              ...r,
+              dislikes: [...updatedDislikes, currentUser.uid],
+              likes: updatedLikes.filter(id => id !== currentUser.uid)
+            };
+          }
+        }
+        return r;
+      }));
+    } catch (error) {
+      console.error('Error disliking review:', error);
+      toast.error('Erreur lors du dislike');
+    }
+  };
+
+  const handleReply = async (reviewId: string) => {
+    if (!currentUser || !replyText.trim()) return;
+    
+    try {
+      const reviewRef = doc(db, 'reviews', reviewId);
+      const review = userReviews.find(r => r.id === reviewId);
+      
+      if (!review) return;
+      
+      const newReply = {
+        userId: currentUser.uid,
+        comment: replyText.trim(),
+        createdAt: new Date()
+      };
+      
+      await updateDoc(reviewRef, {
+        replies: [...(review.replies || []), newReply]
+      });
+      
+      // Update local state
+      setUserReviews(prev => prev.map(r => {
+        if (r.id === reviewId) {
+          return {
+            ...r,
+            replies: [...(r.replies || []), newReply]
+          };
+        }
+        return r;
+      }));
+      
+      setReplyText('');
+      setReplyingTo(null);
+      toast.success('Réponse envoyée');
+    } catch (error) {
+      console.error('Error replying to review:', error);
+      toast.error('Erreur lors de l\'envoi de la réponse');
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!currentUser) return;
+    try {
+      const displayName = `${firstName} ${lastName}`.trim();
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        firstName,
+        lastName,
+        displayName,
+        updatedAt: new Date(),
+      });
+      await currentUser.reload();
+      toast.success('Nom mis à jour !');
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour du nom');
+    }
+  };
 
   if (!currentUser) {
     return (
@@ -335,9 +600,9 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Alerte d'erreurs d'index */}
-      {errors.length > 0 && (
+      {/* {errors.length > 0 && (
         <Alert className="border-orange-200 bg-orange-50">
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
@@ -359,61 +624,58 @@ export const ProfilePage: React.FC = () => {
             </div>
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       {/* En-tête du profil */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start space-x-4">
-            <div className="relative">
+        <CardHeader className="text-left">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:space-x-4 text-center sm:text-left">
+            <div className="relative flex-shrink-0 mx-auto sm:mx-0">
               <ProfilePhotoUpload
-                currentPhotoURL={userProfile?.photoURL || ''}
-                displayName={userProfile?.displayName || currentUser.email || 'Utilisateur'}
+                currentPhotoURL={photoURL}
+                displayName={displayName}
               />
-              {userProfile?.isVerified && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-background">
-                  <Shield className="w-3 h-3 text-white" />
+              {isVerified && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-background">
+                  <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <CardTitle className="text-2xl">
-                  {userProfile?.displayName || 'Utilisateur'}
+            <div className="flex-1 w-full">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 mb-1">
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl text-center sm:text-left w-full sm:w-auto">
+                  {displayName}
                 </CardTitle>
-                {userProfile?.isVerified && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200">
+                {isVerified && (
+                  <Badge className="bg-green-100 text-green-800 border-green-200 mt-2 sm:mt-0 text-xs sm:text-sm">
                     <Shield className="w-3 h-3 mr-1" />
                     Vérifié
                   </Badge>
                 )}
               </div>
-              <CardDescription className="text-base">
-                {currentUser.email}
-              </CardDescription>
-              {userProfile?.university && (
-                <div className="flex items-center mt-2 text-muted-foreground">
-                  <User className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{userProfile.university}</span>
+              <CardDescription className="text-sm sm:text-base text-center sm:text-left break-all">{email}</CardDescription>
+              <div className="flex flex-col gap-1 mt-2 text-muted-foreground text-center sm:text-left text-xs sm:text-sm">
+                <div><User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 inline" /> Université : <span className="text-xs sm:text-sm">{university}</span></div>
+                <div><GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 mr-1 inline" /> Filière : <span className="text-xs sm:text-sm">{fieldOfStudy}</span></div>
+                <div><span className="font-bold">Année de diplôme :</span> <span className="text-xs sm:text-sm">{graduationYear}</span></div>
+              </div>
+              {location && (
+                <div className="flex items-center justify-center sm:justify-start mt-1 text-muted-foreground text-center sm:text-left">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="text-xs sm:text-sm">{location}</span>
                 </div>
               )}
-              {userProfile?.location && (
-                <div className="flex items-center mt-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{userProfile.location}</span>
-                </div>
-              )}
-              <div className="flex items-center mt-1 text-muted-foreground">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span className="text-sm">
-                  Membre depuis {formatDate(userProfile?.createdAt)}
+              <div className="flex items-center justify-center sm:justify-start mt-1 text-muted-foreground text-center sm:text-left">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <span className="text-xs sm:text-sm">
+                  Membre depuis {formatDate(createdAt)}
                 </span>
               </div>
-              {userProfile?.co2Saved && userProfile.co2Saved > 0 && (
-                <div className="flex items-center mt-1 text-green-600">
-                  <Leaf className="h-4 w-4 mr-1" />
-                  <span className="text-sm font-medium">
-                    {userProfile.co2Saved} kg CO₂ économisés
+              {co2Saved && co2Saved > 0 && (
+                <div className="flex items-center justify-center sm:justify-start mt-1 text-green-600 text-center sm:text-left">
+                  <Leaf className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="text-xs sm:text-sm font-medium">
+                    {co2Saved} kg CO₂ économisés
                   </span>
                 </div>
               )}
@@ -423,74 +685,74 @@ export const ProfilePage: React.FC = () => {
       </Card>
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center space-x-2">
-              <Package className="h-5 w-5 text-blue-600" />
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg sm:text-2xl font-bold">
                   {loading.listings ? (
-                    <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.totalListings
                   )}
                 </p>
-                <p className="text-sm text-muted-foreground">Annonces totales</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Annonces totales</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg sm:text-2xl font-bold">
                   {loading.listings ? (
-                    <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.activeListings
                   )}
                 </p>
-                <p className="text-sm text-muted-foreground">Annonces actives</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Annonces actives</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center space-x-2">
-              <Star className="h-5 w-5 text-yellow-600" />
+              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg sm:text-2xl font-bold">
                   {loading.reviews ? (
-                    <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.averageRating || '—'
                   )}
                 </p>
-                <p className="text-sm text-muted-foreground">Note moyenne</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Note moyenne</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center space-x-2">
-              <Heart className="h-5 w-5 text-red-600" />
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg sm:text-2xl font-bold">
                   {loading.favorites ? (
-                    <div className="h-8 w-8 bg-muted animate-pulse rounded" />
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.totalFavorites
                   )}
                 </p>
-                <p className="text-sm text-muted-foreground">Favoris</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Favoris</p>
               </div>
             </div>
           </CardContent>
@@ -499,33 +761,41 @@ export const ProfilePage: React.FC = () => {
 
       {/* Contenu des onglets */}
       <Tabs defaultValue="listings" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="listings" className="flex items-center gap-2">
-            <Package className="w-4 h-4" />
-            Mes Annonces
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4">
+          <TabsTrigger value="listings" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Mes Annonces</span>
+            <span className="sm:hidden">Annonces</span>
             {!loading.listings && stats.totalListings > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge variant="secondary" className="ml-1 text-[8px] sm:text-[10px] px-1 py-0.5">
                 {stats.totalListings}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="flex items-center gap-2">
-            <Star className="w-4 h-4" />
-            Avis Reçus
+          <TabsTrigger value="reviews" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Star className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Avis Reçus</span>
+            <span className="sm:hidden">Avis</span>
             {!loading.reviews && stats.totalReviews > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge variant="secondary" className="ml-1 text-[8px] sm:text-[10px] px-1 py-0.5">
                 {stats.totalReviews}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="favorites" className="flex items-center gap-2">
-            <Heart className="w-4 h-4" />
-            Favoris
+          <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm">
+            <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Favoris</span>
+            <span className="sm:hidden">Favoris</span>
             {!loading.favorites && stats.totalFavorites > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge variant="secondary" className="ml-1 text-[8px] sm:text-[10px] px-1 py-0.5">
                 {stats.totalFavorites}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-1 text-xs sm:text-sm">
+            <User className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Paramètres</span>
+            <span className="sm:hidden">Paramètres</span>
           </TabsTrigger>
         </TabsList>
 
@@ -562,7 +832,7 @@ export const ProfilePage: React.FC = () => {
                     Vous n'avez pas encore publié d'annonces.
                   </p>
                   <Button asChild>
-                    <a href="/create">Publier ma première annonce</a>
+                    <Link to="/create">Publier ma première annonce</Link>
                   </Button>
                 </div>
               ) : (
@@ -630,13 +900,106 @@ export const ProfilePage: React.FC = () => {
                           {formatDate(review.createdAt)}
                         </span>
                       </div>
-                      <p className="text-foreground mb-3 leading-relaxed">{review.comment}</p>
+                      <p className="text-foreground mb-3 leading-relaxed text-left">{review.comment}</p>
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>Par {review.reviewerName || 'Utilisateur anonyme'}</span>
+                        <span className="flex items-center gap-2 font-medium">
+                          {reviewerProfiles[review.reviewerId]?.photoURL && (
+                            <img src={reviewerProfiles[review.reviewerId].photoURL} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
+                          )}
+                          {review.reviewerId === currentUser.uid
+                            ? (userProfile?.displayName || 'Vous')
+                            : reviewerProfiles[review.reviewerId]?.displayName
+                              ? reviewerProfiles[review.reviewerId].displayName
+                              : <span className="inline-block bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">Profil supprimé</span>
+                          }
+                        </span>
                         <Badge variant="outline" className="text-xs">
                           {review.reviewType === 'buyer' ? 'Acheteur' : 'Vendeur'}
                         </Badge>
                       </div>
+
+                      {/* Interactions */}
+                      <div className="mt-3 flex items-center gap-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`flex items-center gap-1 ${review.likes?.includes(currentUser?.uid || '') ? 'text-primary' : ''}`}
+                          onClick={() => handleLike(review.id)}
+                        >
+                          <ThumbsUp className="w-4 h-4" />
+                          <span>{review.likes?.length || 0}</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`flex items-center gap-1 ${review.dislikes?.includes(currentUser?.uid || '') ? 'text-destructive' : ''}`}
+                          onClick={() => handleDislike(review.id)}
+                        >
+                          <ThumbsDown className="w-4 h-4" />
+                          <span>{review.dislikes?.length || 0}</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => setReplyingTo(replyingTo === review.id ? null : review.id)}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Répondre</span>
+                        </Button>
+                      </div>
+
+                      {/* Reply form */}
+                      {replyingTo === review.id && (
+                        <div className="mt-3 space-y-2">
+                          <Textarea
+                            placeholder="Votre réponse..."
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            className="min-h-[80px]"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setReplyingTo(null);
+                                setReplyText('');
+                              }}
+                            >
+                              Annuler
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleReply(review.id)}
+                              disabled={!replyText.trim()}
+                            >
+                              Envoyer
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Replies */}
+                      {review.replies && review.replies.length > 0 && (
+                        <div className="mt-4 space-y-3 pl-4 border-l-2 border-muted">
+                          {review.replies.map((reply, index) => (
+                            <div key={index} className="text-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium">
+                                  {isOwnProfile && reply.userId === currentUser?.uid
+                                    ? 'Vous'
+                                    : reviewerProfiles[reply.userId]?.displayName || 'Utilisateur'}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDate(reply.createdAt)}
+                                </span>
+                              </div>
+                              <p className="text-muted-foreground text-left">{reply.comment}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -678,7 +1041,7 @@ export const ProfilePage: React.FC = () => {
                     Vous n'avez pas encore d'annonces favorites. Explorez les annonces et ajoutez-les à vos favoris !
                   </p>
                   <Button asChild>
-                    <a href="/listings">Explorer les annonces</a>
+                    <Link to="/create">Publier ma première annonce</Link>
                   </Button>
                 </div>
               ) : (
@@ -688,6 +1051,28 @@ export const ProfilePage: React.FC = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Paramètres du profil</CardTitle>
+              <CardDescription>Modifie tes informations principales.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 mb-2">
+                <div className="flex-1">
+                  <Label htmlFor="firstName">Prénom</Label>
+                  <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="lastName">Nom</Label>
+                  <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} autoComplete="family-name" />
+                </div>
+              </div>
+              <Button onClick={handleSaveName} disabled={!firstName || !lastName}>Enregistrer</Button>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Fonction helper pour vérifier les types d'images
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|jpg|png|webp|gif)');
+    }
+    
+    // Fonction helper pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction helper pour vérifier la propriété
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // User profile photos
+    match /users/{userId}/{fileName} {
+      allow read: if true; // Photos publiques pour affichage
+      allow write: if isOwner(userId)
+                   && isImage()
+                   && request.resource.size < 5 * 1024 * 1024 // 5MB max
+                   && fileName.matches('^profile_[0-9]+\\.(jpg|jpeg|png|webp)$');
+      allow delete: if isOwner(userId);
+    }
+    
+    // Listing images
+    match /listings/{listingId}/{fileName} {
+      allow read: if true; // Images publiques
+      allow write: if isAuthenticated()
+                   && isImage()
+                   && request.resource.size < 10 * 1024 * 1024 // 10MB max
+                   && fileName.matches('^image_[0-9]+_[0-9]+\\.(jpg|jpeg|png|webp)$');
+      // Note: La validation de propriété pour les listings nécessiterait 
+      // une requête Firestore, donc on vérifie juste l'authentification
+    }
+    
+    // User documents (pour vérification d'identité étudiante)
+    match /documents/{userId}/{fileName} {
+      allow read, write: if isOwner(userId)
+                         && request.resource.size < 20 * 1024 * 1024 // 20MB max
+                         && (fileName.matches('.*\\.(pdf|jpg|jpeg|png)$'));
+      allow delete: if isOwner(userId);
+    }
+    
+    // Temporary uploads (pour traitement côté serveur)
+    match /temp/{userId}/{fileName} {
+      allow write: if isOwner(userId)
+                   && request.resource.size < 50 * 1024 * 1024 // 50MB max
+                   && request.resource.metadata.keys().hasAny(['temporary']);
+      allow read, delete: if isOwner(userId);
+    }
+    
+    // Default rule - deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

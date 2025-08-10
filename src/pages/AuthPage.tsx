@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, User, Loader2, GraduationCap, Shield, MapPin, CheckCircle, AlertCircle, School } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, GraduationCap, Shield, AlertCircle, School } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,8 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { auth, db } from "../lib/firebase";
+import { createUserWithEmailAndPassword, reload, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { auth, db, emailConfig } from "../lib/firebase";
+// import { EmailVerificationModal } from "@/components/ui/EmailVerificationModal";
 
 const signInSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -23,11 +24,13 @@ const signInSchema = z.object({
 });
 
 const signUpSchema = z.object({
-  displayName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
+  lastName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  displayName: z.string().optional(),
   email: z.string().email('Email invalide').refine((email) => {
     // Check if email is from a university domain
     const universityDomains = [
-      'univ-', 'edu', 'ac.', 'student.', 'etudiant.', 'etu.',
+      'univ-', 'edu', 'gmail.com', 'ac.', 'student.', 'etudiant.', 'etu.',
       'sorbonne-universite.fr',
       'sorbonne-nouvelle.fr', 'dauphine.psl.eu', 'polytechnique.edu',
       'ens.fr', 'centralesupelec.fr', 'mines-paristech.fr'
@@ -35,20 +38,57 @@ const signUpSchema = z.object({
     return universityDomains.some(domain => email.includes(domain));
   }, 'Vous devez utiliser une adresse email universitaire'),
   university: z.string().min(1, 'Veuillez sélectionner votre université'),
+  otherUniversity: z.string().optional(),
   fieldOfStudy: z.string().min(1, 'Veuillez indiquer votre filière'),
+  otherFieldOfStudy: z.string().optional(),
   graduationYear: z.string().min(1, 'Veuillez indiquer votre année de diplôme'),
   password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
+}).refine((data) => {
+  if (data.university === 'Autre université') {
+    return !!data.otherUniversity && data.otherUniversity.trim().length > 1;
+  }
+  return true;
+}, {
+  message: 'Veuillez indiquer le nom de votre université',
+  path: ['otherUniversity'],
+}).refine((data) => {
+  if (data.fieldOfStudy === 'Autre') {
+    return !!data.otherFieldOfStudy && data.otherFieldOfStudy.trim().length > 1;
+  }
+  return true;
+}, {
+  message: 'Veuillez indiquer le nom de votre filière',
+  path: ['otherFieldOfStudy'],
 });
 
 // Schema pour compléter le profil après connexion Google
 const completeProfileSchema = z.object({
   university: z.string().min(1, 'Veuillez sélectionner votre université'),
+  otherUniversity: z.string().optional(),
   fieldOfStudy: z.string().min(1, 'Veuillez indiquer votre filière'),
+  otherFieldOfStudy: z.string().optional(),
   graduationYear: z.string().min(1, 'Veuillez indiquer votre année de diplôme'),
+  displayName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+}).refine((data) => {
+  if (data.university === 'Autre université') {
+    return !!data.otherUniversity && data.otherUniversity.trim().length > 1;
+  }
+  return true;
+}, {
+  message: 'Veuillez indiquer le nom de votre université',
+  path: ['otherUniversity'],
+}).refine((data) => {
+  if (data.fieldOfStudy === 'Autre') {
+    return !!data.otherFieldOfStudy && data.otherFieldOfStudy.trim().length > 1;
+  }
+  return true;
+}, {
+  message: 'Veuillez indiquer le nom de votre filière',
+  path: ['otherFieldOfStudy'],
 });
 
 type SignInFormData = z.infer<typeof signInSchema>;
@@ -105,10 +145,15 @@ export const AuthPage: React.FC = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [userEmail, setUserEmail] = useState('');
-  const [pendingUserData, setPendingUserData] = useState(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
-  const [googleUserData, setGoogleUserData] = useState(null);
-  const location = useLocation();
+  const [googleUserData, setGoogleUserData] = useState<{
+    email: string | null;
+    displayName: string | null;
+    photoURL: string | null;
+    uid: string;
+  } | null>(null);
+  // Modal supprimée: on n'utilise plus d'état pour l'affichage de modal de vérification
+  const navigate = useNavigate();
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -121,10 +166,14 @@ export const AuthPage: React.FC = () => {
   const signUpForm = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
+      firstName: '',
+      lastName: '',
       displayName: '',
       email: '',
       university: '',
+      otherUniversity: '',
       fieldOfStudy: '',
+      otherFieldOfStudy: '',
       graduationYear: '',
       password: '',
       confirmPassword: '',
@@ -140,76 +189,156 @@ export const AuthPage: React.FC = () => {
     },
   });
 
-  const from = location.state?.from?.pathname || '/';
-
   // Vérifier le profil utilisateur et gérer les redirections
   useEffect(() => {
     const checkUserProfile = async () => {
-      if (currentUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          
-          if (!userDoc.exists()) {
-            // Utilisateur sans profil - vérifier s'il vient de Google
-            if (currentUser.providerData.some(provider => provider.providerId === 'google.com')) {
-              // Vérifier si l'email Google est universitaire
-              if (!isUniversityEmail(currentUser.email || '')) {
-                setVerificationError('Vous devez utiliser une adresse email universitaire');
-                // Déconnecter l'utilisateur
-                auth.signOut();
-                return;
-              }
-              
-              // Stocker les données Google et demander de compléter le profil
-              setGoogleUserData({
-                email: currentUser.email,
-                displayName: currentUser.displayName,
-                photoURL: currentUser.photoURL,
-                uid: currentUser.uid
-              });
-              setShowCompleteProfile(true);
+      if (!currentUser) {
+        setShowCompleteProfile(false);
+        setGoogleUserData(null);
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        
+        if (!userDoc.exists()) {
+          // Utilisateur sans profil - vérifier s'il vient de Google
+          if (currentUser.providerData.some(provider => provider.providerId === 'google.com')) {
+            // Vérifier si l'email Google est universitaire
+            if (!isUniversityEmail(currentUser.email || '')) {
+              setVerificationError('Vous devez utiliser une adresse email universitaire');
+              // Déconnecter l'utilisateur
+              auth.signOut();
               return;
             }
             
-            // Vérifier s'il y a des données en attente (inscription email)
-            const pendingData = localStorage.getItem('pendingUserData');
-            if (pendingData && currentUser.emailVerified) {
+            // Stocker les données Google et demander de compléter le profil
+            setGoogleUserData({
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              photoURL: currentUser.photoURL,
+              uid: currentUser.uid
+            });
+            setShowCompleteProfile(true);
+            return;
+          }
+          
+          // Vérifier s'il y a des données en attente (inscription email)
+          const pendingData = localStorage.getItem('pendingUserData');
+          const pendingEmail = localStorage.getItem('pendingUserEmail');
+          
+          if (pendingData && pendingEmail === currentUser.email && currentUser.emailVerified) {
+            try {
               const userData = JSON.parse(pendingData);
+              const cleanData = Object.fromEntries(Object.entries(userData).filter(([, v]) => v !== undefined));
+              
+              // Sauvegarder le profil complet
               await setDoc(doc(db, 'users', currentUser.uid), {
-                ...userData,
+                ...cleanData,
                 emailVerified: true,
+                profileCompleted: true
               });
+              
+              // Nettoyer le localStorage
               localStorage.removeItem('pendingUserData');
               localStorage.removeItem('pendingUserEmail');
+              
+              // Rediriger vers le site principal
+              window.location.reload();
+            } catch (error) {
+              console.error('Error saving pending user data:', error);
+              setVerificationError('Erreur lors de la sauvegarde du profil');
             }
-          } else {
-            // Utilisateur avec profil existant
-            const userData = userDoc.data();
-            
-            // Vérifier si l'utilisateur a un email vérifié ou vient de Google
-            const isEmailVerified = currentUser.emailVerified || 
-              currentUser.providerData.some(provider => provider.providerId === 'google.com');
-            
-            if (!isEmailVerified && !userData.emailVerified) {
-              // Email non vérifié - renvoyer vers l'écran de vérification
-              setUserEmail(currentUser.email || '');
-              setEmailSent(true);
+          } else if (pendingData && pendingEmail === currentUser.email && !currentUser.emailVerified) {
+            // Email non vérifié - afficher l'écran de vérification
+            setUserEmail(currentUser.email || '');
+            setEmailSent(true);
+            setShowCompleteProfile(false);
+          }
+        } else {
+          // Utilisateur avec profil existant
+          const userData = userDoc.data();
+
+          // Si des données d'inscription sont en attente et que l'email est désormais vérifié,
+          // fusionner ces données dans le profil existant (corrige le profil vide après inscription)
+          try {
+            const pendingData = localStorage.getItem('pendingUserData');
+            const pendingEmail = localStorage.getItem('pendingUserEmail');
+            if (pendingData && pendingEmail === currentUser.email && currentUser.emailVerified) {
+              const raw = JSON.parse(pendingData);
+              const cleanData = Object.fromEntries(
+                Object.entries(raw).filter(([, v]) => v !== undefined)
+              );
+              await setDoc(
+                doc(db, 'users', currentUser.uid),
+                {
+                  ...cleanData,
+                  emailVerified: true,
+                  profileCompleted: true,
+                },
+                { merge: true }
+              );
+              localStorage.removeItem('pendingUserData');
+              localStorage.removeItem('pendingUserEmail');
+              // Recharger pour refléter immédiatement le profil complet dans tout le site
+              window.location.reload();
               return;
             }
+          } catch (e) {
+            console.error('Error merging pending data into existing profile:', e);
           }
-        } catch (error) {
-          console.error('Error checking user profile:', error);
+
+          // Vérifier si l'utilisateur a un email vérifié ou vient de Google
+          const isEmailVerified = currentUser.emailVerified ||
+            currentUser.providerData.some(provider => provider.providerId === 'google.com');
+          
+          if (!isEmailVerified && !userData.emailVerified) {
+            // Email non vérifié - renvoyer vers l'écran de vérification
+            setUserEmail(currentUser.email || '');
+            setEmailSent(true);
+            setShowCompleteProfile(false);
+          } else {
+            setShowCompleteProfile(false);
+          }
         }
+      } catch (error) {
+        console.error('Error checking user profile:', error);
+        
+        setShowCompleteProfile(false);
       }
     };
 
     checkUserProfile();
   }, [currentUser]);
 
-  // Redirection si l'utilisateur est connecté et vérifié
-  if (currentUser && !showCompleteProfile && !emailSent) {
-    return <Navigate to={from} replace />;
-  }
+  // Modal supprimée: plus de gestion/polling spécifique à la modale
+
+  // Polling supplémentaire pour l'écran de confirmation d'email
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (emailSent && currentUser && !currentUser.emailVerified) {
+      interval = setInterval(async () => {
+        try {
+          await reload(currentUser);
+          if (currentUser.emailVerified) {
+            setEmailSent(false);
+            setUserEmail('');
+            setVerificationError('');
+            
+            // Rediriger vers le site principal
+            window.location.reload();
+          }
+        } catch (error) {
+          console.error('Error checking email verification:', error);
+        }
+      }, 5000); // Polling toutes les 5 secondes
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [emailSent, currentUser]);
 
   // Écran pour compléter le profil après connexion Google
   if (showCompleteProfile && googleUserData) {
@@ -231,7 +360,7 @@ export const AuthPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert>
-              <CheckCircle className="h-4 w-4" />
+              <School className="h-4 w-4" />
               <AlertDescription>
                 Connecté avec <strong>{googleUserData.email}</strong>
               </AlertDescription>
@@ -248,13 +377,17 @@ export const AuthPage: React.FC = () => {
               setLoading(true);
               setVerificationError('');
               try {
-                // Créer le profil utilisateur complet
+                const universityToSave = data.university === 'Autre université' ? data.otherUniversity : data.university;
+                const fieldOfStudyToSave = data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : data.fieldOfStudy;
+                const cleanData = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
                 await setDoc(doc(db, 'users', googleUserData.uid), {
                   email: googleUserData.email,
-                  displayName: googleUserData.displayName,
+                  displayName: cleanData.displayName,
                   photoURL: googleUserData.photoURL,
-                  university: data.university,
-                  fieldOfStudy: data.fieldOfStudy,
+                  university: universityToSave,
+                  otherUniversity: data.university === 'Autre université' ? data.otherUniversity : null,
+                  fieldOfStudy: fieldOfStudyToSave,
+                  otherFieldOfStudy: data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : null,
                   graduationYear: parseInt(data.graduationYear),
                   createdAt: new Date().toISOString(),
                   emailVerified: true,
@@ -262,9 +395,14 @@ export const AuthPage: React.FC = () => {
                   provider: 'google',
                   profileCompleted: true
                 });
-
-                // Rediriger vers l'application
-                setShowCompleteProfile(false);
+                if (currentUser && googleUserData.displayName) {
+                  try {
+                    await updateProfile(currentUser, { displayName: cleanData.displayName });
+                  } catch (error) {
+                    console.error('Error updating profile:', error);
+                  }
+                }
+                window.location.reload(); // Force le menu à se rafraîchir
               } catch (error) {
                 console.error('Error completing profile:', error);
                 setVerificationError('Erreur lors de la sauvegarde du profil');
@@ -275,7 +413,7 @@ export const AuthPage: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="university">Université</Label>
-                <Select onValueChange={(value) => completeProfileForm.setValue('university', value)}>
+                <Select onValueChange={(value) => completeProfileForm.setValue('university', value)} value={completeProfileForm.watch('university')}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionnez votre université" />
                   </SelectTrigger>
@@ -287,9 +425,23 @@ export const AuthPage: React.FC = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                {completeProfileForm.watch('university') === 'Autre université' && (
+                  <Input
+                    id="otherUniversity"
+                    type="text"
+                    placeholder="Nom de votre université"
+                    {...completeProfileForm.register('otherUniversity')}
+                    className="mt-2"
+                  />
+                )}
                 {completeProfileForm.formState.errors.university && (
                   <p className="text-sm text-destructive">
                     {completeProfileForm.formState.errors.university.message}
+                  </p>
+                )}
+                {completeProfileForm.watch('university') === 'Autre université' && completeProfileForm.formState.errors.otherUniversity && (
+                  <p className="text-sm text-destructive">
+                    {completeProfileForm.formState.errors.otherUniversity.message}
                   </p>
                 )}
               </div>
@@ -297,7 +449,7 @@ export const AuthPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fieldOfStudy">Filière</Label>
-                  <Select onValueChange={(value) => completeProfileForm.setValue('fieldOfStudy', value)}>
+                  <Select onValueChange={(value) => completeProfileForm.setValue('fieldOfStudy', value)} value={completeProfileForm.watch('fieldOfStudy')}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filière" />
                     </SelectTrigger>
@@ -309,9 +461,23 @@ export const AuthPage: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {completeProfileForm.watch('fieldOfStudy') === 'Autre' && (
+                    <Input
+                      id="otherFieldOfStudy"
+                      type="text"
+                      placeholder="Nom de votre filière"
+                      {...completeProfileForm.register('otherFieldOfStudy')}
+                      className="mt-2"
+                    />
+                  )}
                   {completeProfileForm.formState.errors.fieldOfStudy && (
                     <p className="text-sm text-destructive">
                       {completeProfileForm.formState.errors.fieldOfStudy.message}
+                    </p>
+                  )}
+                  {completeProfileForm.watch('fieldOfStudy') === 'Autre' && completeProfileForm.formState.errors.otherFieldOfStudy && (
+                    <p className="text-sm text-destructive">
+                      {completeProfileForm.formState.errors.otherFieldOfStudy.message}
                     </p>
                   )}
                 </div>
@@ -367,7 +533,7 @@ export const AuthPage: React.FC = () => {
     );
   }
 
-  // Écran de confirmation d'envoi d'email après inscription
+  // Écran de confirmation d'envoi d'email après inscription (vue pleine page)
   if (emailSent) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-8">
@@ -382,36 +548,28 @@ export const AuthPage: React.FC = () => {
               Vérifiez votre email
             </CardTitle>
             <CardDescription>
-              Un lien d'activation a été envoyé
+              Un lien d'activation a été envoyé à <strong>{userEmail}</strong>.<br/>
+              Cliquez sur le lien pour activer votre compte.<br/>
+              <span className="text-xs text-muted-foreground">(Vous pouvez fermer cette page et revenir après avoir validé l'email)</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Nous avons envoyé un lien d'activation à <strong>{userEmail}</strong>. 
-                Cliquez sur le lien pour activer votre compte.
-              </AlertDescription>
-            </Alert>
-            
             <div className="text-sm text-muted-foreground space-y-2">
               <p><strong>Important :</strong></p>
               <p>• Cliquez sur le lien dans l'email pour activer votre compte</p>
               <p>• Vérifiez votre boîte de réception et vos spams</p>
               <p>• Le lien expire dans 24h</p>
             </div>
-
             <Button
               onClick={async () => {
                 if (!currentUser) return;
-                
                 setLoading(true);
                 try {
-                  await sendEmailVerification(currentUser);
+                  await sendEmailVerification(currentUser, emailConfig.actionCodeSettings);
                   setVerificationError('');
-                  alert('Email d\'activation renvoyé !');
+                  alert("Email d'activation renvoyé !");
                 } catch (error) {
-                  setVerificationError('Erreur lors de l\'envoi de l\'email');
+                  setVerificationError("Erreur lors de l'envoi de l'email");
                   console.error('Error resending verification:', error);
                 }
                 setLoading(false);
@@ -427,20 +585,42 @@ export const AuthPage: React.FC = () => {
               )}
               Renvoyer l'email d'activation
             </Button>
-
+            <Button
+              onClick={async () => {
+                if (!currentUser) return;
+                setLoading(true);
+                try {
+                  await reload(currentUser);
+                  if (currentUser.emailVerified) {
+                    setEmailSent(false);
+                    setUserEmail('');
+                    setVerificationError('');
+                    window.location.reload();
+                  } else {
+                    setVerificationError("L'email n'est pas encore validé. Pensez à vérifier vos spams.");
+                  }
+                } catch {
+                  setVerificationError("Erreur lors de la vérification de l'état de l'email");
+                }
+                setLoading(false);
+              }}
+              variant="secondary"
+              className="w-full"
+              disabled={loading || !currentUser}
+            >
+              J'ai déjà validé mon email
+            </Button>
             {verificationError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{verificationError}</AlertDescription>
               </Alert>
             )}
-
             <Button
               variant="link"
               onClick={() => {
                 setEmailSent(false);
                 setUserEmail('');
-                setPendingUserData(null);
                 setVerificationError('');
                 if (currentUser) {
                   auth.signOut();
@@ -461,18 +641,21 @@ export const AuthPage: React.FC = () => {
     setVerificationError('');
     try {
       await signIn(data.email, data.password);
-      // La redirection sera gérée par le useEffect qui surveille currentUser
-    } catch (error: any) {
-      if (error.code === 'auth/invalid-credential') {
+      navigate('/');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      const errorCode = (error as { code?: string })?.code;
+      
+      if (errorCode === 'auth/invalid-credential') {
         setVerificationError('Email ou mot de passe incorrect');
-      } else if (error.code === 'auth/user-not-found') {
+      } else if (errorCode === 'auth/user-not-found') {
         setVerificationError('Aucun compte trouvé avec cet email');
-      } else if (error.code === 'auth/user-disabled') {
+      } else if (errorCode === 'auth/user-disabled') {
         setVerificationError('Ce compte a été désactivé');
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (errorCode === 'auth/too-many-requests') {
         setVerificationError('Trop de tentatives. Réessayez plus tard.');
       } else {
-        setVerificationError('Erreur de connexion: ' + (error.message || 'Erreur inconnue'));
+        setVerificationError('Erreur de connexion: ' + errorMessage);
       }
       console.error('Sign in error:', error);
     } finally {
@@ -483,53 +666,61 @@ export const AuthPage: React.FC = () => {
   const handleSignUp = async (data: SignUpFormData) => {
     setLoading(true);
     setVerificationError('');
+    
     try {
-      // Créer l'utilisateur avec Firebase Auth
+      // 1. Création du compte Firebase
+      const { firstName, lastName } = data;
+      const displayName = `${firstName} ${lastName}`;
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
-
-      // Stocker les données utilisateur en attendant la vérification
-      const userData = {
-        displayName: data.displayName,
-        university: data.university,
-        fieldOfStudy: data.fieldOfStudy,
+      
+      // 2. Envoi automatique de l'email de vérification via Firebase
+      await sendEmailVerification(user, emailConfig.actionCodeSettings);
+      
+      // 3. Préparation des données utilisateur
+      const universityToSave = data.university === 'Autre université' ? data.otherUniversity : data.university;
+      const fieldOfStudyToSave = data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : data.fieldOfStudy;
+      
+      const userDataToSave = {
+        firstName, lastName, displayName,
+        university: universityToSave,
+        otherUniversity: data.university === 'Autre université' ? data.otherUniversity : null,
+        fieldOfStudy: fieldOfStudyToSave,
+        otherFieldOfStudy: data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : null,
         graduationYear: parseInt(data.graduationYear),
         email: data.email,
         createdAt: new Date().toISOString(),
-        emailVerified: false,
+        emailVerified: false, // Changé à false car l'email n'est pas encore vérifié
         isStudent: true,
         provider: 'email'
       };
-
-      // Créer le document utilisateur dans Firestore
-      await setDoc(doc(db, 'users', user.uid), userData);
-
-      // Envoyer l'email de vérification
-      await sendEmailVerification(user, {
-        url: `${window.location.origin}/auth`,
-        handleCodeInApp: false
-      });
       
-      // Stocker les données temporairement
-      localStorage.setItem('pendingUserData', JSON.stringify(userData));
+      // 4. Stockage temporaire des données en localStorage
+      localStorage.setItem('pendingUserData', JSON.stringify(userDataToSave));
       localStorage.setItem('pendingUserEmail', data.email);
       
-      setPendingUserData(userData);
+      // 5. Mise à jour du profil Firebase
+      if (user) {
+        await updateProfile(user, { displayName: displayName });
+      }
+      
+      // 6. Affichage de l'écran de vérification (vue pleine page)
       setUserEmail(data.email);
       setEmailSent(true);
       
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      
-      if (error.code === 'auth/email-already-in-use') {
+    } catch (error: unknown) {
+      // Gestion des erreurs
+      const errorCode = (error as { code?: string })?.code;
+      if (errorCode === 'auth/email-already-in-use') {
         setVerificationError('Cette adresse email est déjà utilisée');
-      } else if (error.code === 'auth/weak-password') {
+      } else if (errorCode === 'auth/weak-password') {
         setVerificationError('Le mot de passe est trop faible');
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (errorCode === 'auth/invalid-email') {
         setVerificationError('Adresse email invalide');
       } else {
         setVerificationError('Erreur lors de la création du compte');
       }
+      console.error('Sign up error:', error);
     } finally {
       setLoading(false);
     }
@@ -541,15 +732,18 @@ export const AuthPage: React.FC = () => {
     try {
       await signInWithGoogle();
       // La gestion sera faite dans le useEffect
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      const errorCode = (error as { code?: string })?.code;
+      
+      if (errorCode === 'auth/popup-closed-by-user') {
         setVerificationError('Connexion annulée');
-      } else if (error.code === 'auth/popup-blocked') {
+      } else if (errorCode === 'auth/popup-blocked') {
         setVerificationError('Popup bloquée par le navigateur');
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
+      } else if (errorCode === 'auth/account-exists-with-different-credential') {
         setVerificationError('Un compte existe déjà avec cet email');
       } else {
-        setVerificationError('Erreur de connexion avec Google: ' + (error.message || 'Erreur inconnue'));
+        setVerificationError('Erreur de connexion avec Google: ' + errorMessage);
       }
       console.error('Google sign in error:', error);
     } finally {
@@ -557,35 +751,40 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-white" />
+    <div className="min-h-screen flex items-center justify-center px-2 sm:px-4 py-4 sm:py-8 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <Card className="w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto">
+        <CardHeader className="text-center space-y-2 sm:space-y-4">
+          <div className="flex justify-center">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">
-            {isSignUp ? 'Rejoindre StudyMarket' : 'Se connecter'}
-          </CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl lg:text-3xl">
             {isSignUp 
-              ? 'Inscription sécurisée pour étudiants' 
+              ? 'Rejoindre StudyMarket'
+              : 'Connectez-vous à votre compte étudiant'
+            }
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base">
+            {isSignUp 
+              ? 'Créez votre compte étudiant vérifié et rejoignez la communauté'
               : 'Connectez-vous à votre compte étudiant'
             }
           </CardDescription>
           
           {isSignUp && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            <div className="flex items-center justify-center gap-2 mt-2 sm:mt-4">
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs sm:text-sm">
                 <Shield className="w-3 h-3 mr-1" />
                 Email universitaire requis
               </Badge>
             </div>
           )}
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6">
           {/* Affichage des erreurs */}
           {verificationError && (
             <Alert variant="destructive">
@@ -623,7 +822,8 @@ export const AuthPage: React.FC = () => {
                 />
               </svg>
             )}
-            Continuer avec Google Éducation
+            <span className="hidden sm:inline">Continuer avec Google Éducation</span>
+            <span className="sm:hidden">Google Éducation</span>
           </Button>
 
           <div className="relative">
@@ -640,35 +840,33 @@ export const AuthPage: React.FC = () => {
           {/* Form */}
           <form onSubmit={isSignUp ? signUpForm.handleSubmit(handleSignUp) : signInForm.handleSubmit(handleSignIn)} className="space-y-4">
             {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Nom complet</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="displayName"
-                    type="text"
-                    placeholder="Votre nom complet"
-                    className="pl-10"
-                    {...signUpForm.register('displayName')}
-                  />
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="firstName" className="text-sm">Prénom</Label>
+                  <Input id="firstName" {...signUpForm.register('firstName')} autoComplete="given-name" className="text-sm" />
+                  {signUpForm.formState.errors.firstName && (
+                    <span className="text-red-500 text-xs">{signUpForm.formState.errors.firstName.message}</span>
+                  )}
                 </div>
-                {signUpForm.formState.errors.displayName && (
-                  <p className="text-sm text-destructive">
-                    {signUpForm.formState.errors.displayName.message}
-                  </p>
+                <div className="flex-1">
+                  <Label htmlFor="lastName" className="text-sm">Nom</Label>
+                  <Input id="lastName" {...signUpForm.register('lastName')} autoComplete="family-name" className="text-sm" />
+                  {signUpForm.formState.errors.lastName && (
+                    <span className="text-red-500 text-xs">{signUpForm.formState.errors.lastName.message}</span>
                 )}
+                </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email universitaire</Label>
+              <Label htmlFor="email" className="text-sm">Email universitaire</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="prenom.nom@univ-exemple.fr"
-                  className="pl-10"
+                  className="pl-10 text-sm"
                   {...(isSignUp ? signUpForm.register('email') : signInForm.register('email'))}
                 />
               </div>
@@ -687,9 +885,9 @@ export const AuthPage: React.FC = () => {
             {isSignUp && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="university">Université</Label>
-                  <Select onValueChange={(value) => signUpForm.setValue('university', value)}>
-                    <SelectTrigger>
+                  <Label htmlFor="university" className="text-sm">Université</Label>
+                  <Select onValueChange={(value) => signUpForm.setValue('university', value)} value={signUpForm.watch('university')}>
+                    <SelectTrigger className="text-sm">
                       <SelectValue placeholder="Sélectionnez votre université" />
                     </SelectTrigger>
                     <SelectContent>
@@ -700,19 +898,33 @@ export const AuthPage: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {signUpForm.watch('university') === 'Autre université' && (
+                    <Input
+                      id="otherUniversity"
+                      type="text"
+                      placeholder="Nom de votre université"
+                      {...signUpForm.register('otherUniversity')}
+                      className="mt-2 text-sm"
+                    />
+                  )}
                   {signUpForm.formState.errors.university && (
                     <p className="text-sm text-destructive">
                       {signUpForm.formState.errors.university.message}
                     </p>
                   )}
+                  {signUpForm.watch('university') === 'Autre université' && signUpForm.formState.errors.otherUniversity && (
+                    <p className="text-sm text-destructive">
+                      {signUpForm.formState.errors.otherUniversity.message}
+                    </p>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="fieldOfStudy">Filière</Label>
-                    <Select onValueChange={(value) => signUpForm.setValue('fieldOfStudy', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filière" />
+                    <Label htmlFor="fieldOfStudy" className="text-sm">Filière</Label>
+                    <Select onValueChange={(value) => signUpForm.setValue('fieldOfStudy', value)} value={signUpForm.watch('fieldOfStudy')}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Sélectionnez votre filière" />
                       </SelectTrigger>
                       <SelectContent>
                         {fieldsOfStudy.map((field) => (
@@ -722,18 +934,32 @@ export const AuthPage: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {signUpForm.watch('fieldOfStudy') === 'Autre' && (
+                      <Input
+                        id="otherFieldOfStudy"
+                        type="text"
+                        placeholder="Nom de votre filière"
+                        {...signUpForm.register('otherFieldOfStudy')}
+                        className="mt-2 text-sm"
+                      />
+                    )}
                     {signUpForm.formState.errors.fieldOfStudy && (
                       <p className="text-sm text-destructive">
                         {signUpForm.formState.errors.fieldOfStudy.message}
                       </p>
                     )}
+                    {signUpForm.watch('fieldOfStudy') === 'Autre' && signUpForm.formState.errors.otherFieldOfStudy && (
+                      <p className="text-sm text-destructive">
+                        {signUpForm.formState.errors.otherFieldOfStudy.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="graduationYear">Année de diplôme</Label>
-                    <Select onValueChange={(value) => signUpForm.setValue('graduationYear', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Année" />
+                    <Label htmlFor="graduationYear" className="text-sm">Année de diplôme</Label>
+                    <Select onValueChange={(value) => signUpForm.setValue('graduationYear', value)} value={signUpForm.watch('graduationYear')}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Sélectionnez votre année" />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 8 }, (_, i) => 2024 + i).map((year) => (
@@ -754,21 +980,21 @@ export const AuthPage: React.FC = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password" className="text-sm">Mot de passe</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="pl-10 pr-10"
+                  className="pl-10 text-sm"
                   {...(isSignUp ? signUpForm.register('password') : signInForm.register('password'))}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-0 top-1/2 transform -translate-y-1/2 h-full px-3"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -787,14 +1013,14 @@ export const AuthPage: React.FC = () => {
 
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                <Label htmlFor="confirmPassword" className="text-sm">Confirmer le mot de passe</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 text-sm"
                     {...signUpForm.register('confirmPassword')}
                   />
                 </div>
@@ -806,7 +1032,7 @@ export const AuthPage: React.FC = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90" disabled={loading}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-sm sm:text-base" disabled={loading}>
               {loading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : null}
@@ -814,15 +1040,16 @@ export const AuthPage: React.FC = () => {
             </Button>
           </form>
 
-          <div className="text-center">
+          <div className="w-full">
             <Button
               variant="link"
               onClick={() => setIsSignUp(!isSignUp)}
               disabled={loading}
+              className="w-full flex justify-center items-center text-center break-words px-1 text-sm sm:text-base"
             >
               {isSignUp
                 ? 'Déjà un compte ? Se connecter'
-                : 'Pas encore de compte ? Rejoindre la communauté'
+                : 'Pas encore de compte ? S\'inscrire'
               }
             </Button>
           </div>

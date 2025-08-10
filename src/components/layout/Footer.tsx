@@ -84,7 +84,7 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/listings?category=housing" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/housing" className="text-muted-foreground hover:text-primary transition-colors">
                   Logement & Colocation
                 </Link>
               </li>

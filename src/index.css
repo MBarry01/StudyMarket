@@ -49,7 +49,7 @@ button {
   background-color: transparent;
   cursor: pointer;
   transition: border-color 0.25s;
-  border-color: black;
+  border-color: tra;
 }
 button:hover {
   border-color: #646cff;
@@ -346,4 +346,64 @@ button:focus-visible {
 /* Background coloré pour sections spéciales */
 .bg-primary-subtle {
   background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--secondary) / 0.05) 100%);
+}
+
+/* Variables pour header responsive */
+:root {
+  --header-height: 3.5rem; /* 56px mobile */
+  --header-height-sm: 4rem; /* 64px desktop */
+}
+
+/* Main content spacing */
+main {
+  padding-top: calc(var(--header-height) + 0.5rem);
+}
+
+@media (min-width: 640px) {
+  main {
+    padding-top: calc(var(--header-height-sm) + 1rem);
+  }
+}
+
+/* Grid responsive utilitaire */
+.grid-responsive {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .grid-responsive {
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-responsive {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* Évite les débordements sur mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Input responsive - évite le zoom iOS */
+input, textarea, select {
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  input, textarea, select {
+    font-size: 0.875rem;
+  }
 }

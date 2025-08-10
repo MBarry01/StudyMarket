@@ -26,19 +26,11 @@ import {
   Heart,
   Star,
   Package,
-  CreditCard,
   HelpCircle,
   ExternalLink,
   CheckCircle,
-  X,
   Loader2,
-  Camera,
-  Calendar,
-  Building,
-  BookOpen,
-  Phone,
-  Home,
-  Briefcase
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,13 +213,13 @@ export const SettingsPage: React.FC = () => {
     try {
       await updateUserProfile({
         displayName: data.displayName,
-        bio: data.bio || null,
-        phone: data.phone || null,
+        bio: data.bio || undefined,
+        phone: data.phone || undefined,
         university: data.university,
         fieldOfStudy: data.fieldOfStudy,
         graduationYear: data.graduationYear,
-        campus: data.campus || null,
-        location: data.location || null,
+        campus: data.campus || undefined,
+        location: data.location || undefined,
       });
       toast.success('Profil mis à jour avec succès !');
     } catch (error) {
