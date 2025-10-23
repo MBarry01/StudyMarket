@@ -560,24 +560,43 @@ export const CreateListingPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <Label className="text-foreground">Modes de paiement acceptés *</Label>
+                    <Label className="text-foreground font-semibold mb-3 block">Modes de paiement acceptés *</Label>
                     <div className="grid grid-cols-2 gap-3 mt-2">
                       {paymentMethods.map((method) => (
-                        <div key={method.value} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={method.value}
-                            checked={selectedPaymentMethods.includes(method.value)}
-                            onCheckedChange={(checked) => handlePaymentMethodChange(method.value, checked as boolean)}
-                          />
-                          <Label htmlFor={method.value} className="flex items-center gap-2 cursor-pointer text-foreground">
-                            <method.icon className="w-4 h-4" />
-                            {method.label}
+                        <div 
+                          key={method.value} 
+                          className={`
+                            flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer
+                            ${selectedPaymentMethods.includes(method.value) 
+                              ? 'border-primary bg-primary/5 shadow-sm' 
+                              : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                            }
+                          `}
+                          onClick={() => handlePaymentMethodChange(method.value, !selectedPaymentMethods.includes(method.value))}
+                        >
+                          <div className={`
+                            w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+                            ${selectedPaymentMethods.includes(method.value)
+                              ? 'bg-primary border-primary'
+                              : 'border-gray-300 dark:border-gray-600'
+                            }
+                          `}>
+                            {selectedPaymentMethods.includes(method.value) && (
+                              <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M5 13l4 4L19 7"></path>
+                              </svg>
+                            )}
+                          </div>
+                          <Label htmlFor={method.value} className="flex items-center gap-2 cursor-pointer text-foreground flex-1">
+                            <method.icon className="w-5 h-5" />
+                            <span className="font-medium">{method.label}</span>
                           </Label>
                         </div>
                       ))}
                     </div>
                     {selectedPaymentMethods.length === 0 && (
-                      <p className="text-sm text-destructive mt-1">
+                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
                         Sélectionnez au moins un mode de paiement
                       </p>
                     )}
