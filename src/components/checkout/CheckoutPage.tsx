@@ -372,15 +372,30 @@ export const CheckoutPage: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 mt-4">
-                    <Checkbox 
-                      id="saveInfo" 
-                      checked={shippingInfo.saveInfo}
-                      onCheckedChange={(checked) => 
-                        setShippingInfo({...shippingInfo, saveInfo: checked as boolean})
+                  <div 
+                    className={`
+                      flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer mt-4
+                      ${shippingInfo.saveInfo 
+                        ? 'border-primary bg-primary/5 shadow-sm' 
+                        : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                       }
-                    />
-                    <Label htmlFor="saveInfo">
+                    `}
+                    onClick={() => setShippingInfo({...shippingInfo, saveInfo: !shippingInfo.saveInfo})}
+                  >
+                    <div className={`
+                      w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0
+                      ${shippingInfo.saveInfo
+                        ? 'bg-primary border-primary'
+                        : 'border-gray-300 dark:border-gray-600'
+                      }
+                    `}>
+                      {shippingInfo.saveInfo && (
+                        <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                          <path d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      )}
+                    </div>
+                    <Label htmlFor="saveInfo" className="cursor-pointer font-medium flex-1">
                       Sauvegarder ces informations pour mes prochaines commandes
                     </Label>
                   </div>
@@ -541,17 +556,34 @@ export const CheckoutPage: React.FC = () => {
                   
                   {/* Terms and Conditions */}
                   <div className="pt-4 border-t">
-                    <div className="flex items-start space-x-2">
-                      <Checkbox 
-                        id="terms" 
-                        checked={acceptTerms}
-                        onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                      />
-                      <div>
-                        <Label htmlFor="terms" className="font-medium">
+                    <div 
+                      className={`
+                        flex items-start space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer
+                        ${acceptTerms 
+                          ? 'border-primary bg-primary/5 shadow-sm' 
+                          : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                        }
+                      `}
+                      onClick={() => setAcceptTerms(!acceptTerms)}
+                    >
+                      <div className={`
+                        w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5
+                        ${acceptTerms
+                          ? 'bg-primary border-primary'
+                          : 'border-gray-300 dark:border-gray-600'
+                        }
+                      `}>
+                        {acceptTerms && (
+                          <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M5 13l4 4L19 7"></path>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor="terms" className="font-medium cursor-pointer block">
                           J'accepte les conditions générales de vente
                         </Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground mt-1">
                           En passant commande, vous acceptez nos conditions générales de vente et notre politique de confidentialité.
                         </p>
                       </div>
