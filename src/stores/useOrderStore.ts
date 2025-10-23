@@ -86,10 +86,11 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     try {
       set({ loading: true });
       
-      // Simple query without orderBy to avoid index requirements
+      // Query with orderBy - requires index: userId + createdAt (desc)
       const ordersQuery = query(
         collection(db, 'orders'),
         where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
         limit(100)
       );
       
@@ -106,8 +107,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         } as Order);
       });
       
-      // Sort client-side by creation date (most recent first)
-      orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      // No need to sort since we're using orderBy in the query
       
       set({ orders, loading: false });
       

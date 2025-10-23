@@ -26,6 +26,7 @@ interface ListingStore {
   loading: boolean;
   hasMore: boolean;
   lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+  error: string | null;
   
   // Actions
   fetchListings: (filters?: SearchFilters, refresh?: boolean) => Promise<void>;
@@ -146,13 +147,14 @@ export const useListingStore = create<ListingStore>((set, get) => ({
   loading: false,
   hasMore: true,
   lastDoc: null,
+  error: null,
 
   fetchListings: async (filters = {}, refresh = false) => {
     const { listings, lastDoc: currentLastDoc } = get();
     
     if (!refresh && !currentLastDoc) return;
     
-    set({ loading: true });
+    set({ loading: true, error: null });
 
     try {
       // Simple query without complex filtering to avoid index requirements
@@ -220,11 +222,13 @@ export const useListingStore = create<ListingStore>((set, get) => ({
         lastDoc: lastVisible,
         hasMore: snapshot.docs.length === 20,
         loading: false,
+        error: null,
       });
     } catch (error) {
       console.error('Error fetching listings:', error);
-      toast.error('Erreur lors du chargement des annonces');
-      set({ loading: false });
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error(`Erreur lors du chargement des annonces: ${errorMessage}`);
+      set({ loading: false, error: errorMessage });
     }
   },
 

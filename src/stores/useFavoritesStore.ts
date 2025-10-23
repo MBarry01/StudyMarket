@@ -81,6 +81,7 @@ export const useFavoritesStore = create<FavoritesStore>((set, get) => ({
       const favoritesQuery = query(
         collection(db, 'favorites'),
         where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
         limit(100)
       );
       
@@ -101,8 +102,7 @@ export const useFavoritesStore = create<FavoritesStore>((set, get) => ({
         favoriteIds.add(favorite.listingId);
       });
       
-      // Sort by creation date (most recent first)
-      favorites.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      // No need to sort since we're using orderBy in the query
       
       set({ 
         favorites, 

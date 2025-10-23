@@ -3,12 +3,18 @@ import { supabase, supabaseStatus } from './supabase';
 import toast from 'react-hot-toast';
 
 // Initialize Stripe with your publishable key
-const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51O5JqHLVDYKrxBIwIyiUQOmNk9HFZJKvBz6zJyRNBNjkKSGVEvZKEwlKnwL2JV8PmXVjWSHoZ9XQfKOiLkXGZ9Nh00wPxKdm9p';
-const stripePromise = loadStripe(stripeKey);
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+let stripePromise: Promise<any> | null = null;
+
+if (stripeKey && stripeKey !== 'your_stripe_publishable_key') {
+  stripePromise = loadStripe(stripeKey);
+} else {
+  console.warn('Stripe not configured. Payment functionality will be disabled.');
+}
 
 // Check if Stripe is properly configured
 export const stripeStatus = {
-  isConfigured: true, // Force to true for demo purposes
+  isConfigured: !!(stripeKey && stripeKey !== 'your_stripe_publishable_key'),
   key: stripeKey ? `${stripeKey.substring(0, 8)}...` : 'Non configuré'
 };
 

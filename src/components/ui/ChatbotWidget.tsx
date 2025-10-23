@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseStatus } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -179,7 +179,7 @@ const ChatbotWidget: React.FC = () => {
     setContactLoading(true);
     
     try {
-      // Appeler la Edge Function Supabase pour envoyer l'email et sauvegarder
+      // Appeler la fonction Edge pour envoyer l'email et sauvegarder
       const { data, error } = await supabase.functions.invoke('contact-email', {
         body: {
           name: contactForm.name,
@@ -194,8 +194,8 @@ const ChatbotWidget: React.FC = () => {
         throw error;
       }
 
-      if (data && !data.success) {
-        throw new Error(data.error || 'Erreur lors de l\'envoi');
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Erreur lors de l\'envoi');
       }
 
       setContactSuccess(true);
@@ -218,6 +218,16 @@ const ChatbotWidget: React.FC = () => {
 
   const handleContactFormChange = (field: keyof ContactForm, value: string) => {
     setContactForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Fonction utilitaire pour récupérer les messages sauvegardés (dev uniquement)
+  const getSavedContactMessages = () => {
+    if (process.env.NODE_ENV === 'development') {
+      const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+      console.log('Messages de contact sauvegardés:', messages);
+      return messages;
+    }
+    return [];
   };
 
   const openWidget = () => {
@@ -559,6 +569,18 @@ const ChatbotWidget: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
+        {/* Indicateur de mode fallback */}
+        {!supabaseStatus.isConfigured && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Mode hors ligne : votre message sera sauvegardé localement
+              </p>
+            </div>
+          </div>
+        )}
+        
         {contactSuccess ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-green-100 flex items-center justify-center mx-auto mb-4">

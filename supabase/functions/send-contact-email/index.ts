@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-client-version, x-client-name',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 
 serve(async (req) => {
@@ -33,14 +34,12 @@ serve(async (req) => {
 
     // Save to database
     const { data, error: dbError } = await supabase
-      .from('contact_messages')
+      .from('contact_logs')
       .insert([{
         name,
         email,
         subject,
-        message,
-        user_id,
-        status: 'nouveau'
+        message
       }])
       .select()
 
@@ -96,10 +95,22 @@ serve(async (req) => {
 </html>
     `.trim()
 
-    // Send email using Gmail SMTP
-    const gmailUser = Deno.env.get('GMAIL_USER') || 'barrymohamadou98@gmail.com'
-    const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD') || 'nxyq gklz yluz pebv'
-    const contactEmail = Deno.env.get('CONTACT_EMAIL') || 'barrymohamadou98@gmail.com'
+    // Send email using Gmail SMTP - SECURE CONFIGURATION
+    const gmailUser = Deno.env.get('GMAIL_USER')
+    const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD')
+    const contactEmail = Deno.env.get('CONTACT_EMAIL')
+    
+    // Validate required environment variables
+    if (!gmailUser || !gmailPassword || !contactEmail) {
+      console.error('Missing email configuration environment variables')
+      return new Response(
+        JSON.stringify({ error: 'Configuration email manquante' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
 
     // Use SMTPjs or similar service for sending email
     // For now, we'll use a webhook to a third-party service

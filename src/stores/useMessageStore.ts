@@ -185,10 +185,12 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     }
 
     try {
-      // Simple query without orderBy to avoid index requirements
+      // Query with orderBy - requires index: participants (array-contains) + updatedAt (desc)
       const q = query(
         collection(db, 'conversations'),
-        where('participants', 'array-contains', userId)
+        where('participants', 'array-contains', userId),
+        orderBy('updatedAt', 'desc'),
+        limit(50)
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -228,8 +230,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
           });
         });
 
-        // Sort by updatedAt in JavaScript
-        conversations.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        // No need to sort since we're using orderBy in the query
 
         set({ conversations, loading: false, unsubscribeConversations: unsubscribe });
       }, (error) => {
@@ -252,9 +253,11 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     }
 
     try {
-      // Simple query without orderBy to avoid index requirements
+      // Query with orderBy - requires index: conversationId + sentAt (asc)
       const q = query(
-        collection(db, 'conversations', conversationId, 'messages')
+        collection(db, 'conversations', conversationId, 'messages'),
+        orderBy('sentAt', 'asc'),
+        limit(100)
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -274,8 +277,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
           };
         });
 
-        // Sort messages by sentAt in JavaScript
-        messages.sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
+        // No need to sort since we're using orderBy in the query
 
         set({ messages, unsubscribeMessages: unsubscribe });
       }, (error) => {
