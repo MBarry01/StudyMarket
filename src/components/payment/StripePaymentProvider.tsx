@@ -1,53 +1,42 @@
-import React from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import React, { useMemo } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
-import { StripePaymentForm } from './StripePaymentForm';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-
-// Load Stripe outside of a component's render to avoid recreating the Stripe object on every render
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51O5JqHLVDYKrxBIwIyiUQOmNk9HFZJKvBz6zJyRNBNjkKSGVEvZKEwlKnwL2JV8PmXVjWSHoZ9XQfKOiLkXGZ9Nh00wPxKdm9p');
+import { getStripe, stripeOptions, stripeDarkOptions } from '../../lib/stripe';
+import { useTheme } from 'next-themes';
 
 interface StripePaymentProviderProps {
-  amount: number;
-  currency: string;
-  onPaymentSuccess: (paymentId: string) => void;
-  onPaymentError: (error: string) => void;
+  children: React.ReactNode;
+  clientSecret?: string;
+  amount?: number;
+  currency?: string;
 }
 
 export const StripePaymentProvider: React.FC<StripePaymentProviderProps> = ({
-  amount,
-  currency,
-  onPaymentSuccess,
-  onPaymentError
+  children,
+  clientSecret,
+  amount = 0,
+  currency = 'eur'
 }) => {
-  const options = {
-    appearance: {
-      theme: 'stripe',
-    },
-    locale: 'fr',
-  };
-
-  // Check if Stripe is properly initialized
-  if (!stripePromise) {
-    return (
-      <Alert className="border-yellow-200 bg-yellow-50">
-        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-        <AlertDescription className="text-yellow-800">
-          <strong>Configuration Stripe manquante</strong> - Veuillez configurer votre clé publique Stripe dans le fichier .env
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const { resolvedTheme } = useTheme();
+  
+  // Construire les options Elements correctement
+  const appearance = (resolvedTheme === 'dark' ? stripeDarkOptions : stripeOptions).appearance;
+  // IMPORTANT: Ne pas recréer l'objet options quand clientSecret est présent
+  const options = useMemo(() => {
+    if (clientSecret) {
+      return { clientSecret, appearance } as const;
+    }
+    return {
+      mode: 'payment' as const,
+      amount: Math.round((amount || 0) * 100),
+      currency: (currency || 'eur').toLowerCase(),
+      appearance,
+    } as const;
+  }, [clientSecret, resolvedTheme]);
 
   return (
-    <Elements stripe={stripePromise} options={options}>
-      <StripePaymentForm 
-        amount={amount}
-        currency={currency}
-        onPaymentSuccess={onPaymentSuccess}
-        onPaymentError={onPaymentError}
-      />
+    <Elements key={`${resolvedTheme}_${clientSecret ? `cs_${clientSecret.slice(-8)}` : 'deferred'}`}
+      stripe={getStripe()} options={options}>
+      {children}
     </Elements>
   );
 };

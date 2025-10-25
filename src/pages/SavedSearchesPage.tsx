@@ -842,10 +842,10 @@ export const SavedSearchesPage: React.FC = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-orange-600">{stats.newMatches}</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.newMatches}</p>
                 <p className="text-sm text-muted-foreground">Nouvelles</p>
               </div>
-              <Zap className="w-8 h-8 text-orange-600" />
+              <Zap className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -867,7 +867,7 @@ export const SavedSearchesPage: React.FC = () => {
             <Target className="w-4 h-4" />
             Correspondances
             {stats.newMatches > 0 && (
-              <Badge className="ml-1 bg-orange-500">
+              <Badge className="ml-1 bg-blue-500">
                 {stats.newMatches}
               </Badge>
             )}

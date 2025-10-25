@@ -55,6 +55,12 @@ export interface Listing {
   images: string[];
   tags: string[];
   
+  // Coordonnées et disponibilité
+  phone?: string;
+  availableDate?: string;
+  availableTimeStart?: string;
+  availableTimeEnd?: string;
+  
   // Location and campus
   location: {
     city: string;

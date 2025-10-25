@@ -61,7 +61,7 @@ export const SubscriptionStatus: React.FC = () => {
         );
       case 'past_due':
         return (
-          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
             <AlertTriangle className="w-3 h-3 mr-1" />
             Paiement en retard
           </Badge>
@@ -209,9 +209,9 @@ export const SubscriptionStatus: React.FC = () => {
         
         {/* Cancellation notice */}
         {subscription.cancel_at_period_end && (
-          <Alert className="bg-orange-50 border-orange-200">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
               Votre abonnement prendra fin le {formatDate(subscription.current_period_end)} et ne sera pas renouvelé.
             </AlertDescription>
           </Alert>

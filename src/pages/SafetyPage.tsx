@@ -128,7 +128,7 @@ const safetyTips = [
   {
     category: 'Communication',
     icon: MessageCircle,
-    color: 'text-orange-600',
+    color: 'text-blue-600',
     tips: [
       {
         title: 'Restez poli et respectueux',
@@ -224,7 +224,7 @@ const emergencyInfo = [
     description: 'Comportement suspect, arnaque, violation des règles',
     contact: 'Bouton "Signaler" dans l\'app',
     icon: Flag,
-    color: 'text-orange-600'
+    color: 'text-blue-600'
   },
   {
     title: 'Support StudyMarket',
@@ -308,10 +308,10 @@ export const SafetyPage: React.FC = () => {
         
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Star className="w-6 h-6 text-orange-600" />
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Star className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="text-2xl font-bold text-orange-600">4.9/5</div>
+            <div className="text-2xl font-bold text-blue-600">4.9/5</div>
             <div className="text-sm text-muted-foreground">Satisfaction sécurité</div>
           </CardContent>
         </Card>
@@ -344,7 +344,7 @@ export const SafetyPage: React.FC = () => {
                         ? 'border-green-200 bg-green-50' 
                         : tip.type === 'dont'
                         ? 'border-red-200 bg-red-50'
-                        : 'border-orange-200 bg-orange-50'
+                        : 'border-blue-200 bg-blue-50'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -353,7 +353,7 @@ export const SafetyPage: React.FC = () => {
                           ? 'text-green-600' 
                           : tip.type === 'dont'
                           ? 'text-red-600'
-                          : 'text-orange-600'
+                          : 'text-blue-600'
                       }`} />
                       <div>
                         <h4 className={`font-semibold mb-2 ${
@@ -361,7 +361,7 @@ export const SafetyPage: React.FC = () => {
                             ? 'text-green-800' 
                             : tip.type === 'dont'
                             ? 'text-red-800'
-                            : 'text-orange-800'
+                            : 'text-blue-800'
                         }`}>
                           {tip.title}
                         </h4>
@@ -370,7 +370,7 @@ export const SafetyPage: React.FC = () => {
                             ? 'text-green-700' 
                             : tip.type === 'dont'
                             ? 'text-red-700'
-                            : 'text-orange-700'
+                            : 'text-blue-700'
                         }`}>
                           {tip.description}
                         </p>
@@ -403,17 +403,17 @@ export const SafetyPage: React.FC = () => {
                 className={`p-4 rounded-lg border-2 ${
                   flag.severity === 'high' 
                     ? 'border-red-200 bg-red-50' 
-                    : 'border-orange-200 bg-orange-50'
+                    : 'border-blue-200 bg-blue-50'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <flag.icon className={`w-5 h-5 mt-0.5 ${
-                    flag.severity === 'high' ? 'text-red-600' : 'text-orange-600'
+                    flag.severity === 'high' ? 'text-red-600' : 'text-blue-600'
                   }`} />
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className={`font-semibold ${
-                        flag.severity === 'high' ? 'text-red-800' : 'text-orange-800'
+                        flag.severity === 'high' ? 'text-red-800' : 'text-blue-800'
                       }`}>
                         {flag.title}
                       </h4>
@@ -425,7 +425,7 @@ export const SafetyPage: React.FC = () => {
                       </Badge>
                     </div>
                     <p className={`text-sm ${
-                      flag.severity === 'high' ? 'text-red-700' : 'text-orange-700'
+                      flag.severity === 'high' ? 'text-red-700' : 'text-blue-700'
                     }`}>
                       {flag.description}
                     </p>
@@ -454,7 +454,7 @@ export const SafetyPage: React.FC = () => {
               <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                   info.color === 'text-red-600' ? 'bg-red-100' :
-                  info.color === 'text-orange-600' ? 'bg-orange-100' :
+                  info.color === 'text-blue-600' ? 'bg-blue-100' :
                   info.color === 'text-blue-600' ? 'bg-blue-100' :
                   'bg-green-100'
                 }`}>

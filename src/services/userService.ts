@@ -51,8 +51,11 @@ export class UserService {
       lastSeen: new Date(),
     };
     
+    // ✅ Fusionner avec TOUTES les données passées (firstName, lastName, otherUniversity, otherFieldOfStudy, etc.)
     await setDoc(userRef, {
       ...newUser,
+      ...userData, // Ajouter toutes les données supplémentaires
+      id: uid, // S'assurer que l'ID n'est pas écrasé
       createdAt: serverTimestamp(),
       lastSeen: serverTimestamp(),
     });
@@ -67,11 +70,36 @@ export class UserService {
       }
       
       const data = userDoc.data();
+      
+      // Gérer les dates qui peuvent être des strings, des Timestamps, ou des objets Date
+      let createdAt = new Date();
+      let lastSeen = new Date();
+      
+      if (data.createdAt) {
+        if (typeof data.createdAt === 'string') {
+          createdAt = new Date(data.createdAt);
+        } else if (data.createdAt.toDate && typeof data.createdAt.toDate === 'function') {
+          createdAt = data.createdAt.toDate();
+        } else if (data.createdAt instanceof Date) {
+          createdAt = data.createdAt;
+        }
+      }
+      
+      if (data.lastSeen) {
+        if (typeof data.lastSeen === 'string') {
+          lastSeen = new Date(data.lastSeen);
+        } else if (data.lastSeen.toDate && typeof data.lastSeen.toDate === 'function') {
+          lastSeen = data.lastSeen.toDate();
+        } else if (data.lastSeen instanceof Date) {
+          lastSeen = data.lastSeen;
+        }
+      }
+      
       return {
         ...data,
         id: uid,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        lastSeen: data.lastSeen?.toDate() || new Date(),
+        createdAt,
+        lastSeen,
       } as User;
     } catch (error) {
       console.error('Error getting user:', error);

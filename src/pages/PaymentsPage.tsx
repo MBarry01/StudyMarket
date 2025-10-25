@@ -223,7 +223,7 @@ export const PaymentsPage: React.FC = () => {
                 <p className="text-2xl font-bold">{stats.pendingRequests}</p>
                 <p className="text-sm text-muted-foreground">En attente</p>
               </div>
-              <Clock className="w-8 h-8 text-orange-600" />
+              <Clock className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>

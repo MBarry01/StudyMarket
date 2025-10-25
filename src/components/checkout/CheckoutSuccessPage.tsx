@@ -82,9 +82,9 @@ export const CheckoutSuccessPage: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
-          <Alert className="border-orange-200 bg-orange-50">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
+          <Alert className="border-blue-200 bg-blue-50">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
               Vous devez être connecté pour voir les détails de votre achat.
             </AlertDescription>
           </Alert>

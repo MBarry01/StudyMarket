@@ -49,22 +49,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingUser = await UserService.getUser(user.uid);
       
       if (!existingUser) {
-        // Créer un nouveau profil
-        await UserService.createUser(user.uid, {
+        // Créer un nouveau profil et le retourner directement
+        const newUserData = {
           email: user.email!,
           displayName: user.displayName || 'Utilisateur',
-          photoURL: user.photoURL || undefined,
+          photoURL: user.photoURL || null, // ✅ null au lieu de undefined
           university: additionalData?.university as string,
           fieldOfStudy: additionalData?.fieldOfStudy as string,
           graduationYear: additionalData?.graduationYear as number,
           campus: additionalData?.campus as string,
           ...additionalData
-        });
+        };
+        
+        await UserService.createUser(user.uid, newUserData);
+        
+        // Utiliser les données qu'on vient de créer au lieu de refetch
+        setUserProfile(newUserData as User);
+      } else {
+        // Utilisateur existant, utiliser les données récupérées
+        setUserProfile(existingUser);
       }
-      
-      // Récupérer le profil complet
-      const userProfile = await UserService.getUser(user.uid);
-      setUserProfile(userProfile);
       
     } catch (error) {
       console.error('Error creating/updating user profile:', error);

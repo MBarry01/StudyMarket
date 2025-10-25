@@ -45,6 +45,14 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Vérifier si l'utilisateur est admin
+  const isAdmin = React.useMemo(() => {
+    if (!currentUser) return false;
+    const allowedEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
+    const allowedUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map((u: string) => u.trim()).filter(Boolean);
+    return (currentUser.email && allowedEmails.includes(currentUser.email)) || allowedUids.includes(currentUser.uid);
+  }, [currentUser]);
+
   // Calculer le nombre total de messages non lus
   const totalUnreadMessages = React.useMemo(() => {
     if (!currentUser || !conversations.length) return 0;
@@ -214,6 +222,19 @@ export const Header: React.FC = () => {
                     </div>
                     <DropdownMenuSeparator />
                     
+                    {/* Admin Dashboard (si admin) */}
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin" className="cursor-pointer bg-gradient-to-r from-primary/10 to-secondary/10">
+                            <Shield className="w-4 h-4 mr-2 text-primary" />
+                            <span className="font-semibold text-primary">Administration</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    
                     {/* Profil et compte */}
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="cursor-pointer">
@@ -236,6 +257,13 @@ export const Header: React.FC = () => {
                       <Link to="/orders" className="cursor-pointer">
                         <Package className="w-4 h-4 mr-2" />
                         Mes commandes
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem asChild>
+                      <Link to="/sales" className="cursor-pointer">
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        Mes ventes
                       </Link>
                     </DropdownMenuItem>
                     

@@ -36,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { MapLocationPicker } from '@/components/ui/MapLocationPicker';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingStore } from '../stores/useListingStore';
 import { Listing } from '../types';
@@ -46,8 +47,11 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 const baseSchema = z.object({
   title: z.string().min(5, 'Le titre doit contenir au moins 5 caractères').max(80, 'Le titre ne peut pas dépasser 80 caractères'),
   description: z.string().min(20, 'La description doit contenir au moins 20 caractères').max(1000, 'La description ne peut pas dépasser 1000 caractères'),
-  tags: z.array(z.string()).min(1, 'Ajoutez au moins un tag').max(5, 'Maximum 5 tags'),
   meetingLocation: z.string().min(1, 'Veuillez spécifier un lieu de rencontre'),
+  phone: z.string().optional(),
+  availableDate: z.string().optional(),
+  availableTimeStart: z.string().optional(),
+  availableTimeEnd: z.string().optional(),
 });
 
 const sellSchema = baseSchema.extend({
@@ -128,13 +132,16 @@ export const CreateListingPage: React.FC = () => {
   
   const [images, setImages] = useState<string[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [currentTag, setCurrentTag] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [desiredItems, setDesiredItems] = useState<string[]>(['']);
   const [currentDesiredItem, setCurrentDesiredItem] = useState('');
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
   const [duration, setDuration] = useState([1]);
+  const [meetingLocation, setMeetingLocation] = useState<{
+    address: string;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // Schéma dynamique selon le type de transaction
   const getSchema = () => {
@@ -162,8 +169,11 @@ export const CreateListingPage: React.FC = () => {
       duration: 1,
       skills: '',
       availability: '',
-      tags: [],
       meetingLocation: '',
+      phone: '',
+      availableDate: '',
+      availableTimeStart: '',
+      availableTimeEnd: '',
     },
     mode: 'onChange'
   });
@@ -183,10 +193,8 @@ export const CreateListingPage: React.FC = () => {
       duration: 1,
       skills: '',
       availability: '',
-      tags: [],
       meetingLocation: '',
     });
-    setTags([]);
     setDesiredItems(['']);
     setSelectedPaymentMethods([]);
     setDuration([1]);
@@ -197,8 +205,12 @@ export const CreateListingPage: React.FC = () => {
     if (!currentUser) throw new Error('User not authenticated');
     
     const timestamp = Date.now();
-    const fileName = `listings/${currentUser.uid}/${timestamp}_${file.name}`;
-    const storageRef = ref(storage, fileName);
+    // Obtenir l'extension du fichier
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    // Format compatible avec les règles Firebase: image_{timestamp}_{random}.{ext}
+    const randomNum = Math.floor(Math.random() * 10000);
+    const fileName = `image_${timestamp}_${randomNum}.${extension}`;
+    const storageRef = ref(storage, `listings/${currentUser.uid}/${fileName}`);
     
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
@@ -210,22 +222,49 @@ export const CreateListingPage: React.FC = () => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    // Vérifier l'authentification
+    if (!currentUser) {
+      alert('Vous devez être connecté pour uploader des images');
+      return;
+    }
+
     setIsUploadingImages(true);
     
     try {
       const validFiles = Array.from(files)
         .slice(0, 10 - images.length)
-        .filter(file => file.size <= 15 * 1024 * 1024); // 15MB max
+        .filter(file => {
+          // Vérifier le type de fichier
+          const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+          if (!validTypes.includes(file.type)) {
+            alert(`${file.name} n'est pas un format d'image supporté (JPG, PNG, WEBP uniquement)`);
+            return false;
+          }
+          // Vérifier la taille (15MB max)
+          if (file.size > 15 * 1024 * 1024) {
+            alert(`${file.name} est trop volumineux (max 15MB)`);
+            return false;
+          }
+          return true;
+        });
+
+      if (validFiles.length === 0) {
+        setIsUploadingImages(false);
+        return;
+      }
 
       const uploadPromises = validFiles.map(file => uploadImageToStorage(file));
       const uploadedUrls = await Promise.all(uploadPromises);
       
       setImages(prev => [...prev, ...uploadedUrls]);
-    } catch (error) {
+      console.log(`✅ ${uploadedUrls.length} image(s) uploadée(s) avec succès`);
+    } catch (error: any) {
       console.error('Error uploading images:', error);
-      // You might want to show a toast notification here
+      alert(`Erreur lors de l'upload des images: ${error.message || 'Erreur inconnue'}`);
     } finally {
       setIsUploadingImages(false);
+      // Réinitialiser l'input file pour permettre de sélectionner à nouveau les mêmes fichiers
+      event.target.value = '';
     }
   };
 
@@ -233,20 +272,6 @@ export const CreateListingPage: React.FC = () => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const addTag = () => {
-    if (currentTag.trim() && !tags.includes(currentTag.trim()) && tags.length < 5) {
-      const newTags = [...tags, currentTag.trim()];
-      setTags(newTags);
-      form.setValue('tags', newTags);
-      setCurrentTag('');
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    const newTags = tags.filter(tag => tag !== tagToRemove);
-    setTags(newTags);
-    form.setValue('tags', newTags);
-  };
 
   const addDesiredItem = () => {
     if (currentDesiredItem.trim()) {
@@ -284,15 +309,23 @@ export const CreateListingPage: React.FC = () => {
         currency: 'EUR',
         category: 'electronics' as any, // Sera déterminé par l'IA plus tard
         images: images,
-        tags: data.tags,
+        tags: [], // Tags supprimés - remplacés par recherche sémantique
+        phone: data.phone || null,
+        availableDate: data.availableDate || null,
+        availableTimeStart: data.availableTimeStart || null,
+        availableTimeEnd: data.availableTimeEnd || null,
         location: {
-          city: 'Paris',
+          city: meetingLocation?.address.split(',')[0] || 'Paris',
           state: 'Île-de-France',
           country: 'France',
           campus: userProfile.campus || null,
           university: userProfile.university || null,
-          coordinates: null,
+          coordinates: meetingLocation ? {
+            lat: meetingLocation.latitude,
+            lng: meetingLocation.longitude
+          } : undefined,
         },
+        meetingPoint: meetingLocation?.address || data.meetingLocation,
         sellerId: currentUser.uid,
         sellerName: userProfile.displayName,
         sellerAvatar: userProfile.photoURL,
@@ -368,7 +401,7 @@ export const CreateListingPage: React.FC = () => {
 
   const isFormValid = () => {
     const errors = form.formState.errors;
-    const hasRequiredFields = form.watch('title') && form.watch('description') && form.watch('meetingLocation') && tags.length > 0;
+    const hasRequiredFields = form.watch('title') && form.watch('description') && meetingLocation;
     
     switch (transactionType) {
       case 'sell':
@@ -385,7 +418,27 @@ export const CreateListingPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="create-listing-page container mx-auto px-4 py-8 max-w-4xl">
+      {/* Styles locaux pour masquer les icônes internes des inputs date/heure sur tous navigateurs */}
+      <style>
+        {`
+          .create-listing-page input[type="date"]::-webkit-calendar-picker-indicator,
+          .create-listing-page input[type="time"]::-webkit-calendar-picker-indicator {
+            display: none;
+            -webkit-appearance: none;
+          }
+          .create-listing-page input[type="date"]::-moz-focus-inner,
+          .create-listing-page input[type="time"]::-moz-focus-inner {
+            border: 0;
+          }
+          .create-listing-page input[type="date"],
+          .create-listing-page input[type="time"] {
+            appearance: textfield;
+            -moz-appearance: textfield;
+            -webkit-appearance: none;
+          }
+        `}
+      </style>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 text-foreground">Créer une annonce</h1>
@@ -446,7 +499,7 @@ export const CreateListingPage: React.FC = () => {
                 onClick={() => setTransactionType('service')}
               >
                 <CardContent className="p-4 text-center">
-                  <Clock className="w-8 h-8 mx-auto mb-2 text-orange-600" />
+                  <Clock className="w-8 h-8 mx-auto mb-2 text-blue-600" />
                   <h3 className="font-semibold text-foreground">Service</h3>
                   <p className="text-xs text-muted-foreground">Proposer un service</p>
                 </CardContent>
@@ -696,7 +749,7 @@ export const CreateListingPage: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Clock className="w-5 h-5 text-orange-600" />
+                    <Clock className="w-5 h-5 text-blue-600" />
                     Informations du service
                   </CardTitle>
                 </CardHeader>
@@ -794,10 +847,10 @@ export const CreateListingPage: React.FC = () => {
                         type="button"
                         variant="destructive"
                         size="icon"
-                        className="absolute top-1 right-1 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                         onClick={() => removeImage(index)}
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                       </Button>
                       {index === 0 && (
                         <Badge className="absolute bottom-1 left-1 text-xs bg-primary text-primary-foreground">
@@ -837,67 +890,102 @@ export const CreateListingPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Tag className="w-5 h-5" />
-                  Tags et localisation
+                  <MapPin className="w-5 h-5" />
+                  Coordonnées et disponibilité
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Numéro de téléphone (optionnel) */}
                 <div>
-                  <Label className="text-foreground">Tags * (max 5)</Label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                        {tag}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="w-4 h-4 p-0 hover:bg-transparent"
-                          onClick={() => removeTag(tag)}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Ajouter un tag..."
-                      value={currentTag}
-                      onChange={(e) => setCurrentTag(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                      className="flex-1"
-                    />
-                    <Button type="button" onClick={addTag} disabled={!currentTag.trim() || tags.length >= 5}>
-                      Ajouter
-                    </Button>
-                  </div>
-                  
-                  {tags.length === 0 && (
-                    <p className="text-sm text-destructive mt-1">
-                      Ajoutez au moins un tag
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="meetingLocation" className="text-foreground">Point de rencontre *</Label>
+                  <Label htmlFor="phone" className="text-foreground font-semibold">
+                    Numéro de téléphone (optionnel)
+                  </Label>
                   <Input
-                    id="meetingLocation"
-                    placeholder="Ex: Bibliothèque universitaire, Hall principal..."
-                    {...form.register('meetingLocation')}
+                    id="phone"
+                    type="tel"
+                    placeholder="+33 6 12 34 56 78"
+                    {...form.register('phone')}
                     className="mt-1"
                   />
-                  {form.formState.errors.meetingLocation && (
-                    <p className="text-sm text-destructive mt-1">
-                      {form.formState.errors.meetingLocation.message}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Privilégiez les lieux publics et fréquentés
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Pour faciliter le contact avec les acheteurs
                   </p>
                 </div>
+
+                {/* Date de disponibilité (optionnel) */}
+                <div>
+                  <Label htmlFor="availableDate" className="text-foreground font-semibold">
+                    Date de disponibilité (optionnel)
+                  </Label>
+                  <div className="relative mt-1">
+                    {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      id="availableDate"
+                      type="date"
+                      {...form.register('availableDate')}
+                      className="pl-10 appearance-none cursor-pointer"
+                      onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    À partir de quelle date l'article est disponible
+                  </p>
+                </div>
+
+                {/* Plage horaire (optionnel) */}
+                <div>
+                  <Label className="text-foreground font-semibold block mb-2">
+                    Plage horaire de disponibilité (optionnel)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="availableTimeStart" className="text-sm text-muted-foreground">
+                        De
+                      </Label>
+                      <div className="relative mt-1">
+                        {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="availableTimeStart"
+                          type="time"
+                          {...form.register('availableTimeStart')}
+                          className="pl-10 appearance-none cursor-pointer"
+                          onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="availableTimeEnd" className="text-sm text-muted-foreground">
+                        À
+                      </Label>
+                      <div className="relative mt-1">
+                        {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="availableTimeEnd"
+                          type="time"
+                          {...form.register('availableTimeEnd')}
+                          className="pl-10 appearance-none cursor-pointer"
+                          onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Vos horaires de disponibilité pour la remise en main propre
+                  </p>
+                </div>
+
+                <MapLocationPicker
+                  onLocationSelect={(location) => {
+                    setMeetingLocation(location);
+                    form.setValue('meetingLocation', location.address);
+                  }}
+                  initialLocation={meetingLocation || undefined}
+                  placeholder="Cliquez sur la carte ou recherchez une adresse"
+                />
               </CardContent>
             </Card>
           </div>
@@ -922,12 +1010,8 @@ export const CreateListingPage: React.FC = () => {
                     <div className={`w-2 h-2 rounded-full ${form.watch('description') && form.watch('description').length >= 20 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <span>Description (20-1000 caractères)</span>
                   </div>
-                  <div className={`flex items-center gap-2 ${tags.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    <div className={`w-2 h-2 rounded-full ${tags.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <span>Tags (1-5)</span>
-                  </div>
-                  <div className={`flex items-center gap-2 ${form.watch('meetingLocation') ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    <div className={`w-2 h-2 rounded-full ${form.watch('meetingLocation') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <div className={`flex items-center gap-2 ${meetingLocation ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    <div className={`w-2 h-2 rounded-full ${meetingLocation ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <span>Point de rencontre</span>
                   </div>
                   

@@ -335,8 +335,9 @@ export const OrdersPage: React.FC = () => {
                           {item.image ? (
                             <img 
                               src={item.image} 
-                              alt={item.name} 
+                              alt={item.title} 
                               className="w-16 h-16 object-cover rounded"
+                              title={item.title}
                             />
                           ) : (
                             <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">

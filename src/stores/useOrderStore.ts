@@ -45,10 +45,12 @@ export interface Order {
 
 interface OrderStore {
   orders: Order[];
+  sales: Order[]; // Ventes du vendeur
   loading: boolean;
   
   // Actions
   fetchUserOrders: (userId: string) => Promise<void>;
+  fetchSellerSales: (sellerId: string) => Promise<void>;
   getOrderById: (orderId: string) => Promise<Order | null>;
   createOrder: (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
   updateOrderStatus: (orderId: string, status: Order['status'], notes?: string) => Promise<void>;
@@ -78,6 +80,7 @@ const safeToDate = (date: any): Date => {
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
   orders: [],
+  sales: [],
   loading: false,
 
   fetchUserOrders: async (userId: string) => {
@@ -114,6 +117,46 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('Erreur lors du chargement des commandes');
+      set({ loading: false });
+    }
+  },
+
+  fetchSellerSales: async (sellerId: string) => {
+    if (!sellerId) return;
+
+    try {
+      set({ loading: true });
+      
+      // Query orders where the seller has items
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        orderBy('createdAt', 'desc'),
+        limit(200)
+      );
+      
+      const querySnapshot = await getDocs(ordersQuery);
+      const sales: Order[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filter orders that contain items sold by this seller
+        const hasSellerItems = data.items?.some((item: any) => item.sellerId === sellerId);
+        
+        if (hasSellerItems) {
+          sales.push({
+            id: doc.id,
+            ...data,
+            createdAt: safeToDate(data.createdAt),
+            updatedAt: safeToDate(data.updatedAt)
+          } as Order);
+        }
+      });
+      
+      set({ sales, loading: false });
+      
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+      toast.error('Erreur lors du chargement des ventes');
       set({ loading: false });
     }
   },

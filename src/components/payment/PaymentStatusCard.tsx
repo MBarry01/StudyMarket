@@ -51,7 +51,7 @@ export const PaymentStatusCard: React.FC<PaymentStatusCardProps> = ({
       case 'confirmed': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed': return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      case 'disputed': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'disputed': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -260,7 +260,7 @@ export const PaymentStatusCard: React.FC<PaymentStatusCardProps> = ({
             <Button
               variant="outline"
               onClick={() => handleStatusUpdate('disputed')}
-              className="text-orange-600 hover:text-orange-700"
+              className="text-blue-600 hover:text-blue-700"
             >
               <AlertTriangle className="w-4 h-4 mr-2" />
               Signaler un problème
@@ -297,9 +297,9 @@ export const PaymentStatusCard: React.FC<PaymentStatusCardProps> = ({
         )}
 
         {request.status === 'disputed' && (
-          <Alert className="border-orange-200 bg-orange-50">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
+          <Alert className="border-blue-200 bg-blue-50">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
               Un litige a été signalé. Notre équipe support va examiner la situation et vous contacter sous 24h.
             </AlertDescription>
           </Alert>

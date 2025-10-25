@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, reload, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, db, emailConfig } from "../lib/firebase";
 // import { EmailVerificationModal } from "@/components/ui/EmailVerificationModal";
@@ -29,13 +29,15 @@ const signUpSchema = z.object({
   displayName: z.string().optional(),
   email: z.string().email('Email invalide').refine((email) => {
     // Check if email is from a university domain
+    // NOTE: gmail.com inclus temporairement pour les tests
     const universityDomains = [
-      'univ-', 'edu', 'gmail.com', 'ac.', 'student.', 'etudiant.', 'etu.',
+      '.edu', 'univ-', '.ac.', 'student.', 'etudiant.', 'etu.',
+      'gmail.com', // TEMPORAIRE : pour tests uniquement
       'sorbonne-universite.fr',
       'sorbonne-nouvelle.fr', 'dauphine.psl.eu', 'polytechnique.edu',
       'ens.fr', 'centralesupelec.fr', 'mines-paristech.fr'
     ];
-    return universityDomains.some(domain => email.includes(domain));
+    return universityDomains.some(domain => email.toLowerCase().includes(domain));
   }, 'Vous devez utiliser une adresse email universitaire'),
   university: z.string().min(1, 'Veuillez sélectionner votre université'),
   otherUniversity: z.string().optional(),
@@ -128,13 +130,15 @@ const fieldsOfStudy = [
 
 // Fonction pour vérifier si un email est universitaire
 const isUniversityEmail = (email: string) => {
+  // NOTE: gmail.com inclus temporairement pour les tests
   const universityDomains = [
-    'univ-', 'edu', 'ac.', 'student.', 'etudiant.', 'etu.',
+    '.edu', 'univ-', '.ac.', 'student.', 'etudiant.', 'etu.',
+    'gmail.com', // TEMPORAIRE : pour tests uniquement
     'sorbonne-universite.fr',
     'sorbonne-nouvelle.fr', 'dauphine.psl.eu', 'polytechnique.edu',
     'ens.fr', 'centralesupelec.fr', 'mines-paristech.fr'
   ];
-  return universityDomains.some(domain => email.includes(domain));
+  return universityDomains.some(domain => email.toLowerCase().includes(domain));
 };
 
 export const AuthPage: React.FC = () => {
@@ -223,69 +227,23 @@ export const AuthPage: React.FC = () => {
             return;
           }
           
-          // Vérifier s'il y a des données en attente (inscription email)
-          const pendingData = localStorage.getItem('pendingUserData');
-          const pendingEmail = localStorage.getItem('pendingUserEmail');
-          
-          if (pendingData && pendingEmail === currentUser.email && currentUser.emailVerified) {
-            try {
-              const userData = JSON.parse(pendingData);
-              const cleanData = Object.fromEntries(Object.entries(userData).filter(([, v]) => v !== undefined));
-              
-              // Sauvegarder le profil complet
-              await setDoc(doc(db, 'users', currentUser.uid), {
-                ...cleanData,
-                emailVerified: true,
-                profileCompleted: true
-              });
-              
-              // Nettoyer le localStorage
-              localStorage.removeItem('pendingUserData');
-              localStorage.removeItem('pendingUserEmail');
-              
-              // Rediriger vers le site principal
-              window.location.reload();
-            } catch (error) {
-              console.error('Error saving pending user data:', error);
-              setVerificationError('Erreur lors de la sauvegarde du profil');
-            }
-          } else if (pendingData && pendingEmail === currentUser.email && !currentUser.emailVerified) {
-            // Email non vérifié - afficher l'écran de vérification
-            setUserEmail(currentUser.email || '');
-            setEmailSent(true);
-            setShowCompleteProfile(false);
-          }
+          // Si pas de profil et pas Google, c'est une erreur
+          console.error('User profile not found and not from Google');
+          setShowCompleteProfile(false);
         } else {
           // Utilisateur avec profil existant
           const userData = userDoc.data();
 
-          // Si des données d'inscription sont en attente et que l'email est désormais vérifié,
-          // fusionner ces données dans le profil existant (corrige le profil vide après inscription)
-          try {
-            const pendingData = localStorage.getItem('pendingUserData');
-            const pendingEmail = localStorage.getItem('pendingUserEmail');
-            if (pendingData && pendingEmail === currentUser.email && currentUser.emailVerified) {
-              const raw = JSON.parse(pendingData);
-              const cleanData = Object.fromEntries(
-                Object.entries(raw).filter(([, v]) => v !== undefined)
-              );
-              await setDoc(
-                doc(db, 'users', currentUser.uid),
-                {
-                  ...cleanData,
-                  emailVerified: true,
-                  profileCompleted: true,
-                },
-                { merge: true }
-              );
-              localStorage.removeItem('pendingUserData');
-              localStorage.removeItem('pendingUserEmail');
-              // Recharger pour refléter immédiatement le profil complet dans tout le site
-              window.location.reload();
-              return;
-            }
-          } catch (e) {
-            console.error('Error merging pending data into existing profile:', e);
+          // Si l'email est maintenant vérifié mais pas marqué comme tel dans Firestore, le mettre à jour
+          if (currentUser.emailVerified && !userData.emailVerified) {
+            await updateDoc(doc(db, 'users', currentUser.uid), {
+              emailVerified: true,
+              profileCompleted: true,
+              updatedAt: new Date().toISOString()
+            });
+            // Rafraîchir pour mettre à jour l'UI
+            window.location.reload();
+            return;
           }
 
           // Vérifier si l'utilisateur a un email vérifié ou vient de Google
@@ -303,7 +261,6 @@ export const AuthPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error checking user profile:', error);
-        
         setShowCompleteProfile(false);
       }
     };
@@ -674,37 +631,67 @@ export const AuthPage: React.FC = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
       
-      // 2. Envoi automatique de l'email de vérification via Firebase
-      await sendEmailVerification(user, emailConfig.actionCodeSettings);
+      // 2. Préparation des données utilisateur
+      const universityToSave = data.university === 'Autre université' 
+        ? (data.otherUniversity || data.university) 
+        : data.university;
       
-      // 3. Préparation des données utilisateur
-      const universityToSave = data.university === 'Autre université' ? data.otherUniversity : data.university;
-      const fieldOfStudyToSave = data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : data.fieldOfStudy;
+      const fieldOfStudyToSave = data.fieldOfStudy === 'Autre' 
+        ? (data.otherFieldOfStudy || data.fieldOfStudy) 
+        : data.fieldOfStudy;
+      
+      // Debug : Afficher les données avant sauvegarde
+      console.log('📝 Données d\'inscription:', {
+        firstName,
+        lastName,
+        displayName,
+        email: data.email,
+        university: data.university,
+        otherUniversity: data.otherUniversity,
+        universityToSave,
+        fieldOfStudy: data.fieldOfStudy,
+        otherFieldOfStudy: data.otherFieldOfStudy,
+        fieldOfStudyToSave,
+        graduationYear: data.graduationYear
+      });
       
       const userDataToSave = {
-        firstName, lastName, displayName,
+        firstName, 
+        lastName, 
+        displayName,
         university: universityToSave,
         otherUniversity: data.university === 'Autre université' ? data.otherUniversity : null,
         fieldOfStudy: fieldOfStudyToSave,
         otherFieldOfStudy: data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : null,
         graduationYear: parseInt(data.graduationYear),
         email: data.email,
+        photoURL: null,
+        bio: null,
+        phone: null,
+        campus: null,
+        location: null,
         createdAt: new Date().toISOString(),
-        emailVerified: false, // Changé à false car l'email n'est pas encore vérifié
+        updatedAt: new Date().toISOString(),
+        emailVerified: false, // Sera mis à true après validation email
+        profileCompleted: false, // Sera mis à true après validation email
         isStudent: true,
         provider: 'email'
       };
       
-      // 4. Stockage temporaire des données en localStorage
-      localStorage.setItem('pendingUserData', JSON.stringify(userDataToSave));
-      localStorage.setItem('pendingUserEmail', data.email);
+      console.log('💾 Données à sauvegarder dans Firestore:', userDataToSave);
       
-      // 5. Mise à jour du profil Firebase
-      if (user) {
-        await updateProfile(user, { displayName: displayName });
-      }
+      // 3. ✅ SAUVEGARDER IMMÉDIATEMENT DANS FIRESTORE (plus de localStorage!)
+      await setDoc(doc(db, 'users', user.uid), userDataToSave);
       
-      // 6. Affichage de l'écran de vérification (vue pleine page)
+      console.log('✅ Données sauvegardées avec succès pour UID:', user.uid);
+      
+      // 4. Mise à jour du profil Firebase Auth
+      await updateProfile(user, { displayName: displayName });
+      
+      // 5. Envoi de l'email de vérification
+      await sendEmailVerification(user, emailConfig.actionCodeSettings);
+      
+      // 6. Affichage de l'écran de vérification
       setUserEmail(data.email);
       setEmailSent(true);
       

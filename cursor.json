@@ -1,0 +1,49 @@
+{
+    "context": {
+      "include": [
+        "README.md",
+        "docs/**/*.md",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "server/**/*.js",
+        "server/**/*.ts",
+        "vite.config.ts",
+        "package.json",
+        ".env"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "build",
+        "coverage",
+        ".next",
+        "*.test.*"
+      ]
+    },
+    "rules": {
+      "global": "Toujours vérifier si le fichier ou la logique existe avant de proposer une création.",
+      "documentation": "Se référer aux fichiers docs/*.md avant d'écrire du code ou modifier des routes.",
+      "imports": "Respecter les chemins absolus ou relatifs existants (pas de nouveaux alias sans vérification).",
+      "ui": "Ne jamais dupliquer un composant déjà documenté dans /src/components.",
+      "routing": "Consulter src/App.tsx et routes.md pour vérifier les routes existantes avant toute création.",
+      "state": "Utiliser les hooks ou contextes déjà définis dans /src/hooks ou /src/context.",
+      "payment": "Réutiliser PaymentWrapper, StripePaymentForm et QuickPaymentButton existants pour tout flux carte.",
+      "security": "Aucune clé ni variable sensible ne doit apparaître côté client.",
+      "commit": "Chaque proposition de changement doit indiquer la source ou la doc de référence utilisée."
+    },
+    "assistants": {
+      "frontend": {
+        "context": ["src/pages/", "src/components/", "src/context/"],
+        "prompt": "Agis comme un développeur React expérimenté sur StudyMarket. Vérifie dans /docs et src/pages si la page existe avant d'en créer une. Réutilise les composants documentés."
+      },
+      "backend": {
+        "context": ["server/", "src/api/"],
+        "prompt": "Agis comme un développeur backend Node/Express. Consulte /docs/api_routes.md avant toute modification d’API. Garde la cohérence avec la logique existante."
+      },
+      "project": {
+        "context": ["README.md", "docs/"],
+        "prompt": "Agis comme un architecte logiciel. Vérifie la documentation avant toute modification majeure. Priorise la cohérence et la réutilisation du code documenté."
+      }
+    }
+  }
+  

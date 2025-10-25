@@ -28,7 +28,8 @@ import {
   doc, 
   getDoc,
   limit,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Listing } from '../types';
@@ -41,6 +42,7 @@ import { Label } from '../components/ui/label';
 import { toast } from 'react-hot-toast';
 import { Textarea } from '../components/ui/textarea';
 import { Input } from '../components/ui/input';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileStats {
   totalListings: number;
@@ -106,6 +108,7 @@ const safeToDate = (date: unknown): Date => {
 
 export const ProfilePage: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+  const navigate = useNavigate();
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([]);
@@ -129,6 +132,40 @@ export const ProfilePage: React.FC = () => {
   const [firstName, setFirstName] = useState<string>(profileData?.firstName as string || '');
   const [lastName, setLastName] = useState<string>(profileData?.lastName as string || '');
 
+  // Fonctions pour gérer les annonces
+  const handleEditListing = (listing: Listing) => {
+    navigate(`/edit-listing/${listing.id}`);
+  };
+
+  const handleDeleteListing = async (listing: Listing) => {
+    if (!currentUser) return;
+    
+    const confirmed = window.confirm(
+      `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?\n\nCette action est irréversible.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(db, 'listings', listing.id));
+      
+      // Mettre à jour la liste locale
+      setUserListings(prev => prev.filter(l => l.id !== listing.id));
+      
+      // Mettre à jour les stats
+      setStats(prev => ({
+        ...prev,
+        totalListings: prev.totalListings - 1,
+        activeListings: listing.status === 'active' ? prev.activeListings - 1 : prev.activeListings
+      }));
+      
+      toast.success('Annonce supprimée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error('Erreur lors de la suppression de l\'annonce');
+    }
+  };
+
   // Charger les données du profil depuis Firestore
   const loadUserProfile = async () => {
     if (!currentUser) return;
@@ -140,17 +177,33 @@ export const ProfilePage: React.FC = () => {
       
       if (userDoc.exists()) {
         const data = userDoc.data();
+        console.log('🔍 ProfilePage - Données récupérées de Firestore:', data);
+        console.log('📊 Détails:', {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          displayName: data.displayName,
+          university: data.university,
+          otherUniversity: data.otherUniversity,
+          fieldOfStudy: data.fieldOfStudy,
+          otherFieldOfStudy: data.otherFieldOfStudy,
+          graduationYear: data.graduationYear
+        });
+        
         setProfileData({
           ...data,
           createdAt: safeToDate(data.createdAt),
           updatedAt: safeToDate(data.updatedAt)
         });
+        
+        // Mettre à jour les états firstName et lastName pour l'édition
+        if (data.firstName) setFirstName(data.firstName);
+        if (data.lastName) setLastName(data.lastName);
       } else {
-        console.log('Aucun document utilisateur trouvé dans Firestore');
+        console.log('❌ Aucun document utilisateur trouvé dans Firestore');
         setProfileData(null);
       }
     } catch (error: unknown) {
-      console.error('Erreur lors du chargement du profil:', error);
+      console.error('❌ Erreur lors du chargement du profil:', error);
       setProfileData(null);
     } finally {
       setLoading(prev => ({ ...prev, profile: false }));
@@ -603,9 +656,9 @@ export const ProfilePage: React.FC = () => {
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Alerte d'erreurs d'index */}
       {/* {errors.length > 0 && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <AlertCircle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
+        <Alert className="border-blue-200 bg-blue-50">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
             <div className="space-y-2">
               <p className="font-medium">⚡ Chargement optimisé activé</p>
               <p className="text-sm">
@@ -616,7 +669,7 @@ export const ProfilePage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => window.open('https://console.firebase.google.com/project/annonces-app-44d27/firestore/indexes', '_blank')}
-                className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                className="text-blue-700 border-blue-300 hover:bg-blue-100"
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 Optimiser la base de données
@@ -691,13 +744,13 @@ export const ProfilePage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold">
+                <div className="text-lg sm:text-2xl font-bold">
                   {loading.listings ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.totalListings
                   )}
-                </p>
+                </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Annonces totales</p>
               </div>
             </div>
@@ -709,13 +762,13 @@ export const ProfilePage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold">
+                <div className="text-lg sm:text-2xl font-bold">
                   {loading.listings ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.activeListings
                   )}
-                </p>
+                </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Annonces actives</p>
               </div>
             </div>
@@ -727,13 +780,13 @@ export const ProfilePage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold">
+                <div className="text-lg sm:text-2xl font-bold">
                   {loading.reviews ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.averageRating || '—'
                   )}
-                </p>
+                </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Note moyenne</p>
               </div>
             </div>
@@ -745,13 +798,13 @@ export const ProfilePage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold">
+                <div className="text-lg sm:text-2xl font-bold">
                   {loading.favorites ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
                   ) : (
                     stats.totalFavorites
                   )}
-                </p>
+                </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Favoris</p>
               </div>
             </div>
@@ -838,7 +891,13 @@ export const ProfilePage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {userListings.map((listing) => (
-                    <ListingCard key={listing.id} listing={listing} />
+                    <ListingCard 
+                      key={listing.id} 
+                      listing={listing}
+                      showActions={true}
+                      onEdit={handleEditListing}
+                      onDelete={handleDeleteListing}
+                    />
                   ))}
                 </div>
               )}

@@ -12,12 +12,15 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc,
+  onSnapshot,
   QueryDocumentSnapshot,
-  DocumentData
+  DocumentData,
+  Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Listing, SearchFilters } from '../types';
 import toast from 'react-hot-toast';
+import { cache } from '../lib/cache'; // 🆕 Système de cache
 
 interface ListingStore {
   listings: Listing[];
@@ -28,6 +31,9 @@ interface ListingStore {
   lastDoc: QueryDocumentSnapshot<DocumentData> | null;
   error: string | null;
   
+  // 🆕 Real-time listeners
+  realtimeListeners: Map<string, Unsubscribe>;
+  
   // Actions
   fetchListings: (filters?: SearchFilters, refresh?: boolean) => Promise<void>;
   fetchFeaturedListings: () => Promise<void>;
@@ -37,6 +43,11 @@ interface ListingStore {
   deleteListing: (id: string) => Promise<void>;
   searchListings: (filters: SearchFilters) => Promise<void>;
   clearListings: () => void;
+  
+  // 🆕 Real-time actions
+  subscribeToListing: (id: string) => Unsubscribe;
+  subscribeToListings: (filters?: SearchFilters) => Unsubscribe;
+  unsubscribeAll: () => void;
 }
 
 // Helper function to clean data before sending to Firestore
@@ -148,6 +159,9 @@ export const useListingStore = create<ListingStore>((set, get) => ({
   hasMore: true,
   lastDoc: null,
   error: null,
+  
+  // 🆕 Real-time listeners
+  realtimeListeners: new Map(),
 
   fetchListings: async (filters = {}, refresh = false) => {
     const { listings, lastDoc: currentLastDoc } = get();
@@ -302,6 +316,14 @@ export const useListingStore = create<ListingStore>((set, get) => ({
   },
 
   fetchListingById: async (id: string) => {
+    // 🆕 Vérifier le cache d'abord
+    const cached = cache.get<Listing>(`listing:${id}`);
+    if (cached) {
+      console.log('✅ Listing from cache:', id);
+      set({ currentListing: cached, loading: false });
+      return;
+    }
+    
     set({ loading: true });
     
     try {
@@ -311,8 +333,11 @@ export const useListingStore = create<ListingStore>((set, get) => ({
       if (docSnap.exists()) {
         const listing = convertDocToListing(docSnap);
 
-        // Increment view count
-        await updateDoc(docRef, { views: (listing.views || 0) + 1 });
+        // 🆕 Mettre en cache (5 minutes)
+        cache.set(`listing:${id}`, listing, 5 * 60 * 1000);
+
+        // Increment view count (async, ne pas attendre)
+        updateDoc(docRef, { views: (listing.views || 0) + 1 }).catch(console.error);
 
         set({ currentListing: listing, loading: false });
       } else {
@@ -379,6 +404,9 @@ export const useListingStore = create<ListingStore>((set, get) => ({
 
       await updateDoc(docRef, cleanedUpdates);
 
+      // 🆕 Invalider le cache
+      cache.invalidate(`listing:${id}`);
+
       // Update local state
       const { listings, currentListing } = get();
       const updatedListings = listings.map(listing =>
@@ -428,5 +456,86 @@ export const useListingStore = create<ListingStore>((set, get) => ({
       hasMore: true,
       currentListing: null 
     });
+  },
+  
+  // 🆕 Subscribe à une annonce spécifique (real-time)
+  subscribeToListing: (id: string) => {
+    console.log('🔔 Subscribing to listing:', id);
+    
+    const unsubscribe = onSnapshot(
+      doc(db, 'listings', id),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const updatedListing = convertDocToListing(snapshot);
+          
+          // Mettre à jour le cache
+          cache.set(`listing:${id}`, updatedListing, 5 * 60 * 1000);
+          
+          // Mettre à jour dans le state
+          set(state => ({
+            currentListing: state.currentListing?.id === id 
+              ? updatedListing 
+              : state.currentListing,
+            listings: state.listings.map(l => 
+              l.id === id ? updatedListing : l
+            ),
+          }));
+          
+          console.log('✅ Listing mis à jour en real-time:', id, updatedListing.status);
+        }
+      },
+      (error) => {
+        console.error('❌ Erreur listener listing:', error);
+      }
+    );
+    
+    // Stocker le listener
+    get().realtimeListeners.set(`listing:${id}`, unsubscribe);
+    
+    return unsubscribe;
+  },
+  
+  // 🆕 Subscribe à une liste d'annonces (real-time)
+  subscribeToListings: (filters = {}) => {
+    console.log('🔔 Subscribing to listings');
+    
+    let q = query(
+      collection(db, 'listings'),
+      where('status', 'in', ['active', 'sold', 'reserved']),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const updatedListings = snapshot.docs.map(convertDocToListing);
+        
+        set({ 
+          listings: updatedListings,
+          loading: false 
+        });
+        
+        console.log('✅ Listings mis à jour en real-time:', updatedListings.length);
+      },
+      (error) => {
+        console.error('❌ Erreur listener listings:', error);
+        set({ error: error.message });
+      }
+    );
+    
+    get().realtimeListeners.set('listings', unsubscribe);
+    
+    return unsubscribe;
+  },
+  
+  // 🆕 Nettoyer tous les listeners
+  unsubscribeAll: () => {
+    console.log('🔕 Unsubscribing all listeners');
+    const { realtimeListeners } = get();
+    realtimeListeners.forEach((unsubscribe, key) => {
+      console.log('🔕 Unsubscribing:', key);
+      unsubscribe();
+    });
+    realtimeListeners.clear();
   },
 }));

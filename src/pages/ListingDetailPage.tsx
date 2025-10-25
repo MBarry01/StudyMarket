@@ -33,6 +33,8 @@ import { useListingStore } from '../stores/useListingStore';
 import { useFavoritesStore } from '../stores/useFavoritesStore';
 import { useAuth } from '../contexts/AuthContext';
 import { ContactButton } from '../components/messaging/ContactButton';
+import { MapViewer } from '@/components/ui/MapViewer';
+import { QuickPaymentButton } from '../components/payment/QuickPaymentButton';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -126,7 +128,7 @@ export const ListingDetailPage: React.FC = () => {
       case 'new': return 'bg-green-100 text-green-800 border-green-200';
       case 'like-new': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'good': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'fair': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'fair': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'poor': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -351,6 +353,12 @@ export const ListingDetailPage: React.FC = () => {
                       <>
                         <ContactButton listing={listing} className="w-full" />
                         
+                        {/* Bouton de paiement rapide */}
+                        <QuickPaymentButton 
+                          listing={listing} 
+                          className="w-full"
+                        />
+                        
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <FavoriteButton 
@@ -555,6 +563,32 @@ export const ListingDetailPage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Map View */}
+            {listing.location.coordinates && 
+             !isNaN(listing.location.coordinates.lat) && 
+             !isNaN(listing.location.coordinates.lng) &&
+             listing.location.coordinates.lat !== 0 && 
+             listing.location.coordinates.lng !== 0 ? (
+              <div>
+                <MapViewer
+                  latitude={listing.location.coordinates.lat}
+                  longitude={listing.location.coordinates.lng}
+                  address={`${listing.location.city}, ${listing.location.state}`}
+                  title="Point de rencontre"
+                />
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    <MapPin className="w-8 h-8 mx-auto mb-2" />
+                    <p>Aucune localisation GPS disponible pour cette annonce</p>
+                    <p className="text-sm mt-1">Le vendeur n'a pas spécifié de point de rencontre précis</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Safety Tips */}
             <Card>

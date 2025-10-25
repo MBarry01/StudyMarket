@@ -1,78 +1,111 @@
-import { loadStripe } from '@stripe/stripe-js';
-import { supabase, supabaseStatus } from './supabase';
-import toast from 'react-hot-toast';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 
-// Initialize Stripe with your publishable key
-const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-let stripePromise: Promise<any> | null = null;
+// Clé publique Stripe (vos vraies clés)
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51RY7Vw2XLhzYQhT9mWGOChkOK9Lp7QGPlTA5mqrZhHCDwiRGdgXeEpCanybQGuvXy4FsNTyDOTlYNkGsBGXEGNhS00ORRyOHto';
 
-if (stripeKey && stripeKey !== 'your_stripe_publishable_key') {
-  stripePromise = loadStripe(stripeKey);
-} else {
-  console.warn('Stripe not configured. Payment functionality will be disabled.');
-}
+// Configuration des devises (Stripe exige des minuscules)
+const currency = (import.meta.env.VITE_STRIPE_CURRENCY || 'eur').toLowerCase();
 
-// Check if Stripe is properly configured
+// Statut de configuration Stripe
 export const stripeStatus = {
-  isConfigured: !!(stripeKey && stripeKey !== 'your_stripe_publishable_key'),
-  key: stripeKey ? `${stripeKey.substring(0, 8)}...` : 'Non configuré'
+  isConfigured: !!stripePublishableKey && stripePublishableKey.startsWith('pk_'),
+  currency: currency,
+  country: import.meta.env.VITE_STRIPE_COUNTRY || 'fr',
 };
 
-// Mock function for demo purposes
-export async function createCheckoutSession(priceId: string, mode: 'payment' | 'subscription' = 'payment') {
-  try {
-    // For demo purposes, we'll just redirect to the success page
-    toast.success('Redirection vers la page de paiement...');
-    
-    // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Redirect to success page
-    window.location.href = `/checkout/success?type=${mode}`;
-    
-  } catch (error: any) {
-    console.error('Checkout error:', error);
-    toast.error(error.message || 'Une erreur est survenue');
-    throw error;
+let stripePromise: Promise<Stripe | null>;
+
+export const getStripe = () => {
+  if (!stripePromise) {
+    stripePromise = loadStripe(stripePublishableKey);
   }
-}
+  return stripePromise;
+};
 
-export async function getUserSubscription() {
-  // Mock subscription data
-  return {
-    customer_id: 'cus_mock123',
-    subscription_id: 'sub_mock123',
-    subscription_status: 'active',
-    price_id: 'price_1RY7iN2XLhzYQhT9ErigqaGg',
-    current_period_start: Math.floor(Date.now() / 1000) - 86400 * 15, // 15 days ago
-    current_period_end: Math.floor(Date.now() / 1000) + 86400 * 15, // 15 days from now
-    cancel_at_period_end: false,
-    payment_method_brand: 'visa',
-    payment_method_last4: '4242'
-  };
-}
+// Configuration par défaut pour les éléments Stripe
+export const stripeOptions = {
+  mode: 'payment' as const,
+  currency: currency,
+  appearance: {
+    theme: 'stripe' as const,
+    variables: {
+      colorPrimary: '#3b82f6',
+      colorBackground: '#ffffff',
+      colorText: '#1a202c',
+      colorDanger: '#ef4444',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      spacingUnit: '4px',
+      borderRadius: '8px',
+    },
+    rules: {
+      '.Input': {
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '12px',
+        fontSize: '16px',
+      },
+      '.Input:focus': {
+        borderColor: '#3b82f6',
+        boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
+      },
+      '.Label': {
+        fontSize: '14px',
+        fontWeight: '500',
+        color: '#374151',
+        marginBottom: '6px',
+      },
+    },
+  },
+};
 
-export async function getUserOrders() {
-  // Mock orders data
-  return [
-    {
-      order_id: 'ord_mock123',
-      checkout_session_id: 'cs_mock123',
-      payment_intent_id: 'pi_mock123',
-      amount_subtotal: 1000,
-      amount_total: 1000,
-      currency: 'eur',
-      payment_status: 'paid',
-      order_status: 'completed',
-      order_date: new Date().toISOString()
-    }
-  ];
-}
+// Configuration pour le mode sombre
+export const stripeDarkOptions = {
+  ...stripeOptions,
+  appearance: {
+    ...stripeOptions.appearance,
+    theme: 'night' as const,
+    variables: {
+      ...stripeOptions.appearance.variables,
+      colorBackground: '#1a202c',
+      colorText: '#f7fafc',
+      colorPrimary: '#60a5fa',
+    },
+    rules: {
+      ...stripeOptions.appearance.rules,
+      '.Input': {
+        ...stripeOptions.appearance.rules['.Input'],
+        backgroundColor: '#2d3748',
+        borderColor: '#4a5568',
+        color: '#f7fafc',
+      },
+      '.Input:focus': {
+        ...stripeOptions.appearance.rules['.Input:focus'],
+        borderColor: '#60a5fa',
+        boxShadow: '0 0 0 3px rgba(96, 165, 250, 0.1)',
+      },
+      '.Label': {
+        ...stripeOptions.appearance.rules['.Label'],
+        color: '#e2e8f0',
+      },
+    },
+  },
+};
 
-export async function createPaymentIntent(amount: number, currency: string = 'eur', metadata: any = {}) {
-  // Mock payment intent creation
-  return {
-    clientSecret: 'mock_client_secret',
-    paymentIntentId: 'pi_mock' + Math.random().toString(36).substring(2, 10)
-  };
-}
+// Fonctions utilitaires Stripe (versions de base)
+export const getUserSubscription = async (userId: string) => {
+  // Version de base - à implémenter avec votre backend
+  console.log('getUserSubscription called for user:', userId);
+  return null;
+};
+
+export const getUserOrders = async (userId: string) => {
+  // Version de base - à implémenter avec votre backend
+  console.log('getUserOrders called for user:', userId);
+  return [];
+};
+
+export const createCheckoutSession = async (priceId: string, userId: string) => {
+  // Version de base - à implémenter avec votre backend
+  console.log('createCheckoutSession called for price:', priceId, 'user:', userId);
+  return null;
+};

@@ -225,7 +225,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                         <span>Montant :</span>
                         <span>{formatAmount(amount, currency)}</span>
                       </div>
-                      <div className="flex justify-between text-orange-600">
+                      <div className="flex justify-between text-blue-600">
                         <span>Frais ({method.fees}%) :</span>
                         <span>{formatAmount(fees, currency)}</span>
                       </div>

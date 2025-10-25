@@ -662,11 +662,11 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Canaux de notification</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-4 h-4 text-blue-600" />
-                      <div>
-                        <p className="font-medium">Email</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Email</p>
                         <p className="text-sm text-muted-foreground">
                           Recevez des notifications par email
                         </p>
@@ -680,11 +680,11 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="w-4 h-4 text-green-600" />
-                      <div>
-                        <p className="font-medium">Notifications push</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Smartphone className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Notifications push</p>
                         <p className="text-sm text-muted-foreground">
                           Notifications dans le navigateur
                         </p>
@@ -698,11 +698,11 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-4 h-4 text-purple-600" />
-                      <div>
-                        <p className="font-medium">SMS</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Phone className="w-5 h-5 text-purple-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">SMS</p>
                         <p className="text-sm text-muted-foreground">
                           Notifications par SMS (bientôt disponible)
                         </p>
@@ -725,11 +725,11 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Types de notifications</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <MessageCircle className="w-4 h-4 text-blue-600" />
-                      <div>
-                        <p className="font-medium">Messages</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <MessageCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Messages</p>
                         <p className="text-sm text-muted-foreground">
                           Nouveaux messages et conversations
                         </p>
@@ -743,11 +743,11 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Package className="w-4 h-4 text-orange-600" />
-                      <div>
-                        <p className="font-medium">Annonces</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Package className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Annonces</p>
                         <p className="text-sm text-muted-foreground">
                           Nouvelles annonces correspondant à vos recherches
                         </p>
@@ -761,11 +761,11 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Star className="w-4 h-4 text-yellow-600" />
-                      <div>
-                        <p className="font-medium">Avis et évaluations</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Star className="w-5 h-5 text-yellow-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Avis et évaluations</p>
                         <p className="text-sm text-muted-foreground">
                           Nouveaux avis sur vos transactions
                         </p>
@@ -779,11 +779,11 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Bell className="w-4 h-4 text-red-600" />
-                      <div>
-                        <p className="font-medium">Alertes de sécurité</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Bell className="w-5 h-5 text-red-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Alertes de sécurité</p>
                         <p className="text-sm text-muted-foreground">
                           Alertes importantes et mises à jour de sécurité
                         </p>
@@ -797,11 +797,11 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Palette className="w-4 h-4 text-pink-600" />
-                      <div>
-                        <p className="font-medium">Marketing</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Palette className="w-5 h-5 text-pink-600 mt-0.5" />
+                      <div className="text-left">
+                        <p className="font-medium text-base">Marketing</p>
                         <p className="text-sm text-muted-foreground">
                           Nouvelles fonctionnalités et promotions
                         </p>
@@ -851,9 +851,9 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Visibilité du profil</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Profil public</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-base">Profil public</p>
                       <p className="text-sm text-muted-foreground">
                         Votre profil est visible par tous les étudiants vérifiés
                       </p>
@@ -869,9 +869,9 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Afficher l'email</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-base">Afficher l'email</p>
                       <p className="text-sm text-muted-foreground">
                         Votre email est visible sur votre profil public
                       </p>
@@ -884,9 +884,9 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Afficher le téléphone</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-base">Afficher le téléphone</p>
                       <p className="text-sm text-muted-foreground">
                         Votre numéro de téléphone est visible sur votre profil
                       </p>
@@ -899,9 +899,9 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Afficher l'université</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-base">Afficher l'université</p>
                       <p className="text-sm text-muted-foreground">
                         Votre université est visible sur votre profil
                       </p>
@@ -922,9 +922,9 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Interactions</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Autoriser les messages</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-base">Autoriser les messages</p>
                       <p className="text-sm text-muted-foreground">
                         Les autres étudiants peuvent vous envoyer des messages
                       </p>
@@ -937,9 +937,9 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Statut en ligne</p>
+                  <div className="flex items-start justify-between py-3">
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-base">Statut en ligne</p>
                       <p className="text-sm text-muted-foreground">
                         Afficher quand vous êtes en ligne
                       </p>

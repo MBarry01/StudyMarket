@@ -2,75 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: transparent;
-  cursor: pointer;
-  transition: border-color 0.25s;
-  border-color: tra;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* Purge des styles Vite par défaut qui entraient en conflit avec Tailwind et le dark mode */
 
 @layer base {
   :root {
@@ -87,7 +19,7 @@ button:focus-visible {
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;             /* Background sections muted */
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 27 96% 61%;             /* Orange accent */
+    --accent: 217 91% 60%;            /* Bleu accent (même que primary) */
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -115,7 +47,7 @@ button:focus-visible {
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;       /* Background sections muted dark */
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 27 96% 61%;
+    --accent: 217 91% 60%;            /* Bleu accent (même que primary) */
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
@@ -205,8 +137,8 @@ button:focus-visible {
   @apply bg-yellow-600 text-white;
 }
 
-.badge-contrast.bg-orange-100 {
-  @apply bg-orange-600 text-white;
+.badge-contrast.bg-blue-100 {
+  @apply bg-blue-600 text-white;
 }
 
 .badge-contrast.bg-red-100 {
@@ -238,8 +170,8 @@ button:focus-visible {
   @apply bg-yellow-500 text-black;
 }
 
-.dark .badge-contrast.bg-orange-100 {
-  @apply bg-orange-500 text-white;
+.dark .badge-contrast.bg-blue-100 {
+  @apply bg-blue-500 text-white;
 }
 
 .dark .badge-contrast.bg-red-100 {
@@ -276,7 +208,7 @@ button:focus-visible {
 }
 
 .bg-safe-orange {
-  @apply bg-orange-600 text-white;
+  @apply bg-blue-600 text-white;
 }
 
 .bg-safe-red {
@@ -309,7 +241,7 @@ button:focus-visible {
 }
 
 .dark .bg-safe-orange {
-  @apply bg-orange-500 text-white;
+  @apply bg-blue-500 text-white;
 }
 
 .dark .bg-safe-red {

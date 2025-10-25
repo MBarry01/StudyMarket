@@ -18,13 +18,28 @@ import { HelpPage } from './pages/HelpPage';
 import { SafetyPage } from './pages/SafetyPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { AuthPage } from './pages/AuthPage';
+import EmailVerificationHandler from './pages/EmailVerificationHandler';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminOverview from './pages/AdminOverview';
+import AdminOrdersPage from './pages/AdminOrdersPage';
+import AdminListingsPage from './pages/AdminListingsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminWebhookLogsPage from './pages/AdminWebhookLogsPage';
+import AdminPayoutsPage from './pages/AdminPayoutsPage';
+import AdminMessagesPage from './pages/AdminMessagesPage';
+import AdminReportsPage from './pages/AdminReportsPage';
+import AdminAuditTrailPage from './pages/AdminAuditTrailPage';
+import { AdminRoute } from './components/auth/AdminRoute';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { CartPage } from './components/checkout/CartPage';
-import { CheckoutPage } from './components/checkout/CheckoutPage';
-import { OrdersPage } from './components/checkout/OrdersPage';
-import { OrderConfirmationPage } from './components/checkout/OrderConfirmationPage';
 import { ProductsPage } from './components/checkout/ProductsPage';
+import { OrdersPage } from './components/checkout/OrdersPage';
+import { SalesPage } from './components/checkout/SalesPage';
+import { OrderDetailPage } from './components/checkout/OrderDetailPage';
+import { OrderConfirmationPage } from './components/checkout/OrderConfirmationPage';
 import { CheckoutSuccessPage } from './components/checkout/CheckoutSuccessPage';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 import EditListingPage from './pages/EditListingPage';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { HousingListingsPage } from './pages/HousingListingsPage';
@@ -32,19 +47,34 @@ import ChatbotWidget from './components/ui/ChatbotWidget';
 import './App.css';
 import React from 'react';
 
-function ErrorBoundary({ children }: { children: React.ReactNode }) {
-  const [error, setError] = React.useState<Error | null>(null);
-  React.useEffect(() => {
-    const handler = (event: ErrorEvent) => {
-      setError(event.error || new Error(event.message));
-    };
-    window.addEventListener('error', handler);
-    return () => window.removeEventListener('error', handler);
-  }, []);
-  if (error) {
-    return <div style={{color:'red',padding:'2rem',textAlign:'center'}}>Une erreur est survenue : {error.message}</div>;
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
   }
-  return <>{children}</>;
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{color:'red',padding:'2rem',textAlign:'center'}}>
+          Une erreur est survenue : {this.state.error?.message}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 function App() {
@@ -61,13 +91,36 @@ function App() {
                   <Route path="/listings" element={<ListingsPage />} />
                   <Route path="/listing/:id" element={<ListingDetailPage />} />
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/verify-email" element={<EmailVerificationHandler />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/safety" element={<SafetyPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+                  <Route path="/payment/success" element={<PaymentSuccessPage />} />
+                  {/* Admin */}
                   <Route
-                    path="/checkout"
+                    path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <AdminRoute>
+                          <AdminDashboardPage />
+                        </AdminRoute>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<AdminOverview />} />
+                    <Route path="orders" element={<AdminOrdersPage />} />
+                    <Route path="listings" element={<AdminListingsPage />} />
+                    <Route path="users" element={<AdminUsersPage />} />
+                    <Route path="webhooks" element={<AdminWebhookLogsPage />} />
+                    <Route path="payouts" element={<AdminPayoutsPage />} />
+                    <Route path="messages" element={<AdminMessagesPage />} />
+                    <Route path="reports" element={<AdminReportsPage />} />
+                    <Route path="audit" element={<AdminAuditTrailPage />} />
+                  </Route>
+                  <Route
+                    path="/checkout/:id"
                     element={
                       <ProtectedRoute>
                         <CheckoutPage />
@@ -79,6 +132,22 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <OrdersPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/sales"
+                    element={
+                      <ProtectedRoute>
+                        <SalesPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/order/:id"
+                    element={
+                      <ProtectedRoute>
+                        <OrderDetailPage />
                       </ProtectedRoute>
                     }
                   />

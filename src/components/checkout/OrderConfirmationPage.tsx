@@ -99,7 +99,7 @@ export const OrderConfirmationPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8 text-center">
         <Card>
           <CardContent className="pt-6">
-            <AlertTriangle className="w-12 h-12 text-orange-500 mx-auto mb-4" />
+            <AlertTriangle className="w-12 h-12 text-blue-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Commande introuvable</h2>
             <p className="text-muted-foreground mb-4">
               Nous n'avons pas pu trouver les détails de cette commande.

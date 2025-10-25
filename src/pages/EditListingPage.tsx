@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { MapLocationPicker } from "@/components/ui/MapLocationPicker";
 import { useListingStore } from "../stores/useListingStore";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -18,6 +20,12 @@ type FormState = {
   price: string;
   images: string[];
 };
+
+interface LocationData {
+  address: string;
+  latitude: number;
+  longitude: number;
+}
 
 const categories = [
   { value: 'electronics', label: 'Électronique' },
@@ -54,6 +62,7 @@ const EditListingPage = () => {
   const [category, setCategory] = useState<CategoryType | "">('');
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState('');
+  const [meetingLocation, setMeetingLocation] = useState<LocationData | undefined>(undefined);
 
   useEffect(() => {
     if (id) fetchListingById(id);
@@ -69,6 +78,19 @@ const EditListingPage = () => {
       });
       setCategory(currentListing.category || '');
       setTags(currentListing.tags || []);
+      
+      // Charger les coordonnées existantes si disponibles et valides
+      if (currentListing.location?.coordinates && 
+          !isNaN(currentListing.location.coordinates.lat) && 
+          !isNaN(currentListing.location.coordinates.lng) &&
+          currentListing.location.coordinates.lat !== 0 && 
+          currentListing.location.coordinates.lng !== 0) {
+        setMeetingLocation({
+          address: `${currentListing.location.city}, ${currentListing.location.state}`,
+          latitude: currentListing.location.coordinates.lat,
+          longitude: currentListing.location.coordinates.lng,
+        });
+      }
     }
   }, [currentListing]);
 
@@ -118,13 +140,30 @@ const EditListingPage = () => {
         );
       }
       const allImages = [...form.images, ...uploadedUrls];
-      await updateListing(id, {
+      
+      // Préparer les données de mise à jour
+      const updateData: any = {
         ...form,
         price: parseFloat(form.price),
         images: allImages,
         category: category as CategoryType,
         tags,
-      });
+      };
+      
+      // Mettre à jour les coordonnées si elles ont été modifiées
+      if (meetingLocation) {
+        updateData.location = {
+          ...currentListing?.location,
+          city: meetingLocation.address.split(',')[0] || currentListing?.location.city,
+          coordinates: {
+            lat: meetingLocation.latitude,
+            lng: meetingLocation.longitude,
+          },
+        };
+        updateData.meetingPoint = meetingLocation.address;
+      }
+      
+      await updateListing(id, updateData);
       navigate(`/listing/${id}`);
     } catch (err) {
       setError("Erreur lors de la mise à jour de l'annonce");
@@ -139,8 +178,8 @@ const EditListingPage = () => {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto mt-10">
-      <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-        <h2 className="text-2xl font-bold mb-8 text-center">Modifier mon annonce</h2>
+      <div className="bg-white dark:bg-card rounded-2xl shadow-lg p-8 border border-gray-100 dark:border-border">
+        <h2 className="text-2xl font-bold mb-8 text-left">Modifier mon annonce</h2>
         
         {/* Titre */}
         <div className="mb-5">
@@ -233,6 +272,15 @@ const EditListingPage = () => {
           </div>
         </div>
         
+        {/* Lieu de rencontre */}
+        <div className="mb-5">
+          <MapLocationPicker
+            onLocationSelect={setMeetingLocation}
+            initialLocation={meetingLocation}
+            placeholder="Sélectionnez un nouveau point de rencontre"
+          />
+        </div>
+        
         {/* Photos */}
         <div className="mb-8">
           <Label className="block mb-1 text-gray-700">Photos</Label>
@@ -244,9 +292,11 @@ const EditListingPage = () => {
                   type="button"
                   size="icon"
                   variant="destructive"
-                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
+                  className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                   onClick={() => handleRemoveImage(idx)}
-                >×</Button>
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
             ))}
             {newImages.map((file, idx) => (
@@ -256,9 +306,11 @@ const EditListingPage = () => {
                   type="button"
                   size="icon"
                   variant="destructive"
-                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
+                  className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                   onClick={() => handleRemoveNewImage(idx)}
-                >×</Button>
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
             ))}
             <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">

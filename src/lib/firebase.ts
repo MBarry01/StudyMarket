@@ -43,8 +43,9 @@ export const emailConfig = {
   // URL de redirection après vérification d'email
   actionCodeSettings: {
     // IMPORTANT: l'app tourne sous /StudyMarket en dev
-    url: `${window.location.origin}/StudyMarket/auth`,
-    handleCodeInApp: false,
+    // Rediriger vers la page de gestion de vérification
+    url: `${window.location.origin}/StudyMarket/verify-email`,
+    handleCodeInApp: true, // Permet à Firebase de gérer l'action dans l'app
   }
 };
 

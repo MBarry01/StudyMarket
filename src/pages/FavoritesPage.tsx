@@ -594,7 +594,7 @@ export const FavoritesPage: React.FC = () => {
                 <p className="text-2xl font-bold">{stats.recentlyAdded}</p>
                 <p className="text-sm text-muted-foreground">Cette semaine</p>
               </div>
-              <Zap className="w-8 h-8 text-orange-600" />
+              <Zap className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
