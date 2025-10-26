@@ -46,6 +46,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '../contexts/AuthContext';
 import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
+import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { doc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
@@ -1143,29 +1144,19 @@ export const SettingsPage: React.FC = () => {
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${userProfile?.isVerified ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                      <VerificationBadge status={userProfile?.isVerified || 'unverified'} size="md" showText />
                       <div>
-                        <p className="font-medium">
-                          {userProfile?.isVerified ? 'Compte vérifié' : 'Vérification en attente'}
-                        </p>
                         <p className="text-sm text-muted-foreground">
                           {userProfile?.isVerified 
                             ? 'Votre statut étudiant a été vérifié'
-                            : 'Votre statut étudiant est en cours de vérification'
+                            : 'Demandez la vérification pour accéder à toutes les fonctionnalités'
                           }
                         </p>
                       </div>
                     </div>
-                    {userProfile?.isVerified ? (
-                      <Badge className="bg-green-100 text-green-800">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Vérifié
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">
-                        En attente
-                      </Badge>
-                    )}
+                    <Button variant="outline" size="sm">
+                      {userProfile?.isVerified ? 'Voir le statut' : 'Demander la vérification'}
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -8,7 +8,8 @@ import { HomePage } from './pages/HomePage';
 import { ListingsPage } from './pages/ListingsPage';
 import { ListingDetailPage } from './pages/ListingDetailPage';
 import { CreateListingPage } from './pages/CreateListingPage';
-import { ProfilePage } from './pages/ProfilePage';
+import ProfilePage from './pages/ProfilePage';
+import { VerificationRequestPage } from './pages/VerificationRequestPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { EnvironmentalImpactPage } from './pages/EnvironmentalImpactPage';
 import { SavedSearchesPage } from './pages/SavedSearchesPage';
@@ -29,6 +30,7 @@ import AdminPayoutsPage from './pages/AdminPayoutsPage';
 import AdminMessagesPage from './pages/AdminMessagesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminAuditTrailPage from './pages/AdminAuditTrailPage';
+import { AdminVerificationsPage } from './pages/AdminVerificationsPage';
 import { AdminRoute } from './components/auth/AdminRoute';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { CartPage } from './components/checkout/CartPage';
@@ -117,6 +119,7 @@ function App() {
                     <Route path="payouts" element={<AdminPayoutsPage />} />
                     <Route path="messages" element={<AdminMessagesPage />} />
                     <Route path="reports" element={<AdminReportsPage />} />
+                    <Route path="verifications" element={<AdminVerificationsPage />} />
                     <Route path="audit" element={<AdminAuditTrailPage />} />
                   </Route>
                   <Route
@@ -172,6 +175,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/verification"
+                    element={
+                      <ProtectedRoute>
+                        <VerificationRequestPage />
                       </ProtectedRoute>
                     }
                   />

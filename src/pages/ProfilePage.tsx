@@ -18,7 +18,8 @@ import {
   GraduationCap,
   User,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   collection, 
@@ -39,6 +40,7 @@ import { fr } from 'date-fns/locale';
 import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
 import { Checkbox } from '../components/ui/checkbox';
 import { Label } from '../components/ui/label';
+import { VerificationBadge } from '../components/ui/VerificationBadge';
 import { toast } from 'react-hot-toast';
 import { Textarea } from '../components/ui/textarea';
 import { Input } from '../components/ui/input';
@@ -1115,6 +1117,41 @@ export const ProfilePage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          {/* Section Vérification */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Vérification du compte
+              </CardTitle>
+              <CardDescription>
+                Vérifiez votre statut d'étudiant pour accéder à toutes les fonctionnalités
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <VerificationBadge status={userProfile?.isVerified || false} size="md" showText />
+                  <div className="text-sm text-muted-foreground">
+                    {userProfile?.isVerified 
+                      ? 'Votre compte est vérifié' 
+                      : 'Votre compte n\'est pas encore vérifié'}
+                  </div>
+                </div>
+                <Button asChild>
+                  <Link to="/verification">
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {userProfile?.isVerified ? 'Voir le statut' : 'Demander la vérification'}
+                  </Link>
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Les comptes vérifiés bénéficient de plus de confiance et d'avantages sur la plateforme
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Paramètres du profil */}
           <Card>
             <CardHeader>
               <CardTitle>Paramètres du profil</CardTitle>
@@ -1139,3 +1176,5 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
+
+export default ProfilePage;

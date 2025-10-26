@@ -9,7 +9,7 @@ export interface User {
   
   // Student verification
   isVerified: boolean;
-  verificationStatus: 'pending' | 'verified' | 'rejected';
+  verificationStatus: 'unverified' | 'documents_submitted' | 'under_review' | 'verified' | 'rejected' | 'suspended';
   university: string;
   studentId?: string;
   graduationYear?: number;
@@ -304,4 +304,69 @@ export interface PaymentInfo {
   transactionId?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Student Verification Types
+export enum VerificationStatus {
+  UNVERIFIED = 'unverified',
+  DOCUMENTS_SUBMITTED = 'documents_submitted',
+  UNDER_REVIEW = 'under_review',
+  VERIFIED = 'verified',
+  REJECTED = 'rejected',
+  SUSPENDED = 'suspended'
+}
+
+export interface VerificationDocument {
+  type: 'student_card' | 'enrollment_certificate' | 'grades_transcript' | 'id_card' | 'selfie';
+  url: string;
+  filename: string;
+  size: number; // bytes
+  checksum?: string;
+  uploadedAt: Date;
+}
+
+export interface VerificationMetadata {
+  email_domain_ok: boolean;
+  id_expiry_ok: boolean;
+  ocr_text?: {
+    institution_name?: string;
+    student_id?: string;
+    expiry_date?: string;
+    confidence: number;
+  };
+  face_match?: {
+    confidence: number;
+    verified: boolean;
+  };
+  fraud_signals?: {
+    disposable_email: boolean;
+    ip_mismatch: boolean;
+    multiple_attempts: boolean;
+  };
+}
+
+export interface StudentVerification {
+  id?: string;
+  userId: string;
+  status: VerificationStatus;
+  documents: VerificationDocument[];
+  metadata?: VerificationMetadata;
+  attemptsCount: number;
+  submittedAt: Date;
+  reviewedAt?: Date;
+  reviewedBy?: string;
+  rejectReason?: string;
+  expiresAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface VerificationAuditEntry {
+  id: string;
+  verificationId: string;
+  actor: string; // userId | adminId | 'system'
+  action: 'submitted' | 'approved' | 'rejected' | 'suspended' | 'auto_verified';
+  details: any;
+  timestamp: Date;
+  ip?: string;
 }

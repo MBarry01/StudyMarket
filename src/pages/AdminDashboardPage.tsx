@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Shield, LayoutDashboard, Package, Users, ListChecks, Webhook, DollarSign, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Shield, LayoutDashboard, Package, Users, ListChecks, Webhook, DollarSign, FileText, MessageSquare, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
   return (
@@ -121,6 +121,19 @@ export const AdminDashboardPage: React.FC = () => {
               >
                 <AlertTriangle className="w-4 h-4" />
                 Signalements
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/admin/verifications"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                    isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                  }`
+                }
+              >
+                <CheckCircle className="w-4 h-4" />
+                Vérifications
               </NavLink>
             </li>
             <li>
