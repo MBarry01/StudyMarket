@@ -4,6 +4,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { VerificationStatus, VerificationDocument as DocType, VerificationMetadata, StudentVerification } from '../types';
 import { AuditService } from './auditService';
 import { AutoValidationService } from './autoValidationService';
+import { QueueService } from './queueService';
 
 export interface VerificationDocument {
   type: 'student_card' | 'enrollment_certificate' | 'grades_transcript' | 'id_card' | 'selfie';
@@ -240,7 +241,11 @@ export class VerificationService {
         }).filter(([_, value]) => value !== undefined)
       );
 
-      await addDoc(collection(db, this.COLLECTION), cleanRequest);
+      const docRef = await addDoc(collection(db, this.COLLECTION), cleanRequest);
+      const verificationId = docRef.id;
+
+      // TODO: Enqueue worker job pour validation serveur
+      // await QueueService.enqueueVerification(verificationId, userId, { documents: uploadedDocuments });
 
       // 4. Mettre à jour le statut de l'utilisateur avec le statut final
       const userRef = doc(db, 'users', userId);
