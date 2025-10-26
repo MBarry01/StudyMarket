@@ -3,6 +3,7 @@ import { db, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { VerificationStatus, VerificationDocument as DocType, VerificationMetadata, StudentVerification } from '../types';
 import { AuditService } from './auditService';
+import { AutoValidationService } from './autoValidationService';
 
 export interface VerificationDocument {
   type: 'student_card' | 'enrollment_certificate' | 'grades_transcript' | 'id_card' | 'selfie';
@@ -142,28 +143,84 @@ export class VerificationService {
         });
       }
 
-      // 2. Créer la demande de vérification
+      // 2. Validation automatique avec les services cloud
+      console.log('🤖 Démarrage validation automatique...');
+      let validationResult;
+      let finalStatus = VerificationStatus.DOCUMENTS_SUBMITTED;
+      
+      try {
+        const validationDocs = uploadedDocuments.map(d => ({
+          url: d.url,
+          filename: d.filename,
+          type: d.type,
+        }));
+
+        validationResult = await AutoValidationService.validate(
+          userData.email,
+          validationDocs,
+          {
+            ipAddress: 'client', // TODO: Récupérer IP réelle
+            previousAttempts: 0, // TODO: Compter tentatives réelles
+          }
+        );
+
+        console.log('✅ Validation automatique terminée:', validationResult);
+
+        // Déterminer le statut final basé sur la recommandation
+        if (validationResult.recommendation === 'auto_approve' && validationResult.passed) {
+          finalStatus = VerificationStatus.VERIFIED;
+          console.log('🎉 Auto-approbation ! Score:', validationResult.score);
+        } else if (validationResult.recommendation === 'reject') {
+          finalStatus = VerificationStatus.REJECTED;
+          console.log('❌ Rejet automatique. Score:', validationResult.score);
+        } else {
+          finalStatus = VerificationStatus.UNDER_REVIEW;
+          console.log('⚠️ Revue admin nécessaire. Score:', validationResult.score);
+        }
+      } catch (validationError) {
+        console.error('⚠️ Erreur validation automatique:', validationError);
+        // Continuer avec statut par défaut (documents_submitted)
+        finalStatus = VerificationStatus.DOCUMENTS_SUBMITTED;
+      }
+
+      // 3. Créer la demande de vérification avec statut final
+      const baseMetadata: any = {
+        email_domain_ok: false,
+        id_expiry_ok: false,
+        ocr_text: {},
+        face_match: { confidence: 0, verified: false },
+        fraud_signals: { disposable_email: false, ip_mismatch: false, multiple_attempts: false },
+        studentId: userData.studentId,
+        university: userData.university,
+        graduationYear: userData.graduationYear,
+        fieldOfStudy: userData.fieldOfStudy,
+        campus: userData.campus,
+      };
+
+      // Ajouter les résultats de validation automatique si disponible
+      const finalMetadata = {
+        ...baseMetadata,
+        ...(validationResult && {
+          auto_validation_score: validationResult.score,
+          auto_validation_recommendation: validationResult.recommendation,
+          auto_validation_checks: validationResult.checks,
+          auto_validation_flags: validationResult.flags,
+          ocr_result: validationResult.details?.ocr,
+          face_match_result: validationResult.details?.faceMatch,
+          antivirus_results: validationResult.details?.antivirus,
+        }),
+      };
+
       const verificationRequest: Omit<VerificationRequest, 'id' | 'metadata'> & { metadata?: any } = {
         userId,
         userEmail: userData.email,
         userName: userData.displayName,
         documents: uploadedDocuments,
-        status: VerificationStatus.DOCUMENTS_SUBMITTED,
+        status: finalStatus, // Utiliser le statut déterminé par validation automatique
         attemptsCount: 1,
         submittedAt: new Date(),
         createdAt: new Date(),
-        metadata: {
-          email_domain_ok: false,
-          id_expiry_ok: false,
-          ocr_text: {},
-          face_match: { confidence: 0, verified: false },
-          fraud_signals: { disposable_email: false, ip_mismatch: false, multiple_attempts: false },
-          studentId: userData.studentId,
-          university: userData.university,
-          graduationYear: userData.graduationYear,
-          fieldOfStudy: userData.fieldOfStudy,
-          campus: userData.campus,
-        },
+        metadata: finalMetadata,
       };
 
       // Filtrer les champs undefined dans metadata
@@ -185,11 +242,34 @@ export class VerificationService {
 
       await addDoc(collection(db, this.COLLECTION), cleanRequest);
 
-      // 3. Mettre à jour le statut de l'utilisateur
+      // 4. Mettre à jour le statut de l'utilisateur avec le statut final
       const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        verificationStatus: VerificationStatus.DOCUMENTS_SUBMITTED,
-        isVerified: false,
+      const userUpdateData: any = {
+        verificationStatus: finalStatus,
+      };
+
+      // Si auto-vérifié, marquer comme vérifié
+      if (finalStatus === VerificationStatus.VERIFIED) {
+        userUpdateData.isVerified = true;
+        console.log('✅ Utilisateur vérifié automatiquement !');
+      } else {
+        userUpdateData.isVerified = false;
+      }
+
+      await updateDoc(userRef, userUpdateData);
+
+      // 5. Logger l'action d'audit
+      await AuditService.log({
+        userId,
+        action: 'renew',
+        targetType: 'verification_request',
+        targetId: 'new',
+        metadata: {
+          previousStatus: 'unverified',
+          newStatus: finalStatus,
+          score: validationResult?.score,
+          recommendation: validationResult?.recommendation,
+        },
       });
     } catch (error) {
       console.error('Erreur lors de la demande de vérification:', error);

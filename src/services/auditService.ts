@@ -15,6 +15,10 @@ export interface AuditLogData {
     previousStatus?: string;
     newStatus?: string;
     attemptsCount?: number;
+    autoValidationScore?: number;
+    recommendation?: 'auto_approve' | 'admin_review' | 'reject';
+    autoValidationChecks?: any;
+    autoValidationFlags?: any;
   };
 }
 
@@ -117,7 +121,7 @@ export class AuditService {
   static async logApproval(
     requestId: string,
     adminId: string,
-    metadata?: { score?: number; documentsCount?: number; previousStatus?: string }
+    metadata?: { score?: number; documentsCount?: number; previousStatus?: string; newStatus?: string }
   ): Promise<void> {
     await this.log({
       userId: adminId,
@@ -138,7 +142,7 @@ export class AuditService {
     requestId: string,
     adminId: string,
     reason: string,
-    metadata?: { score?: number; riskLevel?: 'low' | 'medium' | 'high' }
+    metadata?: { score?: number; riskLevel?: 'low' | 'medium' | 'high'; previousStatus?: string }
   ): Promise<void> {
     await this.log({
       userId: adminId,
@@ -160,7 +164,7 @@ export class AuditService {
     requestId: string,
     adminId: string,
     reason: string,
-    metadata?: { riskLevel?: 'low' | 'medium' | 'high' }
+    metadata?: { riskLevel?: 'low' | 'medium' | 'high'; previousStatus?: string }
   ): Promise<void> {
     await this.log({
       userId: adminId,
