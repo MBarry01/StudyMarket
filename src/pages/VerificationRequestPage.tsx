@@ -4,7 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { VerificationBadge } from '@/components/ui/VerificationBadge';
+import { VerificationProgress } from '@/components/ui/VerificationProgress';
+import { VerificationTimeline } from '@/components/ui/VerificationTimeline';
 import { VerificationService, VerificationRequest } from '@/services/verificationService';
+import { UploadService } from '@/services/uploadService';
+import { NotificationService } from '@/services/notificationService';
+import { VerificationStatus } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -16,6 +21,7 @@ export const VerificationRequestPage: React.FC = () => {
   const [verificationStatus, setVerificationStatus] = useState<VerificationRequest | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -37,11 +43,28 @@ export const VerificationRequestPage: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
+      
+      // Validation nombre max
       if (files.length + selectedFiles.length > 5) {
         toast.error('Maximum 5 fichiers autorisés');
         return;
       }
+      
+      // Validation types et tailles
+      for (const file of selectedFiles) {
+        if (!UploadService.validateFileType(file)) {
+          toast.error(`Type de fichier non autorisé : ${file.name}`);
+          return;
+        }
+        
+        if (!UploadService.validateFileSize(file, 10)) {
+          toast.error(`Fichier trop volumineux : ${file.name} (max 10MB)`);
+          return;
+        }
+      }
+      
       setFiles(prev => [...prev, ...selectedFiles]);
+      NotificationService.notifyDocumentUpload(selectedFiles.length);
     }
   };
 
@@ -65,6 +88,35 @@ export const VerificationRequestPage: React.FC = () => {
     setLoading(true);
 
     try {
+      // Upload des fichiers avec progress tracking
+      const uploadedDocs: { type: string; url: string; filename: string; size: number; uploadedAt: Date }[] = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const path = UploadService.getVerificationDocumentPath(
+          currentUser.uid,
+          'document',
+          file.name
+        );
+        
+        const url = await UploadService.uploadFile(
+          file,
+          path,
+          (progress) => {
+            setUploadProgress(prev => ({ ...prev, [i]: progress.percentage }));
+          }
+        );
+        
+        uploadedDocs.push({
+          type: file.type.includes('pdf') ? 'enrollment_certificate' : 'student_card',
+          url,
+          filename: file.name,
+          size: file.size,
+          uploadedAt: new Date(),
+        });
+      }
+
+      // Soumettre la demande
       await VerificationService.requestVerification(
         currentUser.uid,
         {
@@ -79,16 +131,20 @@ export const VerificationRequestPage: React.FC = () => {
         files
       );
 
-      toast.success('Demande de vérification envoyée avec succès !');
-      setFiles([]);
-      setStudentId('');
-
-      // Recharger le statut
+      // Notifier le changement de statut
       const status = await VerificationService.getVerificationStatus(currentUser.uid);
       setVerificationStatus(status);
+      
+      if (status) {
+        NotificationService.notifyVerificationStatusChange(status.status);
+      }
+
+      setFiles([]);
+      setStudentId('');
+      setUploadProgress({});
     } catch (error) {
       console.error('Erreur lors de la demande:', error);
-      toast.error('Erreur lors de l\'envoi de la demande. Veuillez réessayer.');
+      UploadService.notifyUploadError();
     } finally {
       setLoading(false);
     }
@@ -160,8 +216,14 @@ export const VerificationRequestPage: React.FC = () => {
               <VerificationBadge status={verificationStatus.status} size="lg" />
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {getStatusMessage()}
+            <VerificationProgress status={verificationStatus.status} />
+            <VerificationTimeline 
+              currentStatus={verificationStatus.status}
+              submittedAt={verificationStatus.submittedAt}
+              reviewedAt={verificationStatus.reviewedAt}
+            />
           </CardContent>
         </Card>
       )}
@@ -224,23 +286,38 @@ export const VerificationRequestPage: React.FC = () => {
                     {files.map((file, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                        className="p-3 bg-muted rounded-lg space-y-2"
                       >
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <span className="text-sm">{file.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-sm">{file.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                          >
+                            Supprimer
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(index)}
-                        >
-                          Supprimer
-                        </Button>
+                        {uploadProgress[index] !== undefined && (
+                          <div className="space-y-1">
+                            <div className="w-full bg-background rounded-full h-1">
+                              <div
+                                className="bg-primary h-1 rounded-full transition-all duration-300"
+                                style={{ width: `${uploadProgress[index]}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground text-right">
+                              {uploadProgress[index].toFixed(0)}% uploadé
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
