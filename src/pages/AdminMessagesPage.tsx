@@ -316,9 +316,9 @@ const AdminMessagesPage: React.FC = () => {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-8">Chargement…</div>
+        <div className="text-left py-">Chargement…</div>
       ) : filteredConversations.length === 0 ? (
-        <div className="text-center py-12 rounded-md border border-border bg-muted/50">
+        <div className="text-left py- rounded-md border border-border bg-muted/50">
           <p className="text-muted-foreground">
             Aucune conversation trouvée.
             {conversations.length === 0 && ' La collection conversations est vide.'}

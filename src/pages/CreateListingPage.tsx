@@ -1120,7 +1120,7 @@ export const CreateListingPage: React.FC = () => {
                   )}
                 </Button>
                 
-                <p className="text-xs text-muted-foreground text-center mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   {isFormValid() 
                     ? "Votre annonce sera visible immédiatement" 
                     : "Complétez tous les champs obligatoires"

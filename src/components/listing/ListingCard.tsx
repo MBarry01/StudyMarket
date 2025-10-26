@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { Button } from '@/components/ui/button';
+import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { Listing } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -265,7 +266,13 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                 <span className="text-sm font-medium text-foreground truncate">
                   {listing.sellerName || 'Utilisateur'}
                 </span>
-                {listing.sellerVerified && (
+                {listing.sellerVerificationStatus ? (
+                  <VerificationBadge 
+                    status={listing.sellerVerificationStatus} 
+                    size="sm" 
+                    showText={false}
+                  />
+                ) : listing.sellerVerified && (
                   <Shield className="w-4 h-4 text-green-500 flex-shrink-0" />
                 )}
               </div>

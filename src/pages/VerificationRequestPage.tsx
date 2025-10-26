@@ -209,6 +209,19 @@ export const VerificationRequestPage: React.FC = () => {
             </AlertDescription>
           </Alert>
         );
+      case 'suspended':
+        return (
+          <Alert className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+            <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <AlertDescription className="text-orange-800 dark:text-orange-300">
+              <div className="font-semibold mb-1">Votre certification a été révoquée</div>
+              {verificationStatus.revocationReason && (
+                <div className="mt-2">Raison : {verificationStatus.revocationReason}</div>
+              )}
+              <div className="mt-2">Vous pouvez soumettre une nouvelle demande ci-dessous.</div>
+            </AlertDescription>
+          </Alert>
+        );
       default:
         return null;
     }
@@ -245,7 +258,7 @@ export const VerificationRequestPage: React.FC = () => {
       )}
 
       {/* Formulaire de demande */}
-      {(!verificationStatus || verificationStatus.status === 'rejected' || verificationStatus.status === 'unverified') && (
+      {(!verificationStatus || verificationStatus.status === 'rejected' || verificationStatus.status === 'unverified' || verificationStatus.status === 'suspended') && (
         <Card>
           <CardHeader>
             <CardTitle>Demande de vérification</CardTitle>

@@ -84,6 +84,7 @@ export interface Listing {
   sellerAvatar?: string;
   sellerUniversity: string;
   sellerVerified: boolean;
+  sellerVerificationStatus?: 'unverified' | 'documents_submitted' | 'under_review' | 'verified' | 'rejected' | 'suspended';
   sellerEmail?: string;
   
   // Status and metrics

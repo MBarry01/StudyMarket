@@ -2,6 +2,7 @@ import { doc, collection, addDoc, updateDoc, getDoc, getDocs, query, where, orde
 import { db, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { VerificationStatus, VerificationDocument as DocType, VerificationMetadata, StudentVerification } from '../types';
+import { AuditService } from './auditService';
 
 export interface VerificationDocument {
   type: 'student_card' | 'enrollment_certificate' | 'grades_transcript' | 'id_card' | 'selfie';
@@ -227,7 +228,7 @@ export class VerificationService {
           id: doc.id,
           ...data,
           status: this.mapStatus(status),
-          requestedAt: data.requestedAt?.toDate() || new Date(),
+          submittedAt: data.submittedAt?.toDate() || data.requestedAt?.toDate() || new Date(),
           reviewedAt: data.reviewedAt?.toDate(),
           documents: data.documents?.map((d: any) => ({
             ...d,
@@ -276,6 +277,16 @@ export class VerificationService {
         verificationStatus: VerificationStatus.VERIFIED,
         isVerified: true,
       });
+
+      // 3. Logger l'action d'audit
+      await AuditService.logApproval(
+        requestId,
+        adminId,
+        {
+          documentsCount: data.documents?.length || 0,
+          previousStatus: data.status,
+        }
+      );
     } catch (error) {
       console.error('Erreur lors de l\'approbation:', error);
       throw error;
@@ -315,10 +326,70 @@ export class VerificationService {
         isVerified: false,
       });
 
-      // 3. Supprimer les documents (optionnel)
+      // 3. Logger l'action d'audit
+      await AuditService.logRejection(
+        requestId,
+        adminId,
+        reason,
+        {
+          previousStatus: data.status,
+          riskLevel: 'medium', // ou calculé basé sur metadata
+        }
+      );
+
+      // 4. Supprimer les documents (optionnel)
       // await this.deleteVerificationDocuments(data.documents);
     } catch (error) {
       console.error('Erreur lors du rejet:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Révoquer une certification (Admin only)
+   */
+  static async revokeVerification(
+    requestId: string,
+    reason: string,
+    adminId: string
+  ): Promise<void> {
+    try {
+      const requestRef = doc(db, this.COLLECTION, requestId);
+      const requestSnap = await getDoc(requestRef);
+      
+      if (!requestSnap.exists()) {
+        throw new Error('Demande de vérification introuvable');
+      }
+
+      const data = requestSnap.data();
+      
+      // 1. Mettre à jour la demande (status = suspended)
+      await updateDoc(requestRef, {
+        status: VerificationStatus.SUSPENDED,
+        reviewedAt: serverTimestamp(),
+        reviewedBy: adminId,
+        revocationReason: reason,
+      });
+
+      // 2. Mettre à jour le statut de l'utilisateur
+      const userRef = doc(db, 'users', data.userId);
+      await updateDoc(userRef, {
+        verificationStatus: VerificationStatus.SUSPENDED,
+        isVerified: false,
+      });
+
+      // 3. Logger l'action d'audit
+      await AuditService.logRevocation(
+        requestId,
+        adminId,
+        reason,
+        {
+          riskLevel: 'high',
+          previousStatus: data.status,
+        }
+      );
+    } catch (error) {
+      console.error('Erreur lors de la révocation:', error);
       throw error;
     }
   }
@@ -343,7 +414,7 @@ export class VerificationService {
           id: doc.id,
           ...data,
           status: this.mapStatus(status),
-          requestedAt: data.requestedAt?.toDate() || new Date(),
+          submittedAt: data.submittedAt?.toDate() || data.requestedAt?.toDate() || new Date(),
           reviewedAt: data.reviewedAt?.toDate(),
           documents: data.documents?.map((d: any) => ({
             ...d,
@@ -387,7 +458,7 @@ export class VerificationService {
           id: doc.id,
           ...data,
           status: this.mapStatus(status),
-          requestedAt: data.requestedAt?.toDate() || new Date(),
+          submittedAt: data.submittedAt?.toDate() || data.requestedAt?.toDate() || new Date(),
           reviewedAt: data.reviewedAt?.toDate(),
           documents: data.documents?.map((d: any) => ({
             ...d,
@@ -401,8 +472,8 @@ export class VerificationService {
       
       // Trier manuellement par date (plus récent en premier)
       requests.sort((a, b) => {
-        const dateA = a.requestedAt instanceof Date ? a.requestedAt.getTime() : 0;
-        const dateB = b.requestedAt instanceof Date ? b.requestedAt.getTime() : 0;
+        const dateA = a.submittedAt instanceof Date ? a.submittedAt.getTime() : 0;
+        const dateB = b.submittedAt instanceof Date ? b.submittedAt.getTime() : 0;
         return dateB - dateA;
       });
       
@@ -463,8 +534,9 @@ export class VerificationService {
   ): Unsubscribe {
     const q = query(
       collection(db, this.COLLECTION),
-      where('userId', '==', userId),
-            orderBy('submittedAt', 'desc')
+      where('userId', '==', userId)
+      // Temporairement retiré orderBy pour éviter les problèmes d'index
+      // orderBy('submittedAt', 'desc')
     );
 
     return onSnapshot(
@@ -475,25 +547,34 @@ export class VerificationService {
           return;
         }
 
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-        const status = data.status;
-        
-        const verificationRequest: VerificationRequest = {
-          id: doc.id,
-          ...data,
-          status: this.mapStatus(status),
-          submittedAt: data.submittedAt?.toDate() || data.requestedAt?.toDate() || new Date(),
-          reviewedAt: data.reviewedAt?.toDate(),
-          documents: data.documents?.map((d: any) => ({
-            ...d,
-            uploadedAt: typeof d.uploadedAt === 'number' 
-              ? new Date(d.uploadedAt) 
-              : (d.uploadedAt?.toDate?.() || new Date()),
-          })) || [],
-        };
+        // Trier manuellement par date (plus récent en premier)
+        const docs = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return { doc, data };
+        }).sort((a, b) => {
+          const dateA = a.data.submittedAt?.toDate?.()?.getTime() || a.data.requestedAt?.toDate?.()?.getTime() || 0;
+          const dateB = b.data.submittedAt?.toDate?.()?.getTime() || b.data.requestedAt?.toDate?.()?.getTime() || 0;
+          return dateB - dateA;
+        }).map(({ doc, data }) => {
+          const status = data.status;
+          
+          return {
+            id: doc.id,
+            ...data,
+            status: this.mapStatus(status),
+            submittedAt: data.submittedAt?.toDate() || data.requestedAt?.toDate() || new Date(),
+            reviewedAt: data.reviewedAt?.toDate(),
+            documents: data.documents?.map((d: any) => ({
+              ...d,
+              uploadedAt: typeof d.uploadedAt === 'number' 
+                ? new Date(d.uploadedAt) 
+                : (d.uploadedAt?.toDate?.() || new Date()),
+            })) || [],
+          } as VerificationRequest;
+        });
 
-        callback(verificationRequest);
+        // Retourner le plus récent
+        callback(docs[0]);
       },
       (error) => {
         console.error('Erreur listener Firestore:', error);
@@ -505,7 +586,7 @@ export class VerificationService {
   /**
    * Marquer une demande comme "under_review" quand un admin l'ouvre
    */
-  static async markAsUnderReview(requestId: string): Promise<void> {
+  static async markAsUnderReview(requestId: string, adminId?: string): Promise<void> {
     try {
       const requestRef = doc(db, this.COLLECTION, requestId);
       const requestSnap = await getDoc(requestRef);
@@ -525,6 +606,14 @@ export class VerificationService {
           reviewStartedAt: serverTimestamp(),
         });
         console.log(`✅ Statut mis à jour pour ${requestId}`);
+        
+        // Logger l'action d'audit si adminId fourni
+        if (adminId) {
+          await AuditService.logUnderReview(requestId, adminId, {
+            documentsCount: data.documents?.length || 0,
+            previousStatus: currentStatus,
+          });
+        }
       } else {
         console.log(`⚠️ Statut actuel ${currentStatus}, pas de changement pour ${requestId}`);
       }
@@ -549,9 +638,10 @@ export class VerificationService {
         where('status', '==', statusFilter)
       );
     } else {
+      // Pas d'orderBy pour éviter les problèmes d'index Firestore
       q = query(
-        collection(db, this.COLLECTION),
-            orderBy('submittedAt', 'desc')
+        collection(db, this.COLLECTION)
+        // orderBy('submittedAt', 'desc') - désactivé temporairement
       );
     }
 

@@ -18,7 +18,13 @@ export class UploadService {
   ): Promise<string> {
     try {
       const storageRef = ref(storage, path);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const uploadTask = uploadBytesResumable(storageRef, file, {
+        contentType: file.type,
+        customMetadata: {
+          originalName: file.name,
+          uploadedAt: new Date().toISOString(),
+        }
+      });
 
       return new Promise((resolve, reject) => {
         uploadTask.on(

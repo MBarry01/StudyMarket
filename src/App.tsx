@@ -9,7 +9,7 @@ import { ListingsPage } from './pages/ListingsPage';
 import { ListingDetailPage } from './pages/ListingDetailPage';
 import { CreateListingPage } from './pages/CreateListingPage';
 import ProfilePage from './pages/ProfilePage';
-import { VerificationRequestPage } from './pages/VerificationRequestPage';
+import VerificationRequestPage from './pages/VerificationRequestPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { EnvironmentalImpactPage } from './pages/EnvironmentalImpactPage';
 import { SavedSearchesPage } from './pages/SavedSearchesPage';
@@ -31,6 +31,7 @@ import AdminMessagesPage from './pages/AdminMessagesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminAuditTrailPage from './pages/AdminAuditTrailPage';
 import { AdminVerificationsPage } from './pages/AdminVerificationsPage';
+import TestValidationPage from './pages/TestValidationPage';
 import { AdminRoute } from './components/auth/AdminRoute';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { CartPage } from './components/checkout/CartPage';
@@ -183,6 +184,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <VerificationRequestPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/test-validation"
+                    element={
+                      <ProtectedRoute>
+                        <TestValidationPage />
                       </ProtectedRoute>
                     }
                   />

@@ -200,10 +200,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let firestoreUnsubscribe: (() => void) | null = null;
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // Nettoyer l'ancien listener si existant
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+        firestoreUnsubscribe = null;
+      }
+      
       setCurrentUser(user);
       if (user) {
         await createUserProfile(user);
+        
+        // Écouter les changements du profil en temps réel
+        const { onSnapshot, doc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        
+        firestoreUnsubscribe = onSnapshot(
+          doc(db, 'users', user.uid),
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              setUserProfile(data as User);
+            }
+          },
+          (error) => {
+            console.error('Erreur listener Firestore userProfile:', error);
+          }
+        );
       } else {
         setUserProfile(null);
       }
@@ -231,7 +256,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     handleRedirectResult();
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
+    };
   }, []);
 
   const value = {

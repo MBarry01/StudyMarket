@@ -855,6 +855,201 @@ app.post('/api/admin/users/:id/block', isAdmin, async (req, res) => {
   }
 });
 
+// ==================== ROUTES DE VÉRIFICATION ====================
+
+// POST /api/verification - Créer une demande de vérification
+app.post('/api/verification', async (req, res) => {
+  try {
+    if (!adminReady) {
+      return res.status(500).json({ error: 'Firebase Admin non configuré' });
+    }
+
+    const { userId, idempotencyKey } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' });
+    }
+
+    const db = (await import('firebase-admin')).default.firestore();
+    const { serverTimestamp } = (await import('firebase-admin')).default.firestore;
+    
+    // Vérifier idempotency
+    if (idempotencyKey) {
+      const existing = await db.collection('verification_requests')
+        .where('userId', '==', userId)
+        .where('idempotencyKey', '==', idempotencyKey)
+        .limit(1)
+        .get();
+      
+      if (!existing.empty) {
+        const existingDoc = existing.docs[0].data();
+        return res.status(200).json({
+          verificationId: existing.docs[0].id,
+          status: existingDoc.status,
+          message: 'Request already processed'
+        });
+      }
+    }
+    
+    // Créer la demande
+    const docRef = await db.collection('verification_requests').add({
+      userId,
+      status: 'documents_submitted',
+      idempotencyKey: idempotencyKey || randomUUID(),
+      submittedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      metadata: {
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        submissionSource: 'web'
+      },
+      attemptsCount: 1
+    });
+    
+    console.log(`✅ Demande de vérification créée: ${docRef.id}`);
+    
+    res.status(201).json({
+      verificationId: docRef.id,
+      status: 'documents_submitted'
+    });
+  } catch (error) {
+    console.error('❌ Erreur création vérification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/verification/:id - Récupérer statut complet
+app.get('/api/verification/:id', async (req, res) => {
+  try {
+    if (!adminReady) {
+      return res.status(500).json({ error: 'Firebase Admin non configuré' });
+    }
+
+    const db = (await import('firebase-admin')).default.firestore();
+    const doc = await db.collection('verification_requests').doc(req.params.id).get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Verification not found' });
+    }
+    
+    const data = doc.data();
+    res.json({
+      id: doc.id,
+      ...data,
+      submittedAt: data.submittedAt?.toDate?.() || data.submittedAt,
+      reviewedAt: data.reviewedAt?.toDate?.() || data.reviewedAt
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération vérification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/user/:userId/verification - Statut rapide pour profil
+app.get('/api/user/:userId/verification', async (req, res) => {
+  try {
+    if (!adminReady) {
+      return res.status(500).json({ error: 'Firebase Admin non configuré' });
+    }
+
+    const db = (await import('firebase-admin')).default.firestore();
+    const snapshot = await db.collection('verification_requests')
+      .where('userId', '==', req.params.userId)
+      .orderBy('submittedAt', 'desc')
+      .limit(1)
+      .get();
+    
+    if (snapshot.empty) {
+      return res.json({ status: 'unverified' });
+    }
+    
+    const latest = snapshot.docs[0].data();
+    res.json({
+      status: latest.status,
+      verificationId: snapshot.docs[0].id
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération statut utilisateur:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/verifications/:id/approve - Approver (admin only)
+app.post('/api/admin/verifications/:id/approve', isAdmin, async (req, res) => {
+  try {
+    const { adminId } = req.body;
+    
+    if (!adminReady) {
+      return res.status(500).json({ error: 'Firebase Admin non configuré' });
+    }
+
+    const db = (await import('firebase-admin')).default.firestore();
+    const { serverTimestamp } = (await import('firebase-admin')).default.firestore;
+    
+    const verificationRef = db.collection('verification_requests').doc(req.params.id);
+    const verificationDoc = await verificationRef.get();
+    
+    if (!verificationDoc.exists) {
+      return res.status(404).json({ error: 'Verification not found' });
+    }
+    
+    const verificationData = verificationDoc.data();
+    
+    // Mettre à jour status
+    await verificationRef.update({
+      status: 'verified',
+      reviewedAt: serverTimestamp(),
+      reviewedBy: adminId
+    });
+    
+    // Mettre à jour utilisateur
+    await db.collection('users').doc(verificationData.userId).update({
+      isVerified: true,
+      verificationStatus: 'verified',
+      verifiedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Vérification ${req.params.id} approuvée par ${adminId}`);
+    
+    res.json({ success: true, message: 'Verification approved' });
+  } catch (error) {
+    console.error('❌ Erreur approbation:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/verifications/:id/reject - Rejeter (admin only)
+app.post('/api/admin/verifications/:id/reject', isAdmin, async (req, res) => {
+  try {
+    const { adminId, reason } = req.body;
+    
+    if (!reason || reason.length < 10) {
+      return res.status(400).json({ error: 'Reason required (min 10 characters)' });
+    }
+    
+    if (!adminReady) {
+      return res.status(500).json({ error: 'Firebase Admin non configuré' });
+    }
+
+    const db = (await import('firebase-admin')).default.firestore();
+    const { serverTimestamp } = (await import('firebase-admin')).default.firestore;
+    
+    await db.collection('verification_requests').doc(req.params.id).update({
+      status: 'rejected',
+      rejectionReason: reason,
+      reviewedAt: serverTimestamp(),
+      reviewedBy: adminId
+    });
+    
+    console.log(`✅ Vérification ${req.params.id} rejetée par ${adminId}`);
+    
+    res.json({ success: true, message: 'Verification rejected' });
+  } catch (error) {
+    console.error('❌ Erreur rejet:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Serveur API StudyMarket démarré sur le port ${PORT}`);
   console.log(`📡 Endpoints disponibles:`);
@@ -867,6 +1062,11 @@ app.listen(PORT, () => {
   console.log(`   POST /api/admin/orders/:id/replay-webhook (🔐 ADMIN)`);
   console.log(`   GET  /api/admin/users (🔐 ADMIN)`);
   console.log(`   POST /api/admin/users/:id/block (🔐 ADMIN)`);
+  console.log(`   POST /api/verification (✅ NEW)`);
+  console.log(`   GET  /api/verification/:id (✅ NEW)`);
+  console.log(`   GET  /api/user/:userId/verification (✅ NEW)`);
+  console.log(`   POST /api/admin/verifications/:id/approve (✅ NEW)`);
+  console.log(`   POST /api/admin/verifications/:id/reject (✅ NEW)`);
 });
 
 // --- Helpers ---

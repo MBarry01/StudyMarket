@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader } from '@/components/ui/dialog';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { ShareButton } from '@/components/ui/ShareButton';
+import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { useListingStore } from '../stores/useListingStore';
 import { useFavoritesStore } from '../stores/useFavoritesStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -304,7 +305,13 @@ export const ListingDetailPage: React.FC = () => {
                       {getTransactionIcon()}
                       <span className="ml-1">{getTransactionLabel()}</span>
                     </Badge>
-                    {listing.sellerVerified && (
+                    {listing.sellerVerificationStatus ? (
+                      <VerificationBadge 
+                        status={listing.sellerVerificationStatus} 
+                        size="sm" 
+                        showText={false}
+                      />
+                    ) : listing.sellerVerified && (
                       <Badge className="bg-green-100 text-green-800 border-green-200">
                         <Shield className="w-3 h-3 mr-1" />
                         Vérifié
@@ -415,7 +422,13 @@ export const ListingDetailPage: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{listing.sellerName}</h3>
-                        {listing.sellerVerified && (
+                        {listing.sellerVerificationStatus ? (
+                          <VerificationBadge 
+                            status={listing.sellerVerificationStatus} 
+                            size="sm" 
+                            showText={false}
+                          />
+                        ) : listing.sellerVerified && (
                           <Shield className="w-4 h-4 text-green-600" />
                         )}
                       </div>

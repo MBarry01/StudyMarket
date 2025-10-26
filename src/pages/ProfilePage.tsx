@@ -1131,10 +1131,12 @@ export const ProfilePage: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <VerificationBadge status={userProfile?.isVerified || false} size="md" showText />
+                  <VerificationBadge status={userProfile?.verificationStatus || 'unverified'} size="md" showText />
                   <div className="text-sm text-muted-foreground">
-                    {userProfile?.isVerified 
+                    {userProfile?.verificationStatus === 'verified'
                       ? 'Votre compte est vérifié' 
+                      : userProfile?.verificationStatus === 'rejected'
+                      ? 'Votre demande a été rejetée'
                       : 'Votre compte n\'est pas encore vérifié'}
                   </div>
                 </div>

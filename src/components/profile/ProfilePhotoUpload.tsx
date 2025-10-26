@@ -228,7 +228,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="text-sm text-muted-foreground text-center">
+                <div className="text-sm text-muted-foreground ">
                   <p className="font-medium">{selectedFile.name}</p>
                   <p>{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>

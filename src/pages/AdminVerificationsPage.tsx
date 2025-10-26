@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { VerificationService, VerificationRequest } from '@/services/verificationService';
+import { VerificationService, VerificationRequest, VerificationDocument } from '@/services/verificationService';
 import { CheckCircle2, XCircle, Clock, Eye, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { PDFViewerModal } from '@/components/verification/PDFViewerModal';
 
 export const AdminVerificationsPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -16,8 +17,32 @@ export const AdminVerificationsPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [showDocumentDialog, setShowDocumentDialog] = useState(false);
+  const [selectedDocuments, setSelectedDocuments] = useState<VerificationDocument[]>([]);
+  const [selectedDocumentIndex, setSelectedDocumentIndex] = useState<number>(0);
+  const [showPDFModal, setShowPDFModal] = useState(false);
+  const [currentPDFUrl, setCurrentPDFUrl] = useState<string>('');
+  const [currentPDFName, setCurrentPDFName] = useState<string>('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [revocationReason, setRevocationReason] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
+  // Ouvrir automatiquement le PDF quand un PDF est détecté
+  useEffect(() => {
+    if (showDocumentDialog && selectedDocuments[selectedDocumentIndex]) {
+      const doc = selectedDocuments[selectedDocumentIndex];
+      const docName = doc.filename || doc.fileName || 'Document';
+      const isPDF = !docName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
+      
+      if (isPDF && !showPDFModal) {
+        setCurrentPDFUrl(doc.url);
+        setCurrentPDFName(docName);
+        setShowPDFModal(true);
+        setShowDocumentDialog(false);
+      }
+    }
+  }, [showDocumentDialog, selectedDocumentIndex, selectedDocuments, showPDFModal]);
 
   useEffect(() => {
     const unsubscribe = VerificationService.subscribeToAllRequests(
@@ -82,7 +107,7 @@ export const AdminVerificationsPage: React.FC = () => {
   const openApproveDialog = async (request: VerificationRequest) => {
     // ✅ Marquer comme "en revue" dès l'ouverture
     if (request.status === 'documents_submitted' || request.status === 'pending') {
-      await VerificationService.markAsUnderReview(request.id!);
+      await VerificationService.markAsUnderReview(request.id!, currentUser?.uid);
     }
     
     setSelectedRequest(request);
@@ -92,6 +117,38 @@ export const AdminVerificationsPage: React.FC = () => {
   const openRejectDialog = (request: VerificationRequest) => {
     setSelectedRequest(request);
     setShowRejectDialog(true);
+  };
+
+  const openRevokeDialog = (request: VerificationRequest) => {
+    setSelectedRequest(request);
+    setShowRevokeDialog(true);
+  };
+
+  const openDocumentDialog = async (request: VerificationRequest, index?: number) => {
+    // ✅ Marquer comme "en revue" quand l'admin ouvre un document
+    if (request.status === 'documents_submitted' || request.status === 'pending') {
+      await VerificationService.markAsUnderReview(request.id!, currentUser?.uid);
+    }
+    setSelectedDocuments(request.documents || []);
+    setSelectedDocumentIndex(index ?? 0);
+    setSelectedRequest(request);
+    setShowDocumentDialog(true);
+  };
+
+  const handleRevoke = async () => {
+    if (!selectedRequest || !currentUser || !revocationReason) return;
+
+    try {
+      await VerificationService.revokeVerification(selectedRequest.id!, revocationReason, currentUser.uid);
+      toast.success('Certification révoquée');
+      setShowRevokeDialog(false);
+      setSelectedRequest(null);
+      setRevocationReason('');
+      // Le listener Firestore mettra à jour automatiquement
+    } catch (error) {
+      console.error('Erreur lors de la révocation:', error);
+      toast.error('Erreur lors de la révocation');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -130,6 +187,13 @@ export const AdminVerificationsPage: React.FC = () => {
         return (
           <Badge className="bg-gray-100 text-gray-800 border-gray-200">
             Non vérifié
+          </Badge>
+        );
+      case 'suspended':
+        return (
+          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+            <XCircle className="h-3 w-3 mr-1" />
+            Suspendu
           </Badge>
         );
       default:
@@ -288,13 +352,7 @@ export const AdminVerificationsPage: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={async () => {
-                          // ✅ Marquer comme "en revue" quand l'admin ouvre un document
-                          if (request.status === 'documents_submitted' || request.status === 'pending') {
-                            await VerificationService.markAsUnderReview(request.id!);
-                          }
-                          window.open(request.documents[0]?.url, '_blank');
-                        }}
+                        onClick={() => openDocumentDialog(request)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Voir docs
@@ -319,6 +377,27 @@ export const AdminVerificationsPage: React.FC = () => {
                       </Button>
                     </div>
                   )}
+                  {(request.status === 'verified' || request.status === 'approved') && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDocumentDialog(request)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Voir docs
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        onClick={() => openRevokeDialog(request)}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Révoquer
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               {request.documents && request.documents.length > 0 && (
@@ -328,13 +407,7 @@ export const AdminVerificationsPage: React.FC = () => {
                         <div 
                           key={index}
                           className="border rounded-lg p-2 hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={async () => {
-                            // ✅ Marquer comme "en revue" quand l'admin ouvre un document
-                            if (request.status === 'documents_submitted' || request.status === 'pending') {
-                              await VerificationService.markAsUnderReview(request.id!);
-                            }
-                            window.open(doc.url, '_blank');
-                          }}
+                          onClick={() => openDocumentDialog(request, index)}
                         >
                           {(doc.filename || doc.fileName)?.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/) ? (
                             <img 
@@ -409,6 +482,116 @@ export const AdminVerificationsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Révoquer */}
+      <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Révoquer la certification</DialogTitle>
+            <DialogDescription>
+              Veuillez fournir un motif de révocation pour {selectedRequest?.userName}
+              {selectedRequest?.status === 'verified' && ' (statut actuel: Vérifié)'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Motif de révocation (ex: Documents frauduleux détectés)"
+              value={revocationReason}
+              onChange={(e) => setRevocationReason(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRevokeDialog(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleRevoke}
+              disabled={!revocationReason}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Révoquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Document */}
+      <Dialog open={showDocumentDialog} onOpenChange={setShowDocumentDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Documents de vérification</DialogTitle>
+            <DialogDescription>
+              Documents soumis par {selectedRequest?.userName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedDocuments[selectedDocumentIndex] && (() => {
+              const doc = selectedDocuments[selectedDocumentIndex];
+              const docName = doc.filename || doc.fileName || 'Document';
+              const isImage = docName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
+              
+              return (
+                <div className="space-y-4">
+                  {/* Navigation */}
+                  {selectedDocuments.length > 1 && (
+                    <div className="flex items-center justify-between mb-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={selectedDocumentIndex === 0}
+                        onClick={() => setSelectedDocumentIndex(selectedDocumentIndex - 1)}
+                      >
+                        ← Précédent
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedDocumentIndex + 1} / {selectedDocuments.length}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={selectedDocumentIndex === selectedDocuments.length - 1}
+                        onClick={() => setSelectedDocumentIndex(selectedDocumentIndex + 1)}
+                      >
+                        Suivant →
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Document */}
+                  {isImage ? (
+                    <img 
+                      src={doc.url} 
+                      alt={docName} 
+                      className="w-full max-h-[600px] object-contain rounded-lg border border-border mx-auto"
+                    />
+                  ) : (
+                    <div className="w-full min-h-[600px] bg-muted rounded-lg flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <p className="text-6xl mb-4">📄</p>
+                        <p className="text-lg font-semibold mb-4">{docName}</p>
+                        <p className="text-sm text-muted-foreground mb-4">Chargement du PDF en arrière-plan...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDocumentDialog(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        isOpen={showPDFModal}
+        onClose={() => setShowPDFModal(false)}
+        documentUrl={currentPDFUrl}
+        documentName={currentPDFName}
+      />
     </div>
   );
 };

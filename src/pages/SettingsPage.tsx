@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -1154,8 +1154,10 @@ export const SettingsPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      {userProfile?.isVerified ? 'Voir le statut' : 'Demander la vérification'}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/verification">
+                        {userProfile?.isVerified ? 'Voir le statut' : 'Demander la vérification'}
+                      </Link>
                     </Button>
                   </div>
                 </div>

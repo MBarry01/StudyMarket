@@ -70,6 +70,9 @@ StudyMarket-Git/
 │   │   ├── VERIFIER_LOGS_SERVEUR.md
 │   │   └── GUIDE-RESOLUTION-COMPLETE.md
 │   │
+│   ├── ⚡ Temps réel (1 doc)
+│   │   └── TEMPS-REEL-FIRESTORE.md ⭐
+│   │
 │   └── ... (12 autres docs)
 │
 ├── src/                            # Code source
@@ -143,6 +146,7 @@ README.md (racine)
 | **Email** | 5 | docs/INDEX.md#email--notifications |
 | **Déploiement** | 3 | docs/INDEX.md#déploiement |
 | **Diagnostic** | 3 | docs/INDEX.md#diagnostic--debug |
+| **Temps réel** | 1 | docs/INDEX.md#temps-réel |
 
 ### Par mot-clé :
 
@@ -153,6 +157,7 @@ README.md (racine)
 | **Test** | GUIDE_TEST_COMPLET.md, TEST_COMMANDES.md |
 | **Debug** | DIAGNOSTIC_BADGE_VENDU.md, VERIFIER_LOGS_SERVEUR.md |
 | **Déploiement** | DEPLOIEMENT-MANUEL.md |
+| **Temps réel** | TEMPS-REEL-FIRESTORE.md |
 
 ---
 
