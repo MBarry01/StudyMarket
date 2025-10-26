@@ -50,7 +50,7 @@ export const Header: React.FC = () => {
     if (!currentUser) return false;
     const envEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
     const envUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map((u: string) => u.trim()).filter(Boolean);
-    // Hardcoded admins pour production GitHub Pages
+    // Admins configurés (GitHub Secrets + fallback)
     const hardcodedEmails = ['barrymohamadou98@gmail.com', 'mb3186802@gmail.com'];
     const hardcodedUids = ['q8R6wG9lNAOKJnCuUgMFpZFRHKg1'];
     const allowedEmails = [...envEmails, ...hardcodedEmails];

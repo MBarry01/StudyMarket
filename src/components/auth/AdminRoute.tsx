@@ -22,8 +22,13 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  const allowedEmails = getEnvList(import.meta.env.VITE_ADMIN_EMAILS as any);
-  const allowedUids = getEnvList(import.meta.env.VITE_ADMIN_UIDS as any);
+  const envEmails = getEnvList(import.meta.env.VITE_ADMIN_EMAILS as any);
+  const envUids = getEnvList(import.meta.env.VITE_ADMIN_UIDS as any);
+  // Admins configurés (GitHub Secrets + fallback)
+  const hardcodedEmails = ['barrymohamadou98@gmail.com', 'mb3186802@gmail.com'];
+  const hardcodedUids = ['q8R6wG9lNAOKJnCuUgMFpZFRHKg1'];
+  const allowedEmails = [...envEmails, ...hardcodedEmails];
+  const allowedUids = [...envUids, ...hardcodedUids];
 
   const isAllowed =
     (currentUser.email && allowedEmails.includes(currentUser.email)) ||
