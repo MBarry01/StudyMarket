@@ -87,7 +87,7 @@ function App() {
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div className="min-h-screen bg-background flex flex-col">
             <Header />
-            <main className="flex-1 pt-16">
+            <main className="flex-1 pt-[3.5rem] md:pt-20 pb-20 md:pb-0">
               <ErrorBoundary>
                 <Routes>
                   <Route path="/" element={<HomePage />} />

@@ -36,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMessageStore } from '../../stores/useMessageStore';
 import { useCartStore } from '../../stores/useCartStore';
+import { HeaderMobile } from './HeaderMobile';
 
 export const Header: React.FC = () => {
   const { currentUser, userProfile, logout } = useAuth();
@@ -94,7 +95,14 @@ export const Header: React.FC = () => {
   const cartItemCount = getCartItemCount();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+    <>
+      {/* Header Mobile */}
+      <div className="md:hidden">
+        <HeaderMobile onOpenPublish={() => navigate('/create')} />
+      </div>
+
+      {/* Header Desktop */}
+      <header className="hidden md:block fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-3 sm:px-4 lg:px-6">
         <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
           {/* Logo */}
@@ -481,5 +489,6 @@ export const Header: React.FC = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };

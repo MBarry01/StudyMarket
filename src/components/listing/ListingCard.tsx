@@ -133,14 +133,14 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   const safeTransactionType = listing.transactionType || 'sale';
 
   return (
-    <Card className="group relative bg-card text-card-foreground rounded-xl border border-border hover:border-border shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden w-full max-w-sm">
+    <Card className="group relative bg-card text-card-foreground rounded-xl border border-border hover:border-border shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden w-full max-w-sm card-touchable">
       {/* Image Section */}
-      <Link to={`/listing/${listing.id}`} className="block">
+      <Link to={`/listing/${listing.id}`} className="block touch-manipulation">
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
           <img
             src={listing.images?.[0] || '/placeholder.jpg'}
             alt={listing.title}
-            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 touch-manipulation"
           />
           
           {/* Gradient Overlay for better badge visibility */}

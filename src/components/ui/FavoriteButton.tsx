@@ -47,17 +47,19 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     }
   };
 
+  const iconSize = size === 'sm' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
+
   return (
      <Button
       variant="ghost"
       size="icon"
       onClick={handleToggleFavorite}
-      className={`${getButtonSize()} ${
+      className={`${getButtonSize()} touch-manipulation ${
         isLiked ? 'text-red-500 hover:text-red-600' : 'text-foreground hover:text-red-500'
       } ${className}`}
       aria-label={isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'}
     >
-      <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+      <Heart className={`${iconSize} ${isLiked ? 'fill-current' : ''} transition-transform`} />
     </Button>
   );
 };

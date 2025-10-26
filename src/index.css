@@ -339,3 +339,191 @@ input, textarea, select {
     font-size: 0.875rem;
   }
 }
+
+/* ========== CONVENTIONS iOS/Android ========== */
+
+/* Touch targets - iOS: 44x44px, Android: 48x48dp minimum */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Amélioration de la réactivité tactile */
+button, a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Animations optimisées pour mobile */
+button {
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s;
+}
+
+/* Overscroll iOS - évite les rebonds indésirables */
+.overscroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth scrolling pour iOS */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Amélioration des icônes pour la visibilité */
+.icon-sm {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-md {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-lg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Optimisation des images pour mobile */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Amélioration des cartes pour tactile */
+.card-touchable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-touchable:active {
+  transform: scale(0.99);
+}
+
+/* Animations fluides iOS/Android */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Safe area pour iPhone X et supérieurs */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Optimisation des formulaires pour mobile */
+form input[type="text"],
+form input[type="email"],
+form input[type="password"],
+form input[type="number"],
+form input[type="tel"],
+form textarea,
+form select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 0.5rem;
+}
+
+/* Suppression des outlines iOS */
+input:focus,
+button:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Optimisation pour les listes mobiles */
+.list-item-touchable {
+  min-height: 44px;
+  padding: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.list-item-touchable:active {
+  background-color: hsl(var(--muted));
+  transform: scale(0.995);
+}
+
+/* Amélioration de la scrollbar mobile */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 2px;
+  }
+}
+
+/* Optimisation de la performance tactile */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Amélioration des transitions pour mobile */
+.transition-mobile {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}

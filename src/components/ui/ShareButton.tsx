@@ -47,15 +47,17 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
     }
   };
 
+  const iconSize = size === 'sm' ? 'w-5 h-5' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
+
   return (
     <Button
       variant="ghost"
       size={'icon'}
       onClick={handleShare}
-      className={`${getButtonSize()} ${className}`}
+      className={`${getButtonSize()} touch-manipulation ${className}`}
       aria-label="Partager"
     >
-      <Share2 className='w-4 h-4' />
+      <Share2 className={`${iconSize} transition-transform`} />
     </Button>
   );
 };
