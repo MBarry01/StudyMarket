@@ -39,6 +39,8 @@ jobs:
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID || 'placeholder' }}
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY || 'placeholder' }}
+          VITE_ADMIN_EMAILS: ${{ secrets.VITE_ADMIN_EMAILS || '' }}
+          VITE_ADMIN_UIDS: ${{ secrets.VITE_ADMIN_UIDS || '' }}
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
