@@ -100,7 +100,7 @@ export const VerificationTimeline: React.FC<VerificationTimelineProps> = ({
                     >
                       {step.label}
                     </p>
-                    {isActive && currentStatus !== VerificationStatus.UNVERIFIED && (
+                    {isActive && currentStatus !== VerificationStatus.UNVERIFIED && currentStatus !== VerificationStatus.VERIFIED && currentStatus !== VerificationStatus.REJECTED && currentStatus !== VerificationStatus.SUSPENDED && (
                       <span className="text-xs text-muted-foreground">En cours...</span>
                     )}
                   </div>

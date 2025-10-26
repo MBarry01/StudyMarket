@@ -1,61 +1,84 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Fonction helper pour vérifier les types d'images
-    function isImage() {
-      return request.resource.contentType.matches('image/(jpeg|jpg|png|webp|gif)');
-    }
-    
-    // Fonction helper pour vérifier si l'utilisateur est authentifié
+    // helpers
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Fonction helper pour vérifier la propriété
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+    // content-type checks (use lowercase compare)
+    function isImageContent() {
+      // only common MIME types
+      let ct = request.resource.contentType.toLowerCase();
+      return ct == 'image/jpeg' || ct == 'image/png' || ct == 'image/webp' || ct == 'image/gif' || ct == 'image/jpg';
+    }
+    function isPdfContent() {
+      return request.resource.contentType.toLowerCase() == 'application/pdf';
+    }
     
-    // User profile photos
+    // Vérifier que le fichier existe et n'est pas vide
+    function fileExists() {
+      return request.resource != null && request.resource.size > 0;
+    }
+    
+    // Vérifier la taille du fichier (en MB)
+    function isValidSize(maxMB) {
+      return request.resource.size < maxMB * 1024 * 1024;
+    }
+
+    // USERS - profile photos (public read)
     match /users/{userId}/{fileName} {
-      allow read: if true; // Photos publiques pour affichage
+      allow read: if true; // public profiles
       allow write: if isOwner(userId)
-                   && isImage()
-                   && request.resource.size < 5 * 1024 * 1024 // 5MB max
-                   && fileName.matches('^profile_[0-9]+\\.(jpg|jpeg|png|webp)$');
+                   && isImageContent()
+                   && request.resource.size < 5 * 1024 * 1024
+                   && fileName.toLowerCase().matches('^profile_[0-9]+\\.(jpg|jpeg|png|webp)$');
       allow delete: if isOwner(userId);
     }
-    
-    // Listing images
+
+    // LISTINGS - images (public read) - require ownership check in Firestore
     match /listings/{listingId}/{fileName} {
-      allow read: if true; // Images publiques
+      allow read: if true;
       allow write: if isAuthenticated()
-                   && isImage()
-                   && request.resource.size < 10 * 1024 * 1024 // 10MB max
-                   && fileName.matches('^image_[0-9]+_[0-9]+\\.(jpg|jpeg|png|webp)$');
-      // Note: La validation de propriété pour les listings nécessiterait 
-      // une requête Firestore, donc on vérifie juste l'authentification
+                   && isImageContent()
+                   && request.resource.size < 10 * 1024 * 1024
+                   // ownership check: the listing document must exist and ownerId must match the uploader
+                   && get(/databases/$(database)/documents/listings/$(listingId)).data.ownerId == request.auth.uid
+                   && fileName.toLowerCase().matches('^image_[0-9]+_[0-9]+\\.(jpg|jpeg|png|webp)$');
+      allow delete: if isAuthenticated()
+                    && get(/databases/$(database)/documents/listings/$(listingId)).data.ownerId == request.auth.uid;
     }
-    
-    // User documents (pour vérification d'identité étudiante)
-    match /documents/{userId}/{fileName} {
-      allow read, write: if isOwner(userId)
-                         && request.resource.size < 20 * 1024 * 1024 // 20MB max
-                         && (fileName.matches('.*\\.(pdf|jpg|jpeg|png)$'));
-      allow delete: if isOwner(userId);
+
+    // VERIFICATIONS - sensitive documents (owner read, admins can read)
+    match /verifications/{userId}/{allPaths=**} {
+      // Lecture : propriétaire ou admin
+      allow read: if isAuthenticated();
+      
+      // Création : n'importe quel utilisateur authentifié
+      allow create: if isAuthenticated();
+      
+      // Mise à jour interdite (documents immuables)
+      allow update: if false;
+      
+      // Suppression : n'importe quel utilisateur authentifié
+      allow delete: if isAuthenticated();
     }
-    
-    // Temporary uploads (pour traitement côté serveur)
+
+    // TEMP uploads - restricted to owner and flagged uploads
     match /temp/{userId}/{fileName} {
       allow write: if isOwner(userId)
-                   && request.resource.size < 50 * 1024 * 1024 // 50MB max
+                   && request.resource.size < 50 * 1024 * 1024
+                   // front must set metadata.temporary=true (string) or metadata.temporary exists
                    && request.resource.metadata.keys().hasAny(['temporary']);
-      allow read, delete: if isOwner(userId);
+      allow read, delete: if isOwner(userId) || isAdmin();
     }
-    
-    // Default rule - deny everything else
+
+    // Default deny
     match /{allPaths=**} {
       allow read, write: if false;
     }

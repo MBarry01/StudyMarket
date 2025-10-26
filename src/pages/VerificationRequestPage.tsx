@@ -11,7 +11,7 @@ import { UploadService } from '@/services/uploadService';
 import { NotificationService } from '@/services/notificationService';
 import { VerificationStatus } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Clock } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Clock, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const VerificationRequestPage: React.FC = () => {
@@ -24,20 +24,25 @@ export const VerificationRequestPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
 
   useEffect(() => {
-    const fetchStatus = async () => {
-      if (!currentUser) return;
-      
-      try {
-        const status = await VerificationService.getVerificationStatus(currentUser.uid);
+    if (!currentUser) {
+      setLoadingStatus(false);
+      return;
+    }
+
+    // Listener Firestore en temps réel pour mettre à jour le statut automatiquement
+    const unsubscribe = VerificationService.subscribeToVerificationStatus(
+      currentUser.uid,
+      (status) => {
         setVerificationStatus(status);
-      } catch (error) {
-        console.error('Erreur lors de la récupération du statut:', error);
-      } finally {
         setLoadingStatus(false);
       }
-    };
+    );
 
-    fetchStatus();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [currentUser]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,7 +149,7 @@ export const VerificationRequestPage: React.FC = () => {
       setUploadProgress({});
     } catch (error) {
       console.error('Erreur lors de la demande:', error);
-      UploadService.notifyUploadError();
+      NotificationService.notifyUploadError((error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -163,6 +168,7 @@ export const VerificationRequestPage: React.FC = () => {
 
     switch (verificationStatus.status) {
       case 'pending':
+      case 'documents_submitted':
         return (
           <Alert className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
             <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
@@ -171,7 +177,17 @@ export const VerificationRequestPage: React.FC = () => {
             </AlertDescription>
           </Alert>
         );
+      case 'under_review':
+        return (
+          <Alert className="bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800">
+            <Eye className="h-4 w-4 text-purple-600 dark:text-purple-400 animate-pulse" />
+            <AlertDescription className="text-purple-800 dark:text-purple-300">
+              Un administrateur examine actuellement vos documents. Vous serez notifié dès qu'une décision sera prise.
+            </AlertDescription>
+          </Alert>
+        );
       case 'approved':
+      case 'verified':
         return (
           <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -229,7 +245,7 @@ export const VerificationRequestPage: React.FC = () => {
       )}
 
       {/* Formulaire de demande */}
-      {(!verificationStatus || verificationStatus.status === 'rejected') && (
+      {(!verificationStatus || verificationStatus.status === 'rejected' || verificationStatus.status === 'unverified') && (
         <Card>
           <CardHeader>
             <CardTitle>Demande de vérification</CardTitle>
@@ -364,3 +380,4 @@ export const VerificationRequestPage: React.FC = () => {
   );
 };
 
+export default VerificationRequestPage;

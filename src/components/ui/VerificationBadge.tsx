@@ -45,7 +45,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
         return {
           variant: 'secondary' as const,
           icon: <Upload className={iconSize[size]} />,
-          text: 'Documents soumis',
+          text: 'En cours',
           className: 'bg-blue-100 text-blue-800 border-blue-200',
         };
       case VerificationStatus.UNDER_REVIEW:
@@ -86,7 +86,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   if (!showText) {
     return (
       <div
-        className={`inline-flex items-center justify-center rounded-full ${content.className} ${sizeClasses[size]} p-1`}
+        className={`inline-flex items-center justify-center rounded-full ${content.className} ${sizeClasses[size]} p-1 flex-shrink-0`}
         title={content.text}
       >
         {content.icon}
@@ -95,13 +95,12 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   }
 
   return (
-    <Badge
-      variant="outline"
-      className={`inline-flex items-center gap-1.5 ${content.className}`}
+    <div
+      className={`inline-flex items-center gap-1 rounded-md border pl-2 pr-10 py-1 text-xs font-semibold whitespace-nowrap ${content.className}`}
     >
       {content.icon}
       <span className={sizeClasses[size]}>{content.text}</span>
-    </Badge>
+    </div>
   );
 };
 
