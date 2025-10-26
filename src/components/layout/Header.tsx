@@ -48,8 +48,13 @@ export const Header: React.FC = () => {
   // Vérifier si l'utilisateur est admin
   const isAdmin = React.useMemo(() => {
     if (!currentUser) return false;
-    const allowedEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
-    const allowedUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map((u: string) => u.trim()).filter(Boolean);
+    const envEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim()).filter(Boolean);
+    const envUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map((u: string) => u.trim()).filter(Boolean);
+    // Hardcoded admins pour production GitHub Pages
+    const hardcodedEmails = ['barrymohamadou98@gmail.com', 'mb3186802@gmail.com'];
+    const hardcodedUids = ['q8R6wG9lNAOKJnCuUgMFpZFRHKg1'];
+    const allowedEmails = [...envEmails, ...hardcodedEmails];
+    const allowedUids = [...envUids, ...hardcodedUids];
     return (currentUser.email && allowedEmails.includes(currentUser.email)) || allowedUids.includes(currentUser.uid);
   }, [currentUser]);
 
