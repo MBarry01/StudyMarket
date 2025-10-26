@@ -42,7 +42,9 @@ export class OCRService {
             const base64Data = imageUrl.split(',')[1];
             imageData = { image: { content: base64Data } };
           } else {
-            // URL externe
+            // URL externe (PDF ou image)
+            const isPDF = imageUrl.includes('.pdf') || imageUrl.includes('pdf');
+            
             imageData = { image: { source: { imageUri: imageUrl } } };
           }
           
@@ -57,7 +59,7 @@ export class OCRService {
                 requests: [
                   {
                     ...imageData,
-                    features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }],
+                    features: [{ type: 'TEXT_DETECTION', maxResults: 10 }],
                   },
                 ],
               }),

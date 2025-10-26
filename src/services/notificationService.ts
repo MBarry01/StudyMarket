@@ -25,9 +25,9 @@ export class NotificationService {
         break;
 
       case VerificationStatus.UNDER_REVIEW:
-        toast.info(
+        toast(
           '👀 Votre demande est en cours de revue par un administrateur.',
-          { duration: 4000 }
+          { duration: 4000, icon: '🔍' }
         );
         break;
 
