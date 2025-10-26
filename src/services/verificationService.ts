@@ -244,8 +244,24 @@ export class VerificationService {
       const docRef = await addDoc(collection(db, this.COLLECTION), cleanRequest);
       const verificationId = docRef.id;
 
-      // TODO: Enqueue worker job pour validation serveur
-      // await QueueService.enqueueVerification(verificationId, userId, { documents: uploadedDocuments });
+      // 6. Enqueue worker job pour validation serveur (si statut n'est pas déjà approuvé automatiquement)
+      if (finalStatus !== VerificationStatus.VERIFIED) {
+        try {
+          await QueueService.enqueueVerification(verificationId, userId, { 
+            documents: uploadedDocuments.map(d => ({
+              docId: d.filename,
+              url: d.url, // URL complète depuis Firebase Storage
+              filename: d.filename,
+              contentType: 'application/pdf',
+              size: d.size,
+            }))
+          });
+          console.log(`📤 Verification ${verificationId} enqueued for worker processing`);
+        } catch (queueError) {
+          console.error('⚠️ Failed to enqueue job (worker not running?)', queueError);
+          // Continue anyway - verification will be processed when worker starts
+        }
+      }
 
       // 4. Mettre à jour le statut de l'utilisateur avec le statut final
       const userRef = doc(db, 'users', userId);

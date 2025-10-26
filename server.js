@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import Stripe from 'stripe';
 import { randomUUID } from 'node:crypto';
+import fs from 'fs';
 
 // Optional env loader (does not crash if dotenv isn't installed)
 try {
@@ -11,6 +12,16 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Import worker backend (si disponible)
+if (fs.existsSync('./worker/verificationWorker.js')) {
+  try {
+    await import('./worker/verificationWorker.js');
+    console.log('✅ Worker backend démarré');
+  } catch (error) {
+    console.log('⚠️  Worker backend non disponible:', error.message);
+  }
+}
 
 // Configuration Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'YOUR_STRIPE_SECRET_KEY_HERE');
@@ -974,6 +985,29 @@ app.get('/api/user/:userId/verification', async (req, res) => {
   }
 });
 
+// POST /api/verification/enqueue - Enqueue job de validation
+app.post('/api/verification/enqueue', async (req, res) => {
+  try {
+    const { verificationId, userId, metadata } = req.body;
+    
+    if (!verificationId || !userId) {
+      return res.status(400).json({ error: 'verificationId and userId required' });
+    }
+
+    // TODO: Implémenter BullMQ queue côté backend
+    // Pour l'instant, on simule l'enqueue
+    console.log(`📤 [API] Enqueueing verification ${verificationId} for user ${userId}`);
+    
+    // Simuler l'enqueue
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    res.json({ success: true, message: 'Job enqueued' });
+  } catch (error) {
+    console.error('❌ Erreur enqueue:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/admin/verifications/:id/approve - Approver (admin only)
 app.post('/api/admin/verifications/:id/approve', isAdmin, async (req, res) => {
   try {
@@ -1067,6 +1101,7 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/user/:userId/verification (✅ NEW)`);
   console.log(`   POST /api/admin/verifications/:id/approve (✅ NEW)`);
   console.log(`   POST /api/admin/verifications/:id/reject (✅ NEW)`);
+  console.log(`   POST /api/verification/enqueue (✅ NEW)`);
 });
 
 // --- Helpers ---

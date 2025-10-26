@@ -1,56 +1,50 @@
-import { verificationQueue } from '../queue/index';
-
 /**
- * Service pour gérer la queue de validation
+ * Service pour communiquer avec le backend pour les jobs de validation
+ * 
+ * Le vrai worker tourne côté backend (worker/verificationWorker.js)
+ * Ce service envoie des requêtes au backend pour enqueue
  */
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
+
 export class QueueService {
   /**
-   * Ajouter une demande de vérification à la queue
+   * Enqueue une vérification côté serveur
    */
   static async enqueueVerification(verificationId: string, userId: string, metadata?: any) {
-    await verificationQueue.add(
-      'validate',
-      {
-        verificationId,
-        userId,
-        metadata,
-      },
-      {
-        jobId: verificationId, // Idempotence
-        removeOnComplete: true,
-      }
-    );
+    try {
+      console.log(`📤 Enqueueing verification ${verificationId}...`);
+      
+      // Appel au backend (Express) qui va enqueue le job
+      const response = await fetch(`${API_BASE}/api/verification/enqueue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verificationId, userId, metadata }),
+      });
 
-    console.log(`✅ Verification ${verificationId} enqueued`);
+      if (!response.ok) {
+        throw new Error(`Failed to enqueue: ${response.statusText}`);
+      }
+
+      console.log(`✅ Verification ${verificationId} enqueued successfully`);
+    } catch (error) {
+      console.error('⚠️ Failed to enqueue job:', error);
+      // Ne pas bloquer - continue le flow
+    }
   }
 
   /**
-   * Obtenir le status d'un job
+   * Obtenir le status d'un job (pas encore implémenté)
    */
   static async getJobStatus(verificationId: string) {
-    const job = await verificationQueue.getJob(verificationId);
-    
-    if (!job) {
-      return null;
-    }
-
-    return {
-      id: job.id,
-      state: await job.getState(),
-      progress: job.progress,
-      data: job.data,
-    };
+    // TODO: Implémenter via API backend
+    return null;
   }
 
   /**
-   * Retirer un job (si nécessaire)
+   * Retirer un job (pas encore implémenté)
    */
   static async removeJob(verificationId: string) {
-    const job = await verificationQueue.getJob(verificationId);
-    if (job) {
-      await job.remove();
-      console.log(`🗑️ Job ${verificationId} removed`);
-    }
+    // TODO: Implémenter via API backend
   }
 }
-

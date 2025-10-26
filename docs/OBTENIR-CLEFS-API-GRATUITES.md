@@ -31,7 +31,7 @@ Voici comment obtenir gratuitement les clés API nécessaires pour activer les s
 **Ajouter dans `.env` :**
 
 ```env
-VITE_GOOGLE_CLOUD_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VITE_GOOGLE_CLOUD_API_KEY=AIzaSyBRS3KCZFxtOYCMtjtTDGsWFAVnh_jTYwQ
 GOOGLE_CLOUD_PROJECT_ID=votre-project-id
 ```
 
