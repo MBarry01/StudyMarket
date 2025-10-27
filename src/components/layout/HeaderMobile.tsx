@@ -83,7 +83,7 @@ export const HeaderMobile = memo<HeaderMobileProps>(({ onOpenPublish }) => {
             className="flex-1 mx-1 h-7 px-2 bg-white/10 rounded-lg flex items-center gap-1.5 text-left transition-all active:scale-[0.98] touch-manipulation hover:bg-white/15"
           >
             <Search className="w-3 h-3 text-white/50 flex-shrink-0" />
-            <span className="text-[10px] text-white/50 truncate">Rechercher...</span>
+            <span className="text-[10px] text-white/50 truncate flex-1">Rechercher...</span>
           </button>
 
           {/* Bouton Publier (si connecté) */}

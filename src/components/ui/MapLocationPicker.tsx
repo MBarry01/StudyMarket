@@ -26,14 +26,16 @@ const geocoderStyles = `
   }
   
   .mapboxgl-ctrl-geocoder--icon-search {
-    left: 8px !important;
-    top: 8px !important;
+    left: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
     position: absolute !important;
   }
   
   .mapboxgl-ctrl-geocoder--icon-close {
-    right: 8px !important;
-    top: 8px !important;
+    right: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
     position: absolute !important;
   }
   
@@ -79,13 +81,15 @@ const geocoderStyles = `
     }
     
     .mapboxgl-ctrl-geocoder--icon-search {
-      left: 6px !important;
-      top: 6px !important;
+      left: 8px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
     }
     
     .mapboxgl-ctrl-geocoder--icon-close {
-      right: 6px !important;
-      top: 6px !important;
+      right: 8px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
     }
   }
   

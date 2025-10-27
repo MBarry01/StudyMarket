@@ -165,6 +165,7 @@ const useMessagePersistence = (currentUser: any) => {
 const ChatbotWidget: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('menu');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -182,6 +183,8 @@ const ChatbotWidget: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const touchStartY = useRef<number>(0);
+  const [swipeProgress, setSwipeProgress] = useState(0);
 
   const { saveToCache, loadFromFirestore, saveToFirestore } = useMessagePersistence(currentUser);
 
@@ -336,16 +339,54 @@ const ChatbotWidget: React.FC = () => {
   }, []);
 
   const openWidget = useCallback(() => {
+    setIsClosing(false);
     setIsOpen(true);
     setIsMinimized(false);
     setViewMode('menu');
   }, []);
 
   const closeWidget = useCallback(() => {
-    setIsOpen(false);
-    setIsMinimized(false);
-    setViewMode('menu');
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+      setIsMinimized(false);
+      setViewMode('menu');
+    }, 300); // Durée de l'animation
   }, []);
+
+  // Handle touch events for swipe down
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    setSwipeProgress(0);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isMinimized && touchStartY.current > 0) {
+      const currentY = e.touches[0].clientY;
+      const diffY = currentY - touchStartY.current;
+      
+      // Calculer le pourcentage de swipe (limité entre 0 et 1)
+      const progress = Math.max(0, Math.min(1, diffY / 300));
+      setSwipeProgress(progress);
+    }
+  }, [isMinimized]);
+
+  const handleTouchEnd = useCallback(() => {
+    // Si plus de 50% de swipe, fermer directement sans animation
+    if (swipeProgress > 0.5) {
+      // Fermer immédiatement sans animation car déjà en position fermée
+      setIsOpen(false);
+      setIsClosing(false);
+      setIsMinimized(false);
+      setViewMode('menu');
+      setSwipeProgress(0);
+    } else {
+      // Sinon, revenir à la position initiale avec transition
+      setSwipeProgress(0);
+      touchStartY.current = 0;
+    }
+  }, [swipeProgress]);
 
   const toggleMinimize = useCallback(() => {
     setIsMinimized(prev => !prev);
@@ -703,15 +744,42 @@ const ChatbotWidget: React.FC = () => {
       )}
 
       {isOpen && (
-        <Card className={`fixed z-[35] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden transition-all duration-300 ease-in-out
+        <>
+          {/* Backdrop sombre avec animation */}
+          <div 
+            className={`fixed inset-0 z-[40] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'animate-[fadeOut_0.3s_ease-out]' : 'animate-[fadeIn_0.3s_ease-out]'}`}
+            style={{
+              opacity: isClosing ? undefined : (0.5 * (1 - swipeProgress))
+            }}
+            onClick={closeWidget}
+          />
+          
+          {/* Chatbot widget avec animation slide up/down */}
+          <Card 
+            className={`fixed z-[50] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden
+            ${isClosing && !isMinimized ? 'animate-[slideDown_0.4s_ease-out]' : !isClosing && !isMinimized ? 'animate-[slideUp_0.4s_ease-out]' : ''}
+            md:animate-none md:transition-all md:duration-300
             ${isMinimized 
-              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14' 
-            : 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-[75vh]'
-            }
-          md:${isMinimized ? 'bottom-24 md:right-6 md:left-auto md:w-80' : 'bottom-24 md:right-6 md:left-auto md:w-96 md:h-[550px]'}
-            md:max-w-none
-          `}>
-          <CardContent className="p-0 h-full flex flex-col">
+              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14 md:bottom-24 md:right-6 md:left-auto md:w-80' 
+            : 'inset-0 md:bottom-24 md:right-6 md:left-auto md:w-96 md:h-[550px] md:rounded-lg md:top-auto'
+            }`}
+            style={{
+              transform: swipeProgress > 0 ? `translateY(${swipeProgress * 100}%)` : undefined,
+              opacity: isMinimized && swipeProgress === 0 ? undefined : (1 - swipeProgress * 0.5),
+              transition: swipeProgress === 0 ? 'transform 0.3s ease-out, opacity 0.3s ease-out' : 'none'
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <CardContent className="p-0 h-full flex flex-col">
+            {/* Indicateur de swipe vers le bas */}
+            {!isMinimized && (
+              <div className="flex justify-center pt-2 pb-1 md:hidden">
+                <div className="w-10 h-1 bg-gray-400 dark:bg-gray-600 rounded-full animate-pulse"></div>
+              </div>
+            )}
+            
             <div 
               className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation"
             >
@@ -757,6 +825,7 @@ const ChatbotWidget: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        </>
       )}
     </>
   );
