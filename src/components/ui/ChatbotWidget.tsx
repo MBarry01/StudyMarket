@@ -355,7 +355,7 @@ const ChatbotWidget: React.FC = () => {
     }, 300); // Durée de l'animation
   }, []);
 
-  // Handle touch events for swipe down
+  // Handle touch events for swipe down - Meilleures pratiques pour éviter le pull-to-refresh
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     setSwipeProgress(0);
@@ -366,9 +366,17 @@ const ChatbotWidget: React.FC = () => {
       const currentY = e.touches[0].clientY;
       const diffY = currentY - touchStartY.current;
       
-      // Calculer le pourcentage de swipe (limité entre 0 et 1)
-      const progress = Math.max(0, Math.min(1, diffY / 300));
-      setSwipeProgress(progress);
+      // Si on swipe vers le bas (diffY > 0) et qu'on est en train de swiper fort
+      if (diffY > 0) {
+        // Empêcher le pull-to-refresh seulement si on swipe fortement vers le bas
+        if (diffY > 30) {
+          e.preventDefault();
+        }
+        
+        // Calculer le pourcentage de swipe (limité entre 0 et 1)
+        const progress = Math.max(0, Math.min(1, diffY / 300));
+        setSwipeProgress(progress);
+      }
     }
   }, [isMinimized]);
 
@@ -779,6 +787,7 @@ const ChatbotWidget: React.FC = () => {
             
             <div 
               className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation md:hidden"
+              style={{ touchAction: 'none' }}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
