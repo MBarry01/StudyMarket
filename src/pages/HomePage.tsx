@@ -223,7 +223,7 @@ export const HomePage: React.FC = () => {
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-sm sm:text-base">
-              <Link to="/auth">Rejoindre la communauté</Link>
+              <Link to="/auth?signup=true">Rejoindre la communauté</Link>
             </Button>
           </div>
         </div>

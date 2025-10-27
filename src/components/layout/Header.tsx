@@ -371,7 +371,7 @@ export const Header: React.FC = () => {
                   <Link to="/auth">Se connecter</Link>
                 </Button>
                 <Button asChild className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-4">
-                  <Link to="/auth">
+                  <Link to="/auth?signup=true">
                     <span className="hidden sm:inline">Rejoindre</span>
                     <span className="sm:hidden">Connexion</span>
                   </Link>

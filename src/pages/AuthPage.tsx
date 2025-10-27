@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -143,7 +143,21 @@ const isUniversityEmail = (email: string) => {
 
 export const AuthPage: React.FC = () => {
   const { currentUser, signIn, signInWithGoogle } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Initialiser isSignUp en fonction du paramètre URL
+  const params = new URLSearchParams(location.search);
+  const shouldSignUp = params.get('signup') === 'true';
+  
+  const [isSignUp, setIsSignUp] = useState(shouldSignUp);
+  
+  // Vérifier le paramètre URL pour déterminer si on est en mode signup
+  useEffect(() => {
+    const newParams = new URLSearchParams(location.search);
+    setIsSignUp(newParams.get('signup') === 'true');
+  }, [location.search]);
+  
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -157,7 +171,6 @@ export const AuthPage: React.FC = () => {
     uid: string;
   } | null>(null);
   // Modal supprimée: on n'utilise plus d'état pour l'affichage de modal de vérification
-  const navigate = useNavigate();
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
