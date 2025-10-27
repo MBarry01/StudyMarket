@@ -1,0 +1,37 @@
+✅ RÈGLES STORAGE CORRIGÉES POUR /messages/
+
+🔧 PROBLÈME IDENTIFIÉ :
+L'utilisation de "allow write" peut causer des problèmes avec Firebase Storage.
+Il faut utiliser "allow create" à la place.
+
+📝 RÈGLES CORRIGÉES (lignes 81-88) :
+
+    // MESSAGES - images partagées dans les conversations
+    match /messages/{conversationId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+                    && isImageContent()
+                    && request.resource.size < 5 * 1024 * 1024;
+      allow delete: if isAuthenticated();
+    }
+
+🚀 ÉTAPES POUR PUBLIER :
+
+1. Allez sur : https://console.firebase.google.com/project/annonces-app-44d27/storage/rules
+
+2. Copiez TOUT le contenu du fichier storage.rules (le fichier dans votre projet)
+
+3. Collez dans l'éditeur de la console Firebase
+
+4. Cliquez sur "PUBLIER"
+
+5. Attendez quelques secondes pour la propagation
+
+6. Rechargez votre navigateur (Ctrl+Shift+R)
+
+7. Testez l'upload d'une image
+
+💡 ASTUCE :
+Si ça ne fonctionne toujours pas, vérifiez dans la console Firebase qu'il n'y a pas d'erreurs de syntaxe.
+Le bouton "Publier" devrait rester grisé si les règles contiennent des erreurs.
+

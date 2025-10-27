@@ -1,85 +1,334 @@
-import { VerificationStatus } from '../types';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import toast from 'react-hot-toast';
 
+export interface CreateNotificationParams {
+  userId: string;
+  type: 'message' | 'listing' | 'order' | 'verification' | 'system' | 'review' | 'safety';
+  title: string;
+  message: string;
+  data?: {
+    url?: string;
+    listingId?: string;
+    orderId?: string;
+    conversationId?: string;
+    [key: string]: any;
+  };
+  priority?: 'high' | 'normal' | 'low';
+}
+
+/**
+ * Service de notifications pour créer automatiquement des notifications
+ * selon les actions des utilisateurs et admins
+ */
 export class NotificationService {
   /**
-   * Notification pour changement de statut de vérification
+   * Créer une notification dans Firestore
    */
-  static notifyVerificationStatusChange(
-    status: VerificationStatus,
-    reason?: string
-  ): void {
-    switch (status) {
-      case VerificationStatus.VERIFIED:
-        toast.success(
-          '🎉 Félicitations ! Votre compte étudiant est maintenant vérifié.',
-          { duration: 5000 }
-        );
-        break;
+  private static async createNotification(params: CreateNotificationParams) {
+    try {
+      const notificationData = {
+        userId: params.userId,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        data: params.data || {},
+        read: false,
+        priority: params.priority || 'normal',
+        createdAt: serverTimestamp(),
+        expiresAt: null as any
+      };
 
-      case VerificationStatus.DOCUMENTS_SUBMITTED:
-        toast.success(
-          '📤 Vos documents ont été soumis. La vérification est en cours.',
-          { duration: 4000 }
-        );
-        break;
-
-      case VerificationStatus.UNDER_REVIEW:
-        toast(
-          '👀 Votre demande est en cours de revue par un administrateur.',
-          { duration: 4000, icon: '🔍' }
-        );
-        break;
-
-      case VerificationStatus.REJECTED:
-        toast.error(
-          reason 
-            ? `✗ Demande rejetée : ${reason}` 
-            : '✗ Votre demande a été rejetée.',
-          { duration: 6000 }
-        );
-        break;
-
-      case VerificationStatus.SUSPENDED:
-        toast.error(
-          '⚠️ Votre compte a été suspendu. Contactez le support.',
-          { duration: 6000 }
-        );
-        break;
-
-      default:
-        break;
+      const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+      console.log(`✅ Notification créée: ${docRef.id}`);
+      
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Erreur création notification:', error);
+      throw error;
     }
   }
 
   /**
-   * Notification pour admin - nouvelle demande
+   * 💬 Notification : Nouveau message reçu
    */
-  static notifyAdminNewRequest(userName: string): void {
-    toast.success(
-      `Nouvelle demande de vérification de ${userName}`,
-      { duration: 3000 }
-    );
+  static async notifyNewMessage(
+    recipientUserId: string,
+    senderName: string,
+    listingTitle: string,
+    conversationId: string
+  ) {
+    return await this.createNotification({
+      userId: recipientUserId,
+      type: 'message',
+      title: `💬 Message de ${senderName}`,
+      message: `Nouveau message concernant "${listingTitle}"`,
+      data: {
+        url: `/messages?conversation=${conversationId}`,
+        conversationId
+      },
+      priority: 'high'
+    });
   }
 
   /**
-   * Notification pour upload documents
+   * 📝 Notification : Nouvelle annonce correspond à votre recherche
    */
-  static notifyDocumentUpload(count: number): void {
-    toast.success(
-      `${count} document${count > 1 ? 's' : ''} téléversé${count > 1 ? 's' : ''} avec succès`,
-      { duration: 3000 }
-    );
+  static async notifyNewListingMatch(
+    userId: string,
+    listingId: string,
+    listingTitle: string,
+    listingCategory: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'listing',
+      title: `🔍 Nouvelle annonce correspondant à votre recherche`,
+      message: `${listingTitle} (${listingCategory})`,
+      data: {
+        url: `/listing/${listingId}`,
+        listingId
+      },
+      priority: 'normal'
+    });
   }
 
   /**
-   * Notification pour erreur upload
+   * 🛒 Notification : Nouvelle commande
    */
-  static notifyUploadError(error?: string): void {
-    toast.error(
-      error || 'Erreur lors du téléversement. Veuillez réessayer.',
-      { duration: 4000 }
-    );
+  static async notifyNewOrder(
+    sellerUserId: string,
+    orderId: string,
+    listingTitle: string,
+    buyerName: string
+  ) {
+    return await this.createNotification({
+      userId: sellerUserId,
+      type: 'order',
+      title: `🛒 Nouvelle commande`,
+      message: `${buyerName} a acheté "${listingTitle}"`,
+      data: {
+        url: `/orders/${orderId}`,
+        orderId
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * 📦 Notification : Changement de statut de commande
+   */
+  static async notifyOrderStatusChange(
+    userId: string,
+    orderId: string,
+    status: string,
+    listingTitle: string
+  ) {
+    const statusLabels: Record<string, string> = {
+      'pending': '⏳ En attente',
+      'confirmed': '✅ Confirmée',
+      'shipped': '📦 Expédiée',
+      'delivered': '🎉 Livrée',
+      'cancelled': '❌ Annulée'
+    };
+
+    return await this.createNotification({
+      userId,
+      type: 'order',
+      title: `📦 Statut de commande mis à jour`,
+      message: `Votre commande "${listingTitle}" est maintenant ${statusLabels[status] || status}`,
+      data: {
+        url: `/orders/${orderId}`,
+        orderId
+      },
+      priority: 'normal'
+    });
+  }
+
+  /**
+   * ✅ Notification : Document de vérification approuvé
+   */
+  static async notifyVerificationApproved(userId: string) {
+    return await this.createNotification({
+      userId,
+      type: 'verification',
+      title: `🎉 Votre compte est vérifié !`,
+      message: `Félicitations ! Vous êtes maintenant un étudiant certifié.`,
+      data: {
+        url: '/profile'
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * ❌ Notification : Document de vérification rejeté
+   */
+  static async notifyVerificationRejected(userId: string, reason?: string) {
+    return await this.createNotification({
+      userId,
+      type: 'verification',
+      title: `❌ Demande de vérification rejetée`,
+      message: reason || `Votre demande a été rejetée. Veuillez réessayer.`,
+      data: {
+        url: '/verification'
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * ⚙️ Notification : Changement de statut de vérification
+   */
+  static async notifyVerificationStatusChange(
+    userId: string,
+    status: string
+  ) {
+    const statusLabels: Record<string, string> = {
+      'pending': '📋 En attente',
+      'under_review': '👀 En cours de revue',
+      'approved': '✅ Approuvée',
+      'rejected': '❌ Rejetée'
+    };
+
+    return await this.createNotification({
+      userId,
+      type: 'verification',
+      title: `🔄 Statut de vérification mis à jour`,
+      message: `Votre demande est maintenant ${statusLabels[status] || status}`,
+      data: {
+        url: '/verification'
+      },
+      priority: 'normal'
+    });
+  }
+
+  /**
+   * ⭐ Notification : Nouvel avis reçu
+   */
+  static async notifyNewReview(
+    userId: string,
+    reviewerName: string,
+    rating: number
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'review',
+      title: `⭐ Nouvel avis de ${reviewerName}`,
+      message: `Vous avez reçu ${rating} étoile${rating > 1 ? 's' : ''}`,
+      data: {
+        url: '/profile'
+      },
+      priority: 'normal'
+    });
+  }
+
+  /**
+   * 🚨 Notification : Rapport de sécurité
+   */
+  static async notifySafetyReport(
+    userId: string,
+    reportType: string,
+    listingTitle?: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'safety',
+      title: `🚨 Rapport de sécurité`,
+      message: `Un rapport a été créé concernant ${listingTitle || 'votre compte'}`,
+      data: {
+        url: '/reports'
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * 📢 Notification : Annonce administrative
+   */
+  static async notifySystemAnnouncement(
+    userId: string,
+    title: string,
+    message: string,
+    url?: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'system',
+      title: `📢 ${title}`,
+      message,
+      data: {
+        url: url || '/'
+      },
+      priority: 'normal'
+    });
+  }
+
+  /**
+   * 💰 Notification : Paiement reçu
+   */
+  static async notifyPaymentReceived(
+    userId: string,
+    amount: number,
+    orderId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'order',
+      title: `💰 Paiement reçu`,
+      message: `Vous avez reçu ${amount}€ pour votre commande`,
+      data: {
+        url: `/orders/${orderId}`,
+        orderId
+      },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * 📉 Notification : Changement de prix
+   */
+  static async notifyPriceDrop(
+    userId: string,
+    listingId: string,
+    listingTitle: string,
+    newPrice: number,
+    oldPrice: number
+  ) {
+    const discount = ((oldPrice - newPrice) / oldPrice * 100).toFixed(0);
+    
+    return await this.createNotification({
+      userId,
+      type: 'listing',
+      title: `📉 Réduction de ${discount}% !`,
+      message: `${listingTitle} est maintenant à ${newPrice}€ (au lieu de ${oldPrice}€)`,
+      data: {
+        url: `/listing/${listingId}`,
+        listingId
+      },
+      priority: 'normal'
+    });
+  }
+
+  /**
+   * 🎁 Notification : Offre spéciale
+   */
+  static async notifySpecialOffer(
+    userId: string,
+    listingId: string,
+    listingTitle: string,
+    offer: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'listing',
+      title: `🎁 Offre spéciale !`,
+      message: `${listingTitle}: ${offer}`,
+      data: {
+        url: `/listing/${listingId}`,
+        listingId
+      },
+      priority: 'normal'
+    });
   }
 }
-

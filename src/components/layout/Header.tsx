@@ -12,7 +12,6 @@ import {
   LogOut,
   Heart,
   Settings,
-  Bell,
   Shield,
   GraduationCap,
   Leaf,
@@ -33,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMessageStore } from '../../stores/useMessageStore';
 import { useCartStore } from '../../stores/useCartStore';
@@ -173,11 +173,9 @@ export const Header: React.FC = () => {
                 </div>
 
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" asChild className="hidden sm:flex h-8 w-8 sm:h-9 sm:w-9">
-                  <Link to="/saved-searches">
-                    <Bell className="w-4 h-4" />
-                  </Link>
-                </Button>
+                <div className="hidden sm:block">
+                  <NotificationBell />
+                </div>
 
                 {/* Messages avec badge de notification */}
                 <div className="relative hidden sm:block">
@@ -198,17 +196,17 @@ export const Header: React.FC = () => {
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full p-0">
-                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                    <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full p-0 hover:bg-transparent">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                         <AvatarImage src={userProfile?.photoURL} />
                         <AvatarFallback className="text-xs sm:text-sm">
                           {userProfile?.displayName?.[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       {userProfile?.isVerified && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full flex items-center justify-center">
-                          <Shield className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" />
-                        </div>
+                        <Badge className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 p-0 bg-green-500 hover:bg-green-500 border-2 border-background rounded-full flex items-center justify-center">
+                          <Shield className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
+                        </Badge>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
@@ -240,8 +238,8 @@ export const Header: React.FC = () => {
                       <>
                         <DropdownMenuItem asChild>
                           <Link to="/admin" className="cursor-pointer bg-gradient-to-r from-primary/10 to-secondary/10">
-                            <Shield className="w-4 h-4 mr-2 text-primary" />
-                            <span className="font-semibold text-primary">Administration</span>
+                            <Shield className="w-4 h-4 mr-2" />
+                            <span className="font-semibold">Administration</span>
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

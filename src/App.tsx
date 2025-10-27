@@ -48,6 +48,7 @@ import EditListingPage from './pages/EditListingPage';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { HousingListingsPage } from './pages/HousingListingsPage';
 import ChatbotWidget from './components/ui/ChatbotWidget';
+import SouvenirBanner from './components/SouvenirBanner';
 import './App.css';
 import React from 'react';
 
@@ -89,7 +90,8 @@ function App() {
           <ScrollToTop />
           <div className="min-h-screen bg-background flex flex-col">
             <Header />
-            <main className="flex-1 pt-[3.5rem] md:pt-20 pb-20 md:pb-0">
+            <SouvenirBanner />
+            <main className="flex-1 pt-[3.5rem] md:pt-0 pb-20 md:pb-0 min-h-[100vh]">
               <ErrorBoundary>
                 <Routes>
                   <Route path="/" element={<HomePage />} />

@@ -1,0 +1,35 @@
+✅ RÈGLES SIMPLIFIÉES POUR DEBUG /messages/
+
+🔧 PROBLÈME :
+Les règles avec vérification de type d'image ne fonctionnent pas.
+
+💡 SOLUTION :
+Règles simplifiées sans vérification de type (temporaire pour debug)
+
+📝 NOUVELLES RÈGLES (lignes 81-84) :
+
+    // MESSAGES - images partagées dans les conversations
+    match /messages/{conversationId}/{fileName} {
+      allow read, write, delete: if isAuthenticated();
+    }
+
+🚀 PUBLIEZ DANS FIREBASE :
+
+1. Allez sur : https://console.firebase.google.com/project/annonces-app-44d27/storage/rules
+
+2. Remplacez la section /messages/ (lignes 81-84) par :
+   match /messages/{conversationId}/{fileName} {
+     allow read, write, delete: if isAuthenticated();
+   }
+
+3. Cliquez sur "PUBLIER"
+
+4. Attendez 30 secondes à 1 minute
+
+5. Rechargez la page de l'application (Ctrl+Shift+R)
+
+6. Testez l'upload
+
+⚠️ Ces règles permettent TOUS les types de fichiers.
+Une fois que ça fonctionne, on pourra ajouter les restrictions de type et de taille.
+

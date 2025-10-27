@@ -229,6 +229,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Erreur listener Firestore userProfile:', error);
           }
         );
+        
+        // Initialiser les notifications push
+        try {
+          const { initializePushNotifications } = await import('../services/pushNotificationService');
+          await initializePushNotifications();
+        } catch (error) {
+          console.error('Erreur initialisation notifications push:', error);
+        }
       } else {
         setUserProfile(null);
       }

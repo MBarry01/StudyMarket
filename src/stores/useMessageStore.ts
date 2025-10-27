@@ -306,6 +306,10 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
         return;
       }
 
+      // Détecter si le message est une image (URL)
+      const isImage = text.startsWith('https://') && (text.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) || text.includes('firebasestorage'));
+      const messageType = isImage ? 'image' : 'text';
+      
       // Add message to subcollection
       const messageData = {
         conversationId,
@@ -313,7 +317,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
         senderName,
         senderAvatar: senderAvatar || null,
         text,
-        type: 'text',
+        type: messageType,
         seen: false,
         sentAt: serverTimestamp(),
       };
@@ -367,6 +371,21 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
             text,
             conversationId
           );
+        }
+      });
+
+      // Create push notification for other participants
+      const { NotificationService } = await import('../services/notificationService');
+      otherParticipants.forEach(async (participantId) => {
+        try {
+          await NotificationService.notifyNewMessage(
+            participantId,
+            senderName,
+            conversation.listingTitle,
+            conversationId
+          );
+        } catch (error) {
+          console.error('Erreur création notification push:', error);
         }
       });
 
@@ -489,15 +508,28 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
 
   markMessagesAsSeen: async (conversationId: string, userId: string) => {
     try {
-      // Simplified approach: just update the conversation unread count
-      // This avoids the complex query that requires an index
+      // Update conversation unread count
       const conversationRef = doc(db, 'conversations', conversationId);
       await updateDoc(conversationRef, {
         [`unreadCount.${userId}`]: 0,
       });
 
-      // Optionally, we could fetch and update messages individually
-      // but this is less efficient and might not be necessary for the basic functionality
+      // Mark all messages from other users as seen
+      const messagesQuery = query(
+        collection(db, 'conversations', conversationId, 'messages'),
+        where('senderId', '!=', userId)
+      );
+      
+      const messagesSnapshot = await getDocs(messagesQuery);
+      const batch = writeBatch(db);
+      
+      messagesSnapshot.docs.forEach((messageDoc) => {
+        if (!messageDoc.data().seen) {
+          batch.update(messageDoc.ref, { seen: true });
+        }
+      });
+      
+      await batch.commit();
       
     } catch (error) {
       console.error('Error marking messages as seen:', error);

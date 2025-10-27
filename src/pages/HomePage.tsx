@@ -14,7 +14,6 @@ import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
 import { ImBook, ImGift, ImHome, ImLocation, ImMobile, ImSpinner9, ImUsers, ImUserTie } from "react-icons/im";
 
-import { SearchBar } from "@/components/ui/SearchBar";
 
 const categoryIcons: { [key: string]: string } = {
   electronics: `${import.meta.env.BASE_URL}assets/Icon/Gradient/electronic.svg`,
@@ -193,10 +192,6 @@ export const HomePage: React.FC = () => {
             Sécurisé, écologique et pensé pour la vie étudiante.
           </p>
           
-          {/* Search Bar */}
-          <div className="mb-4 sm:mb-6 lg:mb-8 px-2 sm:px-4">
-            <SearchBar />
-          </div>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8">

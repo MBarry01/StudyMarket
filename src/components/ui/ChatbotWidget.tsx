@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase, supabaseStatus } from '@/lib/supabase';
@@ -164,7 +165,12 @@ const useMessagePersistence = (currentUser: any) => {
 
 const ChatbotWidget: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Masquer le chatbot sur la page Messages en mobile
+  const isMessagesPage = location.pathname.includes('/messages');
+  const shouldHideOnMobile = isMessagesPage;
   const [isClosing, setIsClosing] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('menu');
@@ -348,10 +354,10 @@ const ChatbotWidget: React.FC = () => {
   const closeWidget = useCallback(() => {
     setIsClosing(true);
     setTimeout(() => {
-      setIsOpen(false);
+    setIsOpen(false);
       setIsClosing(false);
-      setIsMinimized(false);
-      setViewMode('menu');
+    setIsMinimized(false);
+    setViewMode('menu');
     }, 300); // Durée de l'animation
   }, []);
 
@@ -407,9 +413,9 @@ const ChatbotWidget: React.FC = () => {
 
   // Menu principal
   const renderMenu = () => (
-    <div className="h-full overflow-y-auto p-6">
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-4 rounded-lg">
+    <div className="h-full overflow-y-auto p-4 md:p-6">
+      <div className="text-center mb-4 md:mb-6 animate-fade-in">
+        <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-4 rounded-lg transition-transform duration-300 hover:scale-105">
           <span className="text-2xl font-bold text-white">SM</span>
         </div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -421,7 +427,7 @@ const ChatbotWidget: React.FC = () => {
       </div>
 
       <div 
-        className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-lg touch-manipulation active:scale-[0.99]"
+        className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 rounded-lg touch-manipulation active:scale-[0.99]"
         onClick={() => setViewMode('chat')}
       >
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -469,7 +475,7 @@ const ChatbotWidget: React.FC = () => {
         variant="ghost"
         size="sm"
         onClick={goToHome}
-        className={`w-12 h-12 p-0 ${viewMode === 'home' ? 'text-primary' : 'text-gray-500'} touch-manipulation active:scale-95`}
+        className={`w-12 h-12 p-0 transition-all duration-200 ${viewMode === 'home' ? 'text-primary' : 'text-gray-500'} touch-manipulation active:scale-95 hover:scale-105`}
       >
         <Home className="w-6 h-6" />
       </Button>
@@ -477,7 +483,7 @@ const ChatbotWidget: React.FC = () => {
         variant="ghost"
         size="sm"
         onClick={() => setViewMode('chat')}
-        className={`w-12 h-12 p-0 ${viewMode === 'chat' ? 'text-primary' : 'text-gray-500'} touch-manipulation active:scale-95`}
+        className={`w-12 h-12 p-0 transition-all duration-200 ${viewMode === 'chat' ? 'text-primary' : 'text-gray-500'} touch-manipulation active:scale-95 hover:scale-105`}
       >
         <Bot className="w-6 h-6" />
       </Button>
@@ -485,7 +491,7 @@ const ChatbotWidget: React.FC = () => {
         variant="ghost"
         size="sm"
         onClick={() => setViewMode('contact')}
-        className={`w-12 h-12 p-0 ${viewMode === 'contact' ? 'text-primary' : 'text-gray-500'} touch-manipulation active:scale-95`}
+        className={`w-12 h-12 p-0 transition-all duration-200 ${viewMode === 'contact' ? 'text-primary' : 'text-gray-500'} touch-manipulation active:scale-95 hover:scale-105`}
       >
         <Mail className="w-6 h-6" />
       </Button>
@@ -526,7 +532,7 @@ const ChatbotWidget: React.FC = () => {
           return (
                 <div
                   key={message.id}
-              className={`flex items-end space-x-2 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`}
+              className={`flex items-end space-x-2 transition-all duration-200 hover:opacity-90 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`}
             >
               <div className="flex-shrink-0">
                 {showAvatar ? (
@@ -745,9 +751,9 @@ const ChatbotWidget: React.FC = () => {
       {!isOpen && (
         <button
           onClick={openWidget}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[35] w-14 h-14 rounded-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 touch-manipulation active:scale-95 flex items-center justify-center"
+          className={`fixed bottom-20 right-4 z-[35] w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 touch-manipulation active:scale-95 flex items-center justify-center md:bottom-6 md:right-6 ${shouldHideOnMobile ? 'hidden md:flex' : ''}`}
         >
-          <MessageCircle className="w-7 h-7 text-white" />
+          <MessageCircle className="w-7 h-7 md:w-8 md:h-8 text-white" />
         </button>
       )}
 
@@ -755,7 +761,7 @@ const ChatbotWidget: React.FC = () => {
         <>
           {/* Backdrop sombre avec animation */}
           <div 
-            className={`fixed inset-0 z-[40] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'animate-[fadeOut_0.3s_ease-out]' : 'animate-[fadeIn_0.3s_ease-out]'}`}
+            className={`fixed inset-0 z-[40] bg-black/50 backdrop-blur-sm transition-all duration-300 md:duration-200 ${isClosing ? 'animate-[fadeOut_0.3s_ease-out]' : 'animate-[fadeIn_0.3s_ease-out]'}`}
             style={{
               opacity: isClosing ? undefined : (0.5 * (1 - swipeProgress))
             }}
@@ -766,10 +772,9 @@ const ChatbotWidget: React.FC = () => {
           <Card 
             className={`fixed z-[50] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden
             ${isClosing && !isMinimized ? 'animate-[slideDown_0.4s_ease-out]' : !isClosing && !isMinimized ? 'animate-[slideUp_0.4s_ease-out]' : ''}
-            md:animate-none md:transition-all md:duration-300
             ${isMinimized 
-              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14 md:bottom-24 md:right-6 md:left-auto md:w-80' 
-            : 'inset-0 md:bottom-24 md:right-6 md:left-auto md:w-96 md:h-[550px] md:rounded-lg md:top-auto'
+              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14 md:bottom-6 md:right-6 md:left-auto md:w-[380px]' 
+            : 'inset-0 md:bottom-6 md:right-6 md:left-auto md:w-[480px] md:h-[680px] md:rounded-2xl md:top-auto'
             }`}
             style={{
               transform: swipeProgress > 0 ? `translateY(${swipeProgress * 100}%)` : undefined,
@@ -777,7 +782,7 @@ const ChatbotWidget: React.FC = () => {
               transition: swipeProgress === 0 ? 'transform 0.3s ease-out, opacity 0.3s ease-out' : 'none'
             }}
           >
-            <CardContent className="p-0 h-full flex flex-col">
+          <CardContent className="p-0 h-full flex flex-col">
             {/* Indicateur de swipe vers le bas */}
             {!isMinimized && (
               <div className="flex justify-center pt-2 pb-1 md:hidden">
@@ -794,8 +799,8 @@ const ChatbotWidget: React.FC = () => {
             >
               <div 
                 className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
-                onClick={toggleMinimize}
-              >
+              onClick={toggleMinimize}
+            >
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                   {isMinimized ? (
                     <ArrowDown className="w-6 h-6 text-white transform rotate-180" />
@@ -810,21 +815,41 @@ const ChatbotWidget: React.FC = () => {
                   )}
                 </div>
               </div>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeWidget();
-                }}
-                variant="ghost"
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeWidget();
+                  }}
+                  variant="ghost"
                 className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 touch-manipulation active:scale-95 flex items-center justify-center"
-              >
+                >
                 <X className="w-6 h-6" />
-              </Button>
+                </Button>
             </div>
 
             {!isMinimized && (
               <>
-                <div className="flex-1 overflow-hidden min-h-0">
+                {/* Header Desktop */}
+                <div className="hidden md:flex items-center justify-between px-6 py-4 bg-gradient-to-r from-primary to-secondary border-b border-white/20 animate-fade-in">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-base text-white">StudyMarket</h2>
+                      <p className="text-xs text-white/80">Assistant en ligne</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={closeWidget}
+                    variant="ghost"
+                    className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 transition-all duration-200 hover:scale-105"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+
+                <div className="flex-1 overflow-hidden min-h-0 animate-fade-in">
                   {viewMode === 'menu' && renderMenu()}
                   {viewMode === 'chat' && renderChat()}
                   {viewMode === 'contact' && renderContact()}

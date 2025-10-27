@@ -78,6 +78,11 @@ service firebase.storage {
       allow read, delete: if isOwner(userId) || isAdmin();
     }
 
+    // MESSAGES - images partagées dans les conversations
+    match /messages/{conversationId}/{fileName} {
+      allow read, write, delete: if isAuthenticated();
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

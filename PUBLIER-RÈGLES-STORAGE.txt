@@ -1,0 +1,26 @@
+🔧 PUBLICATION DES RÈGLES STORAGE POUR LES MESSAGES
+
+📋 ÉTAPES À SUIVRE :
+
+1. Ouvrez votre navigateur et allez sur :
+   https://console.firebase.google.com/project/annonces-app-44d27/storage/rules
+
+2. Dans l'éditeur de règles, remplacez TOUT le contenu par le contenu du fichier storage.rules
+
+3. Cliquez sur le bouton "Publier" (en haut à droite)
+
+4. ✅ Attendez la confirmation que les règles ont été publiées
+
+5. 🧪 Testez l'upload d'une image dans une conversation
+
+📝 CONTRÔLES DE SÉCURITÉ :
+   ✅ Upload uniquement pour utilisateurs authentifiés
+   ✅ Limite de 5MB par image
+   ✅ Types d'images acceptés : jpeg, png, webp, gif, jpg
+   ✅ Lecture pour tous les utilisateurs authentifiés
+   ✅ Suppression pour tous les utilisateurs authentifiés
+
+⚠️ IMPORTANT : 
+Les règles de storage.rules dans votre projet sont déjà à jour.
+Il suffit de les copier-coller dans la console Firebase et de publier.
+
