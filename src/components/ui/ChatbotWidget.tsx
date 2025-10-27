@@ -768,9 +768,6 @@ const ChatbotWidget: React.FC = () => {
               opacity: isMinimized && swipeProgress === 0 ? undefined : (1 - swipeProgress * 0.5),
               transition: swipeProgress === 0 ? 'transform 0.3s ease-out, opacity 0.3s ease-out' : 'none'
             }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             <CardContent className="p-0 h-full flex flex-col">
             {/* Indicateur de swipe vers le bas */}
@@ -781,7 +778,10 @@ const ChatbotWidget: React.FC = () => {
             )}
             
             <div 
-              className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation"
+              className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation md:hidden"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               <div 
                 className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
