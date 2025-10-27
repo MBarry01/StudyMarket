@@ -358,7 +358,7 @@ const ChatbotWidget: React.FC = () => {
 
   // Menu principal
   const renderMenu = () => (
-    <div className="p-6">
+    <div className="h-full overflow-y-auto p-6">
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-4 rounded-lg">
           <span className="text-2xl font-bold text-white">SM</span>
@@ -446,30 +446,30 @@ const ChatbotWidget: React.FC = () => {
   // Interface chat
   const renderChat = () => (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+        <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setViewMode('menu')}
-            className="p-2"
+            className="p-1.5 w-9 h-9 touch-manipulation active:scale-95"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-7 h-7">
             <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xs">
               SM
                   </AvatarFallback>
                 </Avatar>
                 <div>
-            <h3 className="font-semibold text-sm">Assistant StudyMarket</h3>
+            <h3 className="font-semibold text-sm">Assistant</h3>
             <p className="text-xs text-green-600">En ligne</p>
               </div>
         </div>
-        <Badge className="bg-green-100 text-green-800 text-xs">Actif</Badge>
+        <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5">Actif</Badge>
             </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-2 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
         {messages.map((message, index) => {
           const isUser = message.sender === 'user';
           const showAvatar = index === 0 || messages[index - 1].sender !== message.sender;
@@ -549,15 +549,15 @@ const ChatbotWidget: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
               <div className="flex space-x-2">
-                <Input
+                <input
             ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
             placeholder="Tape ton message..."
-            className="flex-1 border-none focus:ring-0 focus:ring-offset-0 bg-gray-50 dark:bg-gray-700"
+            className="flex-1 h-11 px-3 rounded-lg border-none focus:ring-0 focus:ring-offset-0 bg-gray-50 dark:bg-gray-700 text-base"
                   disabled={isTyping}
                 />
                 <Button
@@ -576,20 +576,20 @@ const ChatbotWidget: React.FC = () => {
   // Formulaire contact
   const renderContact = () => (
     <div className="flex flex-col h-full">
-      <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setViewMode('menu')}
-          className="p-2"
+          className="p-2 w-10 h-10 touch-manipulation active:scale-95"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-6 h-6" />
         </Button>
         <Mail className="w-6 h-6 text-primary" />
         <h3 className="font-semibold">Nous contacter</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 min-h-0">
         {!supabaseStatus.isConfigured && (
           <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-center space-x-2">
@@ -667,7 +667,7 @@ const ChatbotWidget: React.FC = () => {
                 required
                 rows={4}
                 placeholder="Décris ta demande..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none text-base"
               />
             </div>
             
@@ -705,50 +705,49 @@ const ChatbotWidget: React.FC = () => {
       {isOpen && (
         <Card className={`fixed z-[35] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden transition-all duration-300 ease-in-out
             ${isMinimized 
-              ? 'bottom-[5.75rem] left-2 right-2 w-[calc(100vw-1rem)] h-10' 
-            : 'bottom-[5.75rem] left-2 right-2 w-[calc(100vw-1rem)] h-[calc(100vh-10rem)]'
+              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14' 
+            : 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-[75vh]'
             }
-          md:${isMinimized ? 'bottom-24 md:right-6 md:left-auto md:w-80' : 'bottom-24 md:right-6 md:left-auto md:w-96 md:h-[550px] md:max-h-[calc(100vh-8rem)]'}
+          md:${isMinimized ? 'bottom-24 md:right-6 md:left-auto md:w-80' : 'bottom-24 md:right-6 md:left-auto md:w-96 md:h-[550px]'}
             md:max-w-none
           `}>
           <CardContent className="p-0 h-full flex flex-col">
             <div 
-              className="flex items-center justify-between p-4 bg-gradient-to-r from-primary to-secondary text-white cursor-pointer touch-manipulation active:bg-opacity-90"
-              onClick={toggleMinimize}
+              className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation"
             >
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+              <div 
+                className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
+                onClick={toggleMinimize}
+              >
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                   {isMinimized ? (
-                    <ArrowDown className="w-5 h-5 text-white transform rotate-180" />
+                    <ArrowDown className="w-6 h-6 text-white transform rotate-180" />
                   ) : (
-                    <MessageCircle className="w-5 h-5 text-white" />
+                    <MessageCircle className="w-6 h-6 text-white" />
                   )}
                 </div>
-                <div>
-                  <h2 className="font-semibold text-sm">StudyMarket</h2>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-base">StudyMarket</h2>
                   {!isMinimized && (
                     <p className="text-xs text-white/80">Assistant en ligne</p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeWidget();
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="text-white hover:bg-white/20 p-2 w-9 h-9 touch-manipulation active:scale-95"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeWidget();
+                }}
+                variant="ghost"
+                className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 touch-manipulation active:scale-95 flex items-center justify-center"
+              >
+                <X className="w-6 h-6" />
+              </Button>
             </div>
 
             {!isMinimized && (
               <>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden min-h-0">
                   {viewMode === 'menu' && renderMenu()}
                   {viewMode === 'chat' && renderChat()}
                   {viewMode === 'contact' && renderContact()}
