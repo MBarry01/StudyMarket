@@ -642,7 +642,7 @@ export const ProfilePage: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">

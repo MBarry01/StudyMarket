@@ -420,11 +420,11 @@ export const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl">
       {/* En-tête */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <SettingsIcon className="w-8 h-8" />
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2">
+          <SettingsIcon className="w-6 h-6 sm:w-8 sm:h-8" />
           Paramètres
         </h1>
         <p className="text-muted-foreground">
@@ -433,7 +433,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-5 gap-1 sm:gap-0">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="w-4 h-4" />
             <span className="hidden sm:inline">Profil</span>
@@ -663,30 +663,31 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Canaux de notification</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Email</p>
-                        <p className="text-sm text-muted-foreground">
-                          Recevez des notifications par email
-                        </p>
-                      </div>
+                <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                  <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                    <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-left min-w-0">
+                      <p className="font-medium text-sm sm:text-base">Email</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Recevez des notifications par email
+                      </p>
                     </div>
-                    <Switch
-                      checked={notifications.email}
-                      onCheckedChange={(checked) => 
-                        setNotifications(prev => ({ ...prev, email: checked }))
-                      }
-                    />
                   </div>
+                  <Switch
+                    checked={notifications.email}
+                    onCheckedChange={(checked) => 
+                      setNotifications(prev => ({ ...prev, email: checked }))
+                    }
+                    className="flex-shrink-0"
+                  />
+                </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Smartphone className="w-5 h-5 text-green-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Notifications push</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Smartphone className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">Notifications push</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Notifications dans le navigateur
                         </p>
                       </div>
@@ -696,15 +697,16 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setNotifications(prev => ({ ...prev, push: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Phone className="w-5 h-5 text-purple-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">SMS</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">SMS</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Notifications par SMS (bientôt disponible)
                         </p>
                       </div>
@@ -715,6 +717,7 @@ export const SettingsPage: React.FC = () => {
                         setNotifications(prev => ({ ...prev, sms: checked }))
                       }
                       disabled
+                      className="flex-shrink-0"
                     />
                   </div>
                 </div>
@@ -726,12 +729,12 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Types de notifications</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <MessageCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Messages</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">Messages</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Nouveaux messages et conversations
                         </p>
                       </div>
@@ -741,15 +744,16 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setNotifications(prev => ({ ...prev, messages: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Package className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Annonces</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">Annonces</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Nouvelles annonces correspondant à vos recherches
                         </p>
                       </div>
@@ -759,15 +763,16 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setNotifications(prev => ({ ...prev, listings: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Star className="w-5 h-5 text-yellow-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Avis et évaluations</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">Avis et évaluations</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Nouveaux avis sur vos transactions
                         </p>
                       </div>
@@ -777,15 +782,16 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setNotifications(prev => ({ ...prev, reviews: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Bell className="w-5 h-5 text-red-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Alertes de sécurité</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">Alertes de sécurité</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Alertes importantes et mises à jour de sécurité
                         </p>
                       </div>
@@ -795,15 +801,16 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setNotifications(prev => ({ ...prev, alerts: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Palette className="w-5 h-5 text-pink-600 mt-0.5" />
-                      <div className="text-left">
-                        <p className="font-medium text-base">Marketing</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-medium text-sm sm:text-base">Marketing</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Nouvelles fonctionnalités et promotions
                         </p>
                       </div>
@@ -813,6 +820,7 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setNotifications(prev => ({ ...prev, marketing: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
                 </div>
@@ -852,14 +860,15 @@ export const SettingsPage: React.FC = () => {
                 <h3 className="font-medium">Visibilité du profil</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between py-3">
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-base">Profil public</p>
-                      <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="font-medium text-sm sm:text-base">Profil public</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Votre profil est visible par tous les étudiants vérifiés
                       </p>
                     </div>
                     <Switch
+                      className="flex-shrink-0"
                       checked={privacy.profileVisibility === 'public'}
                       onCheckedChange={(checked) => 
                         setPrivacy(prev => ({ 
@@ -870,10 +879,10 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-start justify-between py-3">
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-base">Afficher l'email</p>
-                      <p className="text-sm text-muted-foreground">
+                  <div className="flex items-start justify-between py-2 sm:py-3 gap-2">
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="font-medium text-sm sm:text-base">Afficher l'email</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Votre email est visible sur votre profil public
                       </p>
                     </div>
@@ -882,13 +891,14 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setPrivacy(prev => ({ ...prev, showEmail: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
                   <div className="flex items-start justify-between py-3">
                     <div className="text-left flex-1">
-                      <p className="font-medium text-base">Afficher le téléphone</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm sm:text-base">Afficher le téléphone</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Votre numéro de téléphone est visible sur votre profil
                       </p>
                     </div>
@@ -897,13 +907,14 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setPrivacy(prev => ({ ...prev, showPhone: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
                   <div className="flex items-start justify-between py-3">
                     <div className="text-left flex-1">
-                      <p className="font-medium text-base">Afficher l'université</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm sm:text-base">Afficher l'université</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Votre université est visible sur votre profil
                       </p>
                     </div>
@@ -912,6 +923,7 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setPrivacy(prev => ({ ...prev, showUniversity: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
                 </div>
@@ -925,8 +937,8 @@ export const SettingsPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex items-start justify-between py-3">
                     <div className="text-left flex-1">
-                      <p className="font-medium text-base">Autoriser les messages</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm sm:text-base">Autoriser les messages</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Les autres étudiants peuvent vous envoyer des messages
                       </p>
                     </div>
@@ -935,13 +947,14 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setPrivacy(prev => ({ ...prev, allowMessages: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
 
                   <div className="flex items-start justify-between py-3">
                     <div className="text-left flex-1">
-                      <p className="font-medium text-base">Statut en ligne</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm sm:text-base">Statut en ligne</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Afficher quand vous êtes en ligne
                       </p>
                     </div>
@@ -950,6 +963,7 @@ export const SettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => 
                         setPrivacy(prev => ({ ...prev, showOnlineStatus: checked }))
                       }
+                      className="flex-shrink-0"
                     />
                   </div>
                 </div>

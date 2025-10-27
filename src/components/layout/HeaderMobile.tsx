@@ -95,7 +95,7 @@ export const HeaderMobile = memo<HeaderMobileProps>(({ onOpenPublish }) => {
                 onOpenPublish();
                 setMenuOpen(false);
               }}
-              className="flex-shrink-0 w-7 h-7 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center transition-all active:scale-95 touch-manipulation"
+              className="flex-shrink-0 w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center transition-all active:scale-95 active:bg-white/20 touch-manipulation"
             >
               <Plus className="w-3.5 h-3.5 text-white" />
             </button>

@@ -92,10 +92,10 @@ export const ListingsPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Toutes les annonces</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Toutes les annonces</h1>
         
         {/* Search Bar */}
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
@@ -315,7 +315,7 @@ export const ListingsPage: React.FC = () => {
 
           {/* Results */}
           {loading && listings.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="animate-pulse">
                   <div className="aspect-[4/3] bg-muted" />
@@ -329,7 +329,7 @@ export const ListingsPage: React.FC = () => {
             </div>
           ) : listings.length > 0 ? (
             <>
-              <div className={`grid gap-8 justify-items-center ${
+              <div className={`grid gap-4 sm:gap-6 lg:gap-8 justify-items-center ${
                 viewMode === 'grid' 
                   ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
                   : 'grid-cols-1'

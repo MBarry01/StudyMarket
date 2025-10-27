@@ -8,9 +8,26 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Styles personnalisés pour la carte
 const mapStyles = `
+  /* Réduire les contrôles de navigation (ZOOM + LOCATION) */
+  .mapboxgl-ctrl-group {
+    margin: 0.5px !important;
+    margin-top: 20px !important;
+    position: relative !important;
+    top: 15px !important;
+  }
+  
+  .mapboxgl-ctrl-group button {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
+  }
+  
   .mapboxgl-ctrl-bottom-left {
     opacity: 0.4 !important;
     transition: opacity 0.2s ease !important;
+    bottom: 4px !important;
+    left: 4px !important;
+    position: absolute !important;
   }
   
   .mapboxgl-ctrl-bottom-left:hover {
@@ -18,9 +35,9 @@ const mapStyles = `
   }
   
   .mapboxgl-ctrl-logo {
-    width: 65px !important;
-    height: 20px !important;
-    margin: 0 0 4px 4px !important;
+    width: 50px !important;
+    height: 15px !important;
+    margin: 0 !important;
   }
   
   .mapboxgl-ctrl-attrib,
@@ -44,7 +61,7 @@ const mapStyles = `
 `;
 
 // Token public Mapbox
-mapboxgl.accessToken = 'pk.eyJ1IjoibWJhcnJ5MjIiLCJhIjoiY21oM3FyZXZsMTZodTJqcXk0dTRybWVkMSJ9.A1RGamevhBLlCZFhz-EFqQ';
+(mapboxgl as any).accessToken = 'pk.eyJ1IjoibWJhcnJ5MjIiLCJhIjoiY21oM3FyZXZsMTZodTJqcXk0dTRybWVkMSJ9.A1RGamevhBLlCZFhz-EFqQ';
 
 interface MapViewerProps {
   latitude: number;
@@ -60,7 +77,7 @@ export const MapViewer: React.FC<MapViewerProps> = ({
   title = 'Point de rencontre'
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<any>(null);
   const routeLayerId = 'route';
   const routeSourceId = 'route-source';
   const { resolvedTheme } = useTheme();
@@ -117,7 +134,7 @@ export const MapViewer: React.FC<MapViewerProps> = ({
     const isDarkMode = resolvedTheme === 'dark';
     
     // Créer la carte
-    map.current = new mapboxgl.Map({
+    map.current = new (mapboxgl as any).Map({
       container: mapContainer.current,
       style: isDarkMode 
         ? 'mapbox://styles/mapbox/dark-v11' 
@@ -129,11 +146,11 @@ export const MapViewer: React.FC<MapViewerProps> = ({
     });
 
     // Ajouter les contrôles de navigation
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.current.addControl(new (mapboxgl as any).NavigationControl(), 'top-right');
     
     // Ajouter le contrôle de géolocalisation
     map.current.addControl(
-      new mapboxgl.GeolocateControl({
+      new (mapboxgl as any).GeolocateControl({
         positionOptions: {
           enableHighAccuracy: true
         },
@@ -203,7 +220,7 @@ export const MapViewer: React.FC<MapViewerProps> = ({
     setIsLoadingRoute(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/walking/${userLocation[0]},${userLocation[1]};${longitude},${latitude}?geometries=geojson&access_token=${mapboxgl.accessToken}&language=fr`
+        `https://api.mapbox.com/directions/v5/mapbox/walking/${userLocation[0]},${userLocation[1]};${longitude},${latitude}?geometries=geojson&access_token=${(mapboxgl as any).accessToken}&language=fr`
       );
       const data = await response.json();
 
@@ -293,7 +310,7 @@ export const MapViewer: React.FC<MapViewerProps> = ({
           <div className="relative">
             <div
               ref={mapContainer}
-              className="w-full h-[400px] rounded-lg overflow-hidden"
+              className="w-full h-[300px] sm:h-[400px] rounded-lg overflow-hidden"
             />
             
             {/* Contrôles de l'itinéraire */}

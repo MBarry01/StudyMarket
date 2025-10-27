@@ -62,7 +62,7 @@ export const ListingDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-muted rounded w-1/4" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -80,7 +80,7 @@ export const ListingDetailPage: React.FC = () => {
 
   if (!currentListing) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 text-center">
         <div className="max-w-md mx-auto">
           <AlertTriangle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Annonce introuvable</h1>
@@ -173,7 +173,7 @@ export const ListingDetailPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Breadcrumb */}
       <div className="border-b border-border bg-muted/30">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground transition-colors">
               Accueil
@@ -188,18 +188,18 @@ export const ListingDetailPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Back Button */}
         <Button 
           variant="ghost" 
           onClick={() => navigate(-1)}
-          className="mb-6 -ml-4"
+          className="mb-4 sm:mb-6 -ml-2 sm:-ml-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Images Section */}
           <div className="lg:col-span-2">
             <div className="space-y-4">
@@ -270,7 +270,7 @@ export const ListingDetailPage: React.FC = () => {
 
               {/* Thumbnail Images */}
               {listing.images && listing.images.length > 1 && (
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {listing.images.map((image, index) => (
                     <button
                       key={index}
@@ -439,7 +439,7 @@ export const ListingDetailPage: React.FC = () => {
                   </div>
 
                   {/* Seller Stats */}
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                     <div>
                       <div className="text-lg font-semibold">4.8</div>
                       <div className="text-xs text-muted-foreground">Note</div>

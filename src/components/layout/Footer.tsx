@@ -1,13 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Twitter, Instagram, Mail, Phone, MapPin, GraduationCap, Shield, Leaf, ExternalLink } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Mail, GraduationCap, Shield, Leaf, ExternalLink } from 'lucide-react';
 import GradientIcon from "@/components/ui/GradientIcon";
 
 export const Footer: React.FC = () => {
+  const [openSection, setOpenSection] = React.useState<string | null>(null);
+
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section);
+  };
+
   return (
     <footer className="bg-muted/50 border-t border-border mt-auto">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="container mx-auto px-4 py-8 md:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
@@ -38,9 +44,15 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Navigation</h3>
-            <ul className="space-y-2 text-sm">
+          <div className="space-y-3 md:space-y-4">
+            <button 
+              onClick={() => toggleSection('navigation')}
+              className="flex items-center justify-between w-full md:cursor-default font-semibold"
+            >
+              <span>Navigation</span>
+              <span className="md:hidden text-xl">{openSection === 'navigation' ? '−' : '+'}</span>
+            </button>
+            <ul className={`space-y-2 text-sm ${openSection === 'navigation' ? 'block' : 'hidden'} md:block`}>
               <li>
                 <Link to="/listings" className="text-muted-foreground hover:text-primary transition-colors">
                   Toutes les annonces
@@ -70,9 +82,15 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Student Categories */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Catégories populaires</h3>
-            <ul className="space-y-2 text-sm">
+          <div className="space-y-3 md:space-y-4">
+            <button 
+              onClick={() => toggleSection('categories')}
+              className="flex items-center justify-between w-full md:cursor-default font-semibold"
+            >
+              <span>Catégories populaires</span>
+              <span className="md:hidden text-xl">{openSection === 'categories' ? '−' : '+'}</span>
+            </button>
+            <ul className={`space-y-2 text-sm ${openSection === 'categories' ? 'block' : 'hidden'} md:block`}>
               <li>
                 <Link to="/listings?category=books" className="text-muted-foreground hover:text-primary transition-colors">
                   Livres & Cours
@@ -102,60 +120,72 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Trust & Safety */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Sécurité & Confiance</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center space-x-2 text-muted-foreground">
-                <Shield className="w-4 h-4 text-green-600" />
-                <span>Étudiants 100% vérifiés</span>
+          <div className="space-y-3 md:space-y-4">
+            <button 
+              onClick={() => toggleSection('safety')}
+              className="flex items-center justify-between w-full md:cursor-default font-semibold"
+            >
+              <span>Sécurité & Confiance</span>
+              <span className="md:hidden text-xl">{openSection === 'safety' ? '−' : '+'}</span>
+            </button>
+            <div className={`${openSection === 'safety' ? 'block' : 'hidden'} md:block`}>
+              <div className="space-y-3 text-sm mb-3">
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span>Étudiants 100% vérifiés</span>
+                </div>
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <Leaf className="w-4 h-4 text-green-600" />
+                  <span>Impact écologique mesuré</span>
+                </div>
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <Mail className="w-4 h-4" />
+                  <span>support@studymarket.fr</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2 text-muted-foreground">
-                <Leaf className="w-4 h-4 text-green-600" />
-                <span>Impact écologique mesuré</span>
+              <div className="space-y-2 text-sm">
+                <Link to="/safety" className="block text-muted-foreground hover:text-primary transition-colors">
+                  Conseils de sécurité
+                </Link>
+                <Link to="/verification" className="block text-muted-foreground hover:text-primary transition-colors">
+                  Processus de vérification
+                </Link>
+                <Link to="/community-guidelines" className="block text-muted-foreground hover:text-primary transition-colors">
+                  Règles de la communauté
+                </Link>
+                <Link to="/help" className="block text-muted-foreground hover:text-primary transition-colors">
+                  Centre d'aide
+                </Link>
               </div>
-              <div className="flex items-center space-x-2 text-muted-foreground">
-                <Mail className="w-4 h-4" />
-                <span>support@studymarket.fr</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Link to="/safety" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                Conseils de sécurité
-              </Link>
-              <Link to="/verification" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                Processus de vérification
-              </Link>
-              <Link to="/community-guidelines" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                Règles de la communauté
-              </Link>
-              <Link to="/help" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                Centre d'aide
-              </Link>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-muted-foreground text-sm">
+        <div className="border-t border-border mt-8 pt-8">
+          <p className="text-muted-foreground text-sm text-center mb-6">
             © 2024 StudyMarket. Tous droits réservés. Plateforme dédiée aux étudiants vérifiés.
           </p>
-          <div className="flex space-x-6 mt-4 sm:mt-0">
-            <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors text-sm">
-              Conditions d'utilisation
-            </Link>
-            <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors text-sm">
-              Politique de confidentialité
-            </Link>
-            <Link to="/cookies" className="text-muted-foreground hover:text-primary transition-colors text-sm">
-              Cookies
-            </Link>
-            <a 
-              href="mailto:support@studymarket.fr" 
-              className="text-muted-foreground hover:text-primary transition-colors text-sm flex items-center gap-1"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Contact
-            </a>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-6 text-sm">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 sm:gap-x-6 items-center">
+              <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                Conditions d'utilisation
+              </Link>
+              <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                Politique de confidentialité
+              </Link>
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 sm:gap-x-6 items-baseline">
+              <Link to="/cookies" className="text-muted-foreground hover:text-primary transition-colors">
+                Cookies
+              </Link>
+              <a 
+                href="mailto:support@studymarket.fr" 
+                className="text-muted-foreground hover:text-primary transition-colors inline-flex items-baseline gap-1"
+              >
+                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                <span className="leading-snug">Contact</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

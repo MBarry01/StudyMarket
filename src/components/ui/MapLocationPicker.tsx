@@ -13,45 +13,95 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 // Styles personnalisés pour corriger l'affichage des icônes et du logo
 const geocoderStyles = `
   .mapboxgl-ctrl-geocoder {
-    min-width: 240px !important;
+    min-width: 200px !important;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+    font-size: 13px !important;
   }
   
   .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--icon {
     display: inline-block !important;
-    width: 20px !important;
-    height: 20px !important;
+    width: 16px !important;
+    height: 16px !important;
     background-size: contain !important;
   }
   
   .mapboxgl-ctrl-geocoder--icon-search {
-    left: 10px !important;
-    top: 10px !important;
+    left: 8px !important;
+    top: 8px !important;
     position: absolute !important;
   }
   
   .mapboxgl-ctrl-geocoder--icon-close {
-    right: 10px !important;
-    top: 10px !important;
+    right: 8px !important;
+    top: 8px !important;
     position: absolute !important;
   }
   
   .mapboxgl-ctrl-geocoder--input {
-    padding: 8px 36px !important;
-    font-size: 14px !important;
+    padding: 6px 28px !important;
+    font-size: 13px !important;
   }
   
   .mapboxgl-ctrl-geocoder--button {
     padding: 0 !important;
-    width: 30px !important;
-    height: 30px !important;
+    width: 24px !important;
+    height: 24px !important;
     background: transparent !important;
+  }
+  
+  /* Réduire les contrôles de navigation (ZOOM + LOCATION) */
+  .mapboxgl-ctrl-group {
+    margin: 0.5px !important;
+    margin-top: 20px !important;
+    position: relative !important;
+    top: 15px !important;
+  }
+  
+  /* Réduire la barre de recherche sur mobile */
+  @media (max-width: 640px) {
+    .mapboxgl-ctrl-geocoder {
+      width: calc(100% - 16px) !important;
+      max-width: 280px !important;
+      min-width: 120px !important;
+      font-size: 11px !important;
+      margin: 8px !important;
+    }
+    
+    .mapboxgl-ctrl-geocoder--input {
+      padding: 4px 20px !important;
+      font-size: 11px !important;
+      height: 32px !important;
+    }
+    
+    .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--icon {
+      width: 13px !important;
+      height: 13px !important;
+    }
+    
+    .mapboxgl-ctrl-geocoder--icon-search {
+      left: 6px !important;
+      top: 6px !important;
+    }
+    
+    .mapboxgl-ctrl-geocoder--icon-close {
+      right: 6px !important;
+      top: 6px !important;
+    }
+  }
+  
+  .mapboxgl-ctrl-group button {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
   }
   
   /* Rendre le logo Mapbox plus discret */
   .mapboxgl-ctrl-bottom-left {
     opacity: 0.4 !important;
     transition: opacity 0.2s ease !important;
+    bottom: 4px !important;
+    left: 4px !important;
+    position: absolute !important;
   }
   
   .mapboxgl-ctrl-bottom-left:hover {
@@ -59,9 +109,9 @@ const geocoderStyles = `
   }
   
   .mapboxgl-ctrl-logo {
-    width: 65px !important;
-    height: 20px !important;
-    margin: 0 0 4px 4px !important;
+    width: 50px !important;
+    height: 15px !important;
+    margin: 0 !important;
   }
   
   /* Masquer complètement TOUS les contrôles d'attribution */
@@ -104,7 +154,7 @@ const geocoderStyles = `
 `;
 
 // Token public Mapbox
-mapboxgl.accessToken = 'pk.eyJ1IjoibWJhcnJ5MjIiLCJhIjoiY21oM3FyZXZsMTZodTJqcXk0dTRybWVkMSJ9.A1RGamevhBLlCZFhz-EFqQ';
+(mapboxgl as any).accessToken = 'pk.eyJ1IjoibWJhcnJ5MjIiLCJhIjoiY21oM3FyZXZsMTZodTJqcXk0dTRybWVkMSJ9.A1RGamevhBLlCZFhz-EFqQ';
 
 interface LocationData {
   address: string;
@@ -129,8 +179,8 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   showDirections = false
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const map = useRef<any>(null);
+  const marker = useRef<any>(null);
   const routeLayerId = 'route';
   const routeSourceId = 'route-source';
   const { resolvedTheme } = useTheme();
@@ -182,7 +232,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     const isDarkMode = resolvedTheme === 'dark';
     
     // Créer la carte avec le style approprié
-    map.current = new mapboxgl.Map({
+    map.current = new (mapboxgl as any).Map({
       container: mapContainer.current,
       // Style adaptatif : dark mode ou light mode
       style: isDarkMode 
@@ -197,9 +247,9 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     });
 
     // Ajouter les contrôles de navigation
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.current.addControl(new (mapboxgl as any).NavigationControl(), 'top-right');
     map.current.addControl(
-      new mapboxgl.GeolocateControl({
+      new (mapboxgl as any).GeolocateControl({
         positionOptions: {
           enableHighAccuracy: true
         },
@@ -211,7 +261,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
     // Ajouter le geocoder (recherche d'adresse)
     const geocoder = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken || '',
+      accessToken: (mapboxgl as any).accessToken || '',
       mapboxgl: mapboxgl as any,
       marker: false,
       placeholder: 'Rechercher une adresse...',
@@ -235,7 +285,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     }
 
     // Écouter les clics sur la carte
-    map.current.on('click', async (e) => {
+    map.current.on('click', async (e: any) => {
       const { lng, lat } = e.lngLat;
       await handleLocationClick(lat, lng);
     });
@@ -277,7 +327,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
     try {
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&language=fr`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${(mapboxgl as any).accessToken}&language=fr`
       );
       const data = await response.json();
       
@@ -353,7 +403,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     setIsLoadingRoute(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/walking/${userLocation[0]},${userLocation[1]};${selectedLocation.longitude},${selectedLocation.latitude}?geometries=geojson&access_token=${mapboxgl.accessToken}&language=fr`
+        `https://api.mapbox.com/directions/v5/mapbox/walking/${userLocation[0]},${userLocation[1]};${selectedLocation.longitude},${selectedLocation.latitude}?geometries=geojson&access_token=${(mapboxgl as any).accessToken}&language=fr`
       );
       const data = await response.json();
 

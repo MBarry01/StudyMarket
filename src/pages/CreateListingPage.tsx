@@ -418,7 +418,7 @@ export const CreateListingPage: React.FC = () => {
   };
 
   return (
-    <div className="create-listing-page container mx-auto px-4 py-8 max-w-4xl">
+    <div className="create-listing-page container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl">
       {/* Styles locaux pour masquer les icônes internes des inputs date/heure sur tous navigateurs */}
       <style>
         {`
@@ -440,8 +440,8 @@ export const CreateListingPage: React.FC = () => {
         `}
       </style>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-foreground">Créer une annonce</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Créer une annonce</h1>
         <p className="text-muted-foreground">
           Partagez vos objets, services ou recherches avec la communauté étudiante vérifiée
         </p>
@@ -614,7 +614,7 @@ export const CreateListingPage: React.FC = () => {
 
                   <div>
                     <Label className="text-foreground font-semibold mb-3 block">Modes de paiement acceptés *</Label>
-                    <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                       {paymentMethods.map((method) => (
                         <div 
                           key={method.value} 
@@ -835,7 +835,7 @@ export const CreateListingPage: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-4">
                   {images.map((image, index) => (
                     <div key={index} className="relative group">
                       <img
@@ -939,7 +939,7 @@ export const CreateListingPage: React.FC = () => {
                   <Label className="text-foreground font-semibold block mb-2">
                     Plage horaire de disponibilité (optionnel)
                   </Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="availableTimeStart" className="text-sm text-muted-foreground">
                         De
