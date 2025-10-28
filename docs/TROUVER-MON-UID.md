@@ -1,28 +1,64 @@
-# 🔍 Comment Trouver Mon UID
+# 🔍 Comment Trouver Votre UID
 
-## Méthode 1 : Console du Navigateur (PLUS RAPIDE)
+## MÉTHODE 1 : Console Browser
 
-1. **Ouvrir** http://localhost:5175/StudyMarket/
-2. **Ouvrir la console** (F12)
-3. **Copier ce code** et l'exécuter :
-   ```javascript
-   const uid = JSON.parse(localStorage.getItem('firebase:authUser:AIzaSyDXD6WpZoQNLNU0DAqH1wd3q9Q4vthOWv4:[DEFAULT]') || '{}')?.uid;
-   console.log('Votre UID:', uid);
-   alert('Votre UID: ' + uid);
-   ```
-4. **Notez** votre UID affiché
+1. Ouvrir https://MBarry01.github.io/StudyMarket/
+2. Se connecter avec votre email admin
+3. Ouvrir DevTools (F12)
+4. Onglet Console
+5. Taper : 
 
-## Méthode 2 : Firestore Console
+```javascript
+console.log(auth.currentUser?.uid)
+```
 
-1. **Aller sur** : https://console.firebase.google.com
-2. **Projet** : `annonces-app-44d27`
-3. **Firestore Database** → Collections → `user_tokens`
-4. **Ouvrir** le document (celui avec votre fcmToken)
-5. **Copier** la valeur de `userId`
+6. Copier l'UID affiché
 
-## Méthode 3 : Utiliser l'Application
+---
 
-1. **Aller sur** : Profile/Settings
-2. **Ouvrir la console** (F12)
-3. Votre UID est affiché dans les logs de connexion
+## MÉTHODE 2 : Firebase Console
+
+1. Ouvrir : https://console.firebase.google.com
+2. Projet : `annonces-app-44d27`
+3. Authentication → Users
+4. Trouver votre email
+5. Copier le UID
+
+---
+
+## MÉTHODE 3 : Localhost
+
+1. Ouvrir http://localhost:5173
+2. Se connecter
+3. Console (F12)
+4. Taper : `console.log(currentUser?.uid)`
+
+---
+
+## 🎯 APRÈS TROUVER L'UID
+
+**Ajouter Secret GitHub** :
+1. https://github.com/MBarry01/StudyMarket/settings/secrets/actions
+2. "New repository secret"
+3. Name : `VITE_ADMIN_UIDS`
+4. Secret : Votre UID (ex: `q8R6wG9lNAOKJnCuUgMFpZFRHKg1`)
+5. Add secret
+
+---
+
+## 📝 NOTE
+
+**Si vous avez plusieurs comptes admin** :
+```
+VITE_ADMIN_UIDS=uid1,uid2,uid3
+```
+
+**Si vous n'avez qu'un seul compte** :
+```
+VITE_ADMIN_UIDS=q8R6wG9lNAOKJnCuUgMFpZFRHKg1
+```
+
+---
+
+**Après ajout, déclencher un nouveau déploiement** 🚀
 

@@ -15,8 +15,8 @@ export const Footer: React.FC = () => {
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {/* Company Info */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
+          <div className="space-y-4 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start space-x-2">
               <GradientIcon icon={GraduationCap} gradientId="gradient-footer" size={32} />
               <div>
                 <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
             <p className="text-muted-foreground text-sm">
               La première plateforme d'échange entre étudiants vérifiés. Achetez, vendez, donnez et échangez en toute sécurité au sein de votre communauté universitaire.
             </p>
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 justify-center md:justify-start">
               <a href="https://facebook.com/studymarket" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
@@ -44,10 +44,10 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3 md:space-y-4 text-center md:text-left">
             <button 
               onClick={() => toggleSection('navigation')}
-              className="flex items-center justify-between w-full md:cursor-default font-semibold"
+              className="flex items-center justify-between w-full md:cursor-default font-semibold md:justify-start"
             >
               <span>Navigation</span>
               <span className="md:hidden text-xl">{openSection === 'navigation' ? '−' : '+'}</span>
@@ -82,10 +82,10 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Student Categories */}
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3 md:space-y-4 text-center md:text-left">
             <button 
               onClick={() => toggleSection('categories')}
-              className="flex items-center justify-between w-full md:cursor-default font-semibold"
+              className="flex items-center justify-between w-full md:cursor-default font-semibold md:justify-start"
             >
               <span>Catégories populaires</span>
               <span className="md:hidden text-xl">{openSection === 'categories' ? '−' : '+'}</span>
@@ -120,25 +120,25 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Trust & Safety */}
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3 md:space-y-4 text-center md:text-left">
             <button 
               onClick={() => toggleSection('safety')}
-              className="flex items-center justify-between w-full md:cursor-default font-semibold"
+              className="flex items-center justify-between w-full md:cursor-default font-semibold md:justify-start"
             >
               <span>Sécurité & Confiance</span>
               <span className="md:hidden text-xl">{openSection === 'safety' ? '−' : '+'}</span>
             </button>
             <div className={`${openSection === 'safety' ? 'block' : 'hidden'} md:block`}>
-              <div className="space-y-3 text-sm mb-3">
-                <div className="flex items-center space-x-2 text-muted-foreground">
+              <div className="space-y-3 text-sm mb-3 md:text-left">
+                <div className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground">
                   <Shield className="w-4 h-4 text-green-600" />
                   <span>Étudiants 100% vérifiés</span>
                 </div>
-                <div className="flex items-center space-x-2 text-muted-foreground">
+                <div className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground">
                   <Leaf className="w-4 h-4 text-green-600" />
                   <span>Impact écologique mesuré</span>
                 </div>
-                <div className="flex items-center space-x-2 text-muted-foreground">
+                <div className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground">
                   <Mail className="w-4 h-4" />
                   <span>support@studymarket.fr</span>
                 </div>

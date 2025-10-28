@@ -184,10 +184,10 @@ export const HomePage: React.FC = () => {
             </Badge>
           </div>
           
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-2 text-center">
             La marketplace des étudiants
           </h1>
-          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 sm:mb-6 lg:mb-8 max-w-2xl mx-auto px-2">
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 sm:mb-6 lg:mb-8 max-w-2xl mx-auto px-2 text-center">
             Achetez, vendez, donnez et échangez entre étudiants certifiés de votre région. 
             Sécurisé, écologique et pensé pour la vie étudiante.
           </p>
@@ -202,8 +202,8 @@ export const HomePage: React.FC = () => {
                     <div className={`w-10 h-10 sm:w-12 sm:h-12 ${action.color} rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 group-hover:scale-110 transition-transform`}>
                       <action.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
-                    <h3 className="font-semibold mb-1 text-sm sm:text-base">{action.title}</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">{action.description}</p>
+                    <h3 className="font-semibold mb-1 text-sm sm:text-base text-center">{action.title}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground text-center">{action.description}</p>
                   </CardContent>
                 </Card>
               </Link>
@@ -252,8 +252,8 @@ export const HomePage: React.FC = () => {
                         alt={category.name}
                         className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3"
                       />
-                      <h3 className="font-semibold text-xs sm:text-sm lg:text-base mb-1">{category.name}</h3>
-                      <p className="text-xs text-muted-foreground hidden sm:block">{category.description}</p>
+                      <h3 className="font-semibold text-xs sm:text-sm lg:text-base mb-1 text-center">{category.name}</h3>
+                      <p className="text-xs text-muted-foreground hidden sm:block text-center">{category.description}</p>
                     </CardContent>
                   </Card>
                 </Link>
@@ -320,29 +320,29 @@ export const HomePage: React.FC = () => {
         <div className="container mx-auto text-center">
           <div className="max-w-3xl mx-auto">
             <Leaf className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 text-green-600 mx-auto mb-4 sm:mb-6" />
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 text-center">
               Votre impact écologique compte
             </h2>
-            <p className="text-sm sm:text-base lg:text-xl text-muted-foreground mb-6 sm:mb-8 px-2">
+            <p className="text-sm sm:text-base lg:text-xl text-muted-foreground mb-6 sm:mb-8 px-2 text-center">
               Chaque achat d'occasion évite la production d'un objet neuf. Suivez votre impact environnemental 
               et découvrez combien de CO₂ vous économisez grâce à vos échanges étudiants.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-0">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">2.5T</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">CO₂ économisé par la communauté</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2 text-center">2.5T</div>
+                <div className="text-xs sm:text-sm text-muted-foreground text-center">CO₂ économisé par la communauté</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">15K</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Objets donnés cette année</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2 text-center">15K</div>
+                <div className="text-xs sm:text-sm text-muted-foreground text-center">Objets donnés cette année</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">8K</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Étudiants engagés</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2 text-center">8K</div>
+                <div className="text-xs sm:text-sm text-muted-foreground text-center">Étudiants engagés</div>
               </div>
             </div>
-            <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white w-full sm:w-auto">
-              <Link to="/impact" className="cursor-pointer">
+            <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white w-full sm:w-auto mx-auto text-center p-0 mt-4">
+              <Link to="/impact" className="cursor-pointer py-2 px-6">
                 Découvrir mon impact
               </Link>
             </Button>
@@ -354,10 +354,10 @@ export const HomePage: React.FC = () => {
       <section className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 bg-gradient-to-r from-primary to-secondary rounded-lg sm:rounded-xl">
         <div className="container mx-auto text-center">
           <GraduationCap className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 text-white mx-auto mb-4 sm:mb-6" />
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-4">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-4 text-center">
             Rejoignez la communauté étudiante
           </h2>
-          <p className="text-sm sm:text-base lg:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
+          <p className="text-sm sm:text-base lg:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto px-2 text-center">
             Plus de 10 000 étudiants font déjà confiance à StudyMarket pour leurs achats, ventes et échanges. 
             Rejoignez une communauté sûre, vérifiée et solidaire.
           </p>

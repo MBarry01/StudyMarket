@@ -900,10 +900,10 @@ export const SavedSearchesPage: React.FC = () => {
                   ))}
                 </div>
               ) : savedSearches.length === 0 ? (
-                <div className="text-center py-12">
-                  <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune recherche sauvegardée</h3>
-                  <p className="text-muted-foreground mb-4">
+                <div className="flex flex-col items-center py-12">
+                  <Search className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucune recherche sauvegardée</h3>
+                  <p className="text-muted-foreground mb-4 text-center">
                     Créez votre première alerte pour être notifié des nouvelles annonces
                   </p>
                   <Button onClick={() => setShowCreateDialog(true)}>
@@ -1058,10 +1058,10 @@ export const SavedSearchesPage: React.FC = () => {
                   ))}
                 </div>
               ) : alertMatches.length === 0 ? (
-                <div className="text-center py-12">
-                  <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune correspondance</h3>
-                  <p className="text-muted-foreground">
+                <div className="flex flex-col items-center py-12">
+                  <Target className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucune correspondance</h3>
+                  <p className="text-muted-foreground text-center">
                     Aucune annonce ne correspond encore à vos critères. Les nouvelles correspondances apparaîtront ici.
                   </p>
                 </div>

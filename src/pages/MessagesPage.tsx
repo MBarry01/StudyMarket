@@ -445,10 +445,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <MessageCircle className="w-12 h-12 text-white" />
           </div>
           </div>
-          <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-center">
             Choisissez une conversation
           </h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-center">
             Sélectionnez une conversation dans la liste pour commencer à discuter
           </p>
         </div>
@@ -686,7 +686,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               </div>
               
               {/* Boutons intégrés */}
-              <div className="flex items-center gap-1.5 p-2">
+              <div className="flex items-center gap-0 p-0">
                 {/* Input file caché */}
                 <input
                   ref={fileInputRef}
@@ -697,23 +697,20 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   className="hidden"
                 />
                 
-                <Button 
-                  variant="ghost"
-                  size="icon"
+                <button
                   onClick={handleImageButtonClick}
                   disabled={uploadingImage}
-                  className="h-8 w-8 rounded-lg bg-transparent hover:bg-transparent p-0 opacity-60 hover:opacity-100 flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="h-8 w-8 rounded-lg bg-transparent hover:bg-transparent p-0 opacity-60 hover:opacity-100 flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed touch-manipulation"
                 >
                   <ImageIcon className="h-5 w-5" />
-                </Button>
-            <Button
+                </button>
+            <button
               onClick={handleSendMessage}
                   disabled={!canSend()}
-                  size="icon"
-                  className="h-8 w-8 rounded-lg bg-transparent hover:bg-transparent p-0 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  className="h-8 w-8 rounded-lg bg-transparent hover:bg-transparent p-0 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0 touch-manipulation"
                 >
                   <Send className="h-5 w-5 text-blue-500 hover:text-blue-600" />
-            </Button>
+            </button>
           </div>
             </div>
           </div>

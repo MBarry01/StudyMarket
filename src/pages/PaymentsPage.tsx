@@ -355,10 +355,10 @@ export const PaymentsPage: React.FC = () => {
                   ))}
                 </div>
               ) : getFilteredRequests().length === 0 ? (
-                <div className="text-center py-12">
-                  <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune demande de paiement</h3>
-                  <p className="text-muted-foreground">
+                <div className="flex flex-col items-center py-12">
+                  <CreditCard className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucune demande de paiement</h3>
+                  <p className="text-muted-foreground text-center">
                     {paymentRequests.length === 0 
                       ? "Vous n'avez pas encore de demandes de paiement."
                       : "Aucune demande ne correspond à vos critères de recherche."
@@ -393,10 +393,10 @@ export const PaymentsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {getBuyerRequests().length === 0 ? (
-                <div className="text-center py-12">
-                  <ArrowUpRight className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucun achat</h3>
-                  <p className="text-muted-foreground">
+                <div className="flex flex-col items-center py-12">
+                  <ArrowUpRight className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucun achat</h3>
+                  <p className="text-muted-foreground text-center">
                     Vous n'avez pas encore initié de demandes de paiement pour vos achats.
                   </p>
                 </div>
@@ -428,10 +428,10 @@ export const PaymentsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {getSellerRequests().length === 0 ? (
-                <div className="text-center py-12">
-                  <ArrowDownLeft className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune vente</h3>
-                  <p className="text-muted-foreground">
+                <div className="flex flex-col items-center py-12">
+                  <ArrowDownLeft className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucune vente</h3>
+                  <p className="text-muted-foreground text-center">
                     Vous n'avez pas encore reçu de demandes de paiement pour vos annonces.
                   </p>
                 </div>

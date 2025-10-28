@@ -880,10 +880,10 @@ export const ProfilePage: React.FC = () => {
                   ))}
                 </div>
               ) : userListings.length === 0 ? (
-                <div className="text-center py-12">
-                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune annonce</h3>
-                  <p className="text-muted-foreground mb-4">
+                <div className="flex flex-col items-center py-12">
+                  <Package className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucune annonce</h3>
+                  <p className="text-muted-foreground mb-4 text-center">
                     Vous n'avez pas encore publié d'annonces.
                   </p>
                   <Button asChild>
@@ -937,10 +937,10 @@ export const ProfilePage: React.FC = () => {
                   ))}
                 </div>
               ) : userReviews.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucun avis</h3>
-                  <p className="text-muted-foreground">
+                <div className="flex flex-col items-center py-12">
+                  <MessageCircle className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-center">Aucun avis</h3>
+                  <p className="text-muted-foreground text-center">
                     Aucun avis reçu pour le moment. Les avis apparaîtront après vos premières transactions.
                   </p>
                 </div>

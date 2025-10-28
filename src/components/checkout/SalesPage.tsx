@@ -327,10 +327,10 @@ export const SalesPage: React.FC = () => {
               ))}
             </div>
           ) : getFilteredSales().length === 0 ? (
-            <div className="text-center py-12">
-              <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucune vente trouvée</h3>
-              <p className="text-muted-foreground mb-6">
+            <div className="flex flex-col items-center py-12">
+              <TrendingUp className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2 text-center">Aucune vente trouvée</h3>
+              <p className="text-muted-foreground mb-6 text-center">
                 {sales.length === 0 
                   ? "Vous n'avez pas encore réalisé de vente." 
                   : "Aucune vente ne correspond à vos critères de recherche."
@@ -412,9 +412,12 @@ export const SalesPage: React.FC = () => {
           {getFilteredSales().filter(order => 
             ['pending', 'processing', 'shipped'].includes(order.status)
           ).length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucune vente en cours</h3>
+            <div className="flex flex-col items-center py-12">
+              <Clock className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2 text-center">Aucune vente en cours</h3>
+              <p className="text-muted-foreground text-center">
+                Vous n'avez pas de ventes en cours.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -460,9 +463,12 @@ export const SalesPage: React.FC = () => {
         <TabsContent value="completed" className="space-y-4">
           {/* Completed sales */}
           {getFilteredSales().filter(order => order.status === 'delivered').length === 0 ? (
-            <div className="text-center py-12">
-              <CheckCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucune vente terminée</h3>
+            <div className="flex flex-col items-center py-12">
+              <CheckCircle className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2 text-center">Aucune vente terminée</h3>
+              <p className="text-muted-foreground text-center">
+                Vous n'avez pas encore de ventes terminées.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -505,9 +511,12 @@ export const SalesPage: React.FC = () => {
         <TabsContent value="cancelled" className="space-y-4">
           {/* Cancelled sales */}
           {getFilteredSales().filter(order => order.status === 'cancelled').length === 0 ? (
-            <div className="text-center py-12">
-              <XCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucune vente annulée</h3>
+            <div className="flex flex-col items-center py-12">
+              <XCircle className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2 text-center">Aucune vente annulée</h3>
+              <p className="text-muted-foreground text-center">
+                Vous n'avez aucune vente annulée.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">

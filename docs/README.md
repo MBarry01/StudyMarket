@@ -1,272 +1,322 @@
-# 📚 Documentation StudyMarket
+# 🎓 StudyMarket - Plateforme de Marketplace pour Étudiants
 
-Bienvenue dans la documentation complète de StudyMarket ! Cette documentation couvre tous les aspects de la plateforme, du démarrage rapide aux guides techniques détaillés.
-
-**📑 [Index Complet (44 documents)](INDEX.md)** - Vue organisée de toute la documentation
+Une plateforme moderne de marketplace dédiée aux étudiants pour acheter, vendre et échanger des articles entre campus.
 
 ---
 
-## 🚀 DÉMARRAGE RAPIDE
+## 🚀 Démarrage Rapide
 
-### Pour commencer immédiatement :
-- **[DEMARRAGE_RAPIDE.md](DEMARRAGE_RAPIDE.md)** - Guide express pour lancer l'application en 3 minutes
-- **[GUIDE-DEMARRAGE.md](GUIDE-DEMARRAGE.md)** - Guide de démarrage complet avec toutes les commandes
+### Installation
 
-### 🚀 Nouveau : Optimisations
-- **[OPTIMISATIONS_IMPLEMENTEES.md](OPTIMISATIONS_IMPLEMENTEES.md)** ⭐ NEW - Badge VENDU instantané + Cache intelligent
-- **[OPTIMISATIONS_RESUME.md](OPTIMISATIONS_RESUME.md)** - Résumé technique des optimisations
-- **[OPTIMISATIONS.md](OPTIMISATIONS.md)** - Guide complet (18 pages)
+```bash
+# Cloner le projet
+git clone [URL_DU_REPO]
+cd StudyMarket-Git
+
+# Installer les dépendances frontend
+npm install
+
+# Installer les dépendances backend
+cd package-server
+npm install
+cd ..
+```
+
+### Lancer l'application
+
+```bash
+# Terminal 1 : Backend (port 3001)
+node server.js
+
+# Terminal 2 : Frontend (port 5174)
+npm run dev
+
+# Terminal 3 : Stripe Webhook (développement local)
+stripe listen --forward-to localhost:3001/api/webhook/stripe
+```
+
+### Accéder à l'application
+
+- **Frontend** : http://localhost:5174/StudyMarket/
+- **Backend API** : http://localhost:3001
 
 ---
 
-## 💳 SYSTÈME DE PAIEMENT
+## 📚 Documentation Complète
 
-### Vue d'ensemble :
-- **[RESUME_MODIFICATIONS.md](RESUME_MODIFICATIONS.md)** ⭐ - Résumé des modifications apportées au système de paiement
-- **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - État complet du système de paiement
+**Toute la documentation est disponible dans le dossier [`/docs`](docs/README.md)**
 
-### Guides techniques :
-- **[SYSTEME_PAIEMENT_COMPLET.md](SYSTEME_PAIEMENT_COMPLET.md)** - Architecture détaillée du système de paiement
-- **[PAYMENT_README.md](PAYMENT_README.md)** - Guide complet des composants de paiement
-- **[AMELIORATIONS_PAIEMENTS.md](AMELIORATIONS_PAIEMENTS.md)** - Améliorations et fonctionnalités ajoutées
+### 🎯 Guides Essentiels
 
-### Tests :
-- **[GUIDE_TEST_COMPLET.md](GUIDE_TEST_COMPLET.md)** 🧪 - 10 scénarios de test détaillés
-- **[TEST_COMMANDES.md](TEST_COMMANDES.md)** - Guide pour tester les commandes
+| Guide | Description | Temps |
+|-------|-------------|-------|
+| [**Démarrage Rapide**](docs/DEMARRAGE_RAPIDE.md) | Lancer l'app en 3 minutes | ⚡ 3 min |
+| [**Résumé Modifications**](docs/RESUME_MODIFICATIONS.md) | Comprendre les changements récents | ⭐ 5 min |
+| [**Guide de Test**](docs/GUIDE_TEST_COMPLET.md) | 10 scénarios de test | 🧪 15 min |
+| [**Configuration Stripe**](docs/GUIDE-CONFIGURATION-STRIPE.md) | Setup paiements | 🔧 10 min |
+| [**Configuration Firebase**](docs/FIREBASE_CONFIG_SIMPLE.md) | Setup base de données | 🔥 10 min |
 
----
+### 📖 Documentation Complète
 
-## 🔧 CONFIGURATION
-
-### Stripe :
-- **[GUIDE-CONFIGURATION-STRIPE.md](GUIDE-CONFIGURATION-STRIPE.md)** - Configuration complète de Stripe
-
-### Firebase :
-- **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** - Installation et configuration Firebase Admin SDK
-- **[FIREBASE_CONFIG_SIMPLE.md](FIREBASE_CONFIG_SIMPLE.md)** - Guide simplifié de configuration Firebase
-
-### Firestore :
-- **[CREER_INDEX_FIRESTORE.md](CREER_INDEX_FIRESTORE.md)** - Création des index Firestore nécessaires
-- **[INDEX_FIRESTORE_REQUIS.md](INDEX_FIRESTORE_REQUIS.md)** - Liste complète des index requis
-- **[CONFIGURATION_FINALE.md](CONFIGURATION_FINALE.md)** - Configuration finale de la base de données
+Consultez le **[README de la documentation](docs/README.md)** pour :
+- Guides techniques détaillés
+- Documentation du système de paiement
+- Guides de configuration
+- Troubleshooting et diagnostic
+- Architecture et best practices
 
 ---
 
-## 🐛 DIAGNOSTIC ET DÉPANNAGE
+## ✨ Fonctionnalités
 
-### Résolution de problèmes :
-- **[DIAGNOSTIC_BADGE_VENDU.md](DIAGNOSTIC_BADGE_VENDU.md)** - Troubleshooting du badge "VENDU"
-- **[VERIFIER_LOGS_SERVEUR.md](VERIFIER_LOGS_SERVEUR.md)** - Comment lire et analyser les logs du serveur
-
----
-
-## 📊 DONNÉES ET FONCTIONNALITÉS
-
-### Gestion des données :
-- **[DONNEES_DYNAMIQUES_UTILISATEURS.md](DONNEES_DYNAMIQUES_UTILISATEURS.md)** - Pages utilisant des données dynamiques vs statiques
-
-### Résumés :
-- **[RESUME_FINAL_AMELIORATIONS.md](RESUME_FINAL_AMELIORATIONS.md)** - Résumé final de toutes les améliorations
-
----
-
-## 📖 STRUCTURE DE LA DOCUMENTATION
-
-```
-docs/
-├── README.md (ce fichier)
-│
-├── 🚀 Démarrage
-│   ├── DEMARRAGE_RAPIDE.md
-│   └── GUIDE-DEMARRAGE.md
-│
-├── 💳 Système de paiement
-│   ├── RESUME_MODIFICATIONS.md ⭐ COMMENCER ICI
-│   ├── IMPLEMENTATION_COMPLETE.md
-│   ├── SYSTEME_PAIEMENT_COMPLET.md
-│   ├── PAYMENT_README.md
-│   ├── AMELIORATIONS_PAIEMENTS.md
-│   ├── GUIDE_TEST_COMPLET.md 🧪
-│   └── TEST_COMMANDES.md
-│
-├── 🔧 Configuration
-│   ├── GUIDE-CONFIGURATION-STRIPE.md
-│   ├── FIREBASE_SETUP.md
-│   ├── FIREBASE_CONFIG_SIMPLE.md
-│   ├── CREER_INDEX_FIRESTORE.md
-│   ├── INDEX_FIRESTORE_REQUIS.md
-│   └── CONFIGURATION_FINALE.md
-│
-├── 🐛 Diagnostic
-│   ├── DIAGNOSTIC_BADGE_VENDU.md
-│   └── VERIFIER_LOGS_SERVEUR.md
-│
-└── 📊 Données
-    ├── DONNEES_DYNAMIQUES_UTILISATEURS.md
-    └── RESUME_FINAL_AMELIORATIONS.md
-```
-
----
-
-## 🎯 PARCOURS RECOMMANDÉS
-
-### 1. Nouveau sur le projet ?
-```
-1. DEMARRAGE_RAPIDE.md (3 min)
-2. GUIDE-DEMARRAGE.md (10 min)
-3. RESUME_MODIFICATIONS.md (5 min)
-```
-
-### 2. Comprendre le système de paiement ?
-```
-1. RESUME_MODIFICATIONS.md ⭐
-2. IMPLEMENTATION_COMPLETE.md
-3. SYSTEME_PAIEMENT_COMPLET.md
-```
-
-### 3. Tester la plateforme ?
-```
-1. DEMARRAGE_RAPIDE.md
-2. GUIDE_TEST_COMPLET.md 🧪
-3. TEST_COMMANDES.md
-```
-
-### 4. Configurer l'environnement ?
-```
-1. FIREBASE_CONFIG_SIMPLE.md
-2. GUIDE-CONFIGURATION-STRIPE.md
-3. CREER_INDEX_FIRESTORE.md
-```
-
-### 5. Résoudre un problème ?
-```
-1. VERIFIER_LOGS_SERVEUR.md
-2. DIAGNOSTIC_BADGE_VENDU.md
-3. Consulter le guide spécifique au problème
-```
-
----
-
-## 🔑 POINTS CLÉS
-
-### Système de paiement moderne
-Le système de paiement a été entièrement refait pour suivre les **best practices Stripe** :
-
-✅ **Commande créée AVANT paiement** (status: pending)  
-✅ **Sélecteur de méthode** (Carte/PayPal/Lydia/Espèces)  
-✅ **Récapitulatif des frais** détaillé et transparent  
-✅ **Polling du statut** pour confirmation en temps réel  
-✅ **Webhook intelligent** (mise à jour vs création)  
-✅ **Architecture scalable** prête pour multi-méthodes  
-
-### Flux complet
-```
-User clique "Acheter"
-       ↓
-Commande créée (pending) 🆕
-       ↓
-Choix de méthode 🆕
-       ↓
-PaymentIntent créé avec orderId
-       ↓
-Récapitulatif des frais 🆕
-       ↓
-User paie
-       ↓
-Webhook met à jour (paid) 🆕
-       ↓
-Page success poll statut 🆕
-       ↓
-Confirmation finale ✅
-```
-
----
-
-## 🆘 BESOIN D'AIDE ?
-
-### Questions fréquentes
-
-**Q: Le serveur ne démarre pas ?**  
-→ Voir [VERIFIER_LOGS_SERVEUR.md](VERIFIER_LOGS_SERVEUR.md)
-
-**Q: Le webhook ne fonctionne pas ?**  
-→ Vérifier Stripe CLI avec `stripe listen --forward-to localhost:3001/api/webhook/stripe`
-
-**Q: Le badge VENDU ne s'affiche pas ?**  
-→ Voir [DIAGNOSTIC_BADGE_VENDU.md](DIAGNOSTIC_BADGE_VENDU.md)
-
-**Q: Comment tester un paiement ?**  
-→ Voir [GUIDE_TEST_COMPLET.md](GUIDE_TEST_COMPLET.md)
-
-**Q: Comment configurer Firebase ?**  
-→ Voir [FIREBASE_CONFIG_SIMPLE.md](FIREBASE_CONFIG_SIMPLE.md)
-
----
-
-## 📈 ÉTAT DU PROJET
-
-### Fonctionnalités implémentées :
-- ✅ Système de paiement par carte (Stripe)
-- ✅ Création de commandes
-- ✅ Webhook Stripe
-- ✅ Polling du statut
-- ✅ Badge "VENDU"
-- ✅ Page "Mes Commandes"
-- ✅ Page "Mes Ventes"
+### 🛍️ Marketplace
+- ✅ Création et gestion d'annonces
+- ✅ Recherche et filtres avancés
+- ✅ Catégorisation par type d'article
+- ✅ Images multiples par annonce
 - ✅ Géolocalisation des annonces
+- ✅ Calcul d'itinéraire vers le vendeur
+
+### 💳 Paiements
+- ✅ **Paiement par carte** (Stripe Payment Element)
+- ✅ Système de commandes professionnel
+- ✅ Webhook sécurisé
+- ✅ Récapitulatif des frais transparent
+- ✅ Confirmation en temps réel
+- ⏳ PayPal (à venir)
+- ⏳ Lydia (à venir)
+- ⏳ Paiement en espèces (à venir)
+
+### 👤 Gestion Utilisateur
+- ✅ Authentification Firebase
+- ✅ Profils personnalisés
+- ✅ Mes annonces
+- ✅ Mes commandes
+- ✅ Mes ventes
+- ✅ Favoris
+
+### 🗺️ Géolocalisation
+- ✅ Carte interactive (Mapbox)
+- ✅ Sélection de lieu de rencontre
+- ✅ Affichage de la position
 - ✅ Calcul d'itinéraire
-- ✅ Édition de lieu de rencontre
-
-### Fonctionnalités en cours :
-- ⏳ PayPal (UI prête)
-- ⏳ Lydia (UI prête)
-- ⏳ Paiement en espèces (UI prête)
-
-### Fonctionnalités prévues :
-- 📋 Notifications email
-- 📋 Admin dashboard
-- 📋 Système de remboursement
-- 📋 Analytics détaillées
+- ✅ Mode sombre/clair
 
 ---
 
-## 🎓 RESSOURCES EXTERNES
+## 🛠️ Stack Technique
 
-### Stripe
-- [Documentation Stripe](https://docs.stripe.com/payments)
-- [Stripe CLI](https://stripe.com/docs/stripe-cli)
-- [Cartes de test](https://stripe.com/docs/testing)
+### Frontend
+- **React** 18.3 avec TypeScript
+- **Vite** 5.4 (build tool)
+- **TailwindCSS** (styling)
+- **Shadcn/ui** (composants UI)
+- **React Router** (navigation)
+- **Zustand** (state management)
+- **Mapbox GL JS** (cartes)
 
-### Firebase
-- [Documentation Firebase](https://firebase.google.com/docs)
-- [Firestore](https://firebase.google.com/docs/firestore)
-- [Firebase Admin SDK](https://firebase.google.com/docs/admin/setup)
+### Backend
+- **Node.js** avec Express
+- **Stripe** API (paiements)
+- **Firebase Admin SDK** (base de données)
 
-### React & Vite
-- [React Documentation](https://react.dev)
-- [Vite Documentation](https://vitejs.dev)
+### Base de données
+- **Firebase Firestore** (NoSQL)
+- **Firebase Storage** (images)
+- **Firebase Authentication** (auth)
 
----
-
-## 📅 DERNIÈRES MISES À JOUR
-
-**25 octobre 2025** - Version 2.0
-- ✅ Refonte complète du système de paiement
-- ✅ Implémentation des best practices Stripe
-- ✅ Création de 18 documents de documentation
-- ✅ Système de polling du statut
-- ✅ Architecture multi-méthodes de paiement
+### Services externes
+- **Stripe** - Paiements sécurisés
+- **Mapbox** - Cartes et géolocalisation
 
 ---
 
-## 🎉 CONCLUSION
+## 📦 Structure du Projet
 
-Cette documentation couvre **100%** des fonctionnalités actuelles de StudyMarket. Pour toute question ou suggestion d'amélioration, n'hésitez pas à consulter les guides spécifiques ou à créer une issue.
+```
+StudyMarket-Git/
+├── src/                    # Code source frontend
+│   ├── components/         # Composants React
+│   │   ├── ui/            # Composants UI réutilisables
+│   │   ├── listing/       # Composants d'annonces
+│   │   ├── payment/       # Composants de paiement
+│   │   └── checkout/      # Pages de commande
+│   ├── pages/             # Pages de l'application
+│   ├── stores/            # Zustand stores
+│   ├── contexts/          # React contexts
+│   ├── lib/               # Utilitaires et configs
+│   └── types/             # Types TypeScript
+│
+├── docs/                   # 📚 Documentation complète
+│   ├── README.md          # Index de la documentation
+│   ├── DEMARRAGE_RAPIDE.md
+│   ├── SYSTEME_PAIEMENT_COMPLET.md
+│   └── ... (18 documents)
+│
+├── server.js              # Backend Express
+├── package-server.json    # Dépendances backend
+├── vite.config.ts         # Configuration Vite
+├── .env                   # Variables d'environnement (backend)
+└── stripe.env.example     # Exemple config Stripe
+```
+
+---
+
+## 🔑 Configuration Requise
+
+### Variables d'environnement
+
+#### Backend (`.env`)
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}
+PORT=3001
+```
+
+#### Frontend (`vite.config.ts`)
+```typescript
+define: {
+  'import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY': JSON.stringify('pk_test_...'),
+  'import.meta.env.VITE_API_BASE': JSON.stringify('http://localhost:3001'),
+  'import.meta.env.VITE_STRIPE_CURRENCY': JSON.stringify('EUR'),
+}
+```
+
+### Index Firestore Requis
+
+Créer les index composites dans Firebase Console :
+
+```
+Collection: orders
+- userId (Ascending) + createdAt (Descending)
+
+Collection: listings
+- sellerId (Ascending) + createdAt (Descending)
+```
+
+Voir [CREER_INDEX_FIRESTORE.md](docs/CREER_INDEX_FIRESTORE.md) pour plus de détails.
+
+---
+
+## 🧪 Tests
+
+### Tester un paiement
+
+1. Démarrer les serveurs (voir Démarrage Rapide)
+2. Aller sur une annonce
+3. Cliquer "Acheter maintenant"
+4. Choisir "Carte Bancaire"
+5. Utiliser une carte de test Stripe :
+   - Numéro : `4242 4242 4242 4242`
+   - Date : n'importe quelle date future
+   - CVC : n'importe quel 3 chiffres
+
+**Pour plus de scénarios** : voir [GUIDE_TEST_COMPLET.md](docs/GUIDE_TEST_COMPLET.md)
+
+---
+
+## 🐛 Problèmes Courants
+
+### Le serveur ne démarre pas
+```bash
+# Vérifier que le port 3001 est libre
+netstat -ano | findstr :3001
+
+# Arrêter les processus Node.js existants
+Get-Process node | Stop-Process -Force
+```
+
+### Webhook ne reçoit rien
+```bash
+# Vérifier que Stripe CLI est lancé
+stripe listen --forward-to localhost:3001/api/webhook/stripe
+```
+
+### Badge VENDU pas affiché
+```bash
+# Vider le cache du navigateur
+Ctrl + F5 (Windows) ou Cmd + Shift + R (Mac)
+```
+
+**Pour plus de diagnostic** : voir [DIAGNOSTIC_BADGE_VENDU.md](docs/DIAGNOSTIC_BADGE_VENDU.md)
+
+---
+
+## 🚀 Déploiement
+
+### Prérequis production
+
+- [ ] Clés Stripe en mode Live
+- [ ] Webhook Stripe configuré en production
+- [ ] Variables d'environnement production configurées
+- [ ] Index Firestore créés
+- [ ] Règles de sécurité Firestore configurées
+- [ ] HTTPS obligatoire
+
+### Variables d'environnement production
+
+Remplacer toutes les clés `test` par les clés `live` :
+- `STRIPE_SECRET_KEY` → clé live
+- `STRIPE_WEBHOOK_SECRET` → webhook prod
+- `VITE_STRIPE_PUBLISHABLE_KEY` → clé publishable live
+
+---
+
+## 📊 Statistiques
+
+- **Composants React** : 50+
+- **Pages** : 15+
+- **Endpoints API** : 4
+- **Documents de doc** : 18
+- **Lignes de code** : ~15,000
+
+---
+
+## 🤝 Contribution
+
+Ce projet est en cours de développement actif. Pour contribuer :
+
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit les changements (`git commit -m 'Add AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+---
+
+## 📝 Licence
+
+[À définir]
+
+---
+
+## 👥 Équipe
+
+Développé avec ❤️ pour les étudiants.
+
+---
+
+## 📞 Support
+
+- **Documentation** : [`/docs`](docs/README.md)
+- **Issues** : [GitHub Issues]
+- **Email** : [support@studymarket.com]
+
+---
+
+## 🎉 Remerciements
+
+- **Stripe** pour l'API de paiement
+- **Firebase** pour la base de données
+- **Mapbox** pour les cartes
+- **Shadcn/ui** pour les composants UI
+- Tous les contributeurs !
+
+---
 
 **La plateforme est prête pour la production ! 🚀**
 
----
+*Dernière mise à jour : 25 octobre 2025 - Version 2.0*
 
-*Dernière mise à jour : 25 octobre 2025*  
-*Version : 2.0 - Système de paiement professionnel*
 
