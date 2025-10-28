@@ -47,6 +47,7 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
 // -------------------------- Helpers --------------------------
 // formatMessageTime helper

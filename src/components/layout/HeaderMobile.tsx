@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, User, Plus, Menu, Heart, MessageCircle, Home, Bell, Settings, Sun, Moon
@@ -6,6 +6,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SearchModal } from '@/components/ui/SearchModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMessageStore } from '../../stores/useMessageStore';
 import { useTheme } from 'next-themes';
 
 interface HeaderMobileProps {
@@ -15,10 +16,21 @@ interface HeaderMobileProps {
 export const HeaderMobile = memo<HeaderMobileProps>(({ onOpenPublish }) => {
   const { currentUser, userProfile, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { conversations } = useMessageStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
+
+  // Calculer le nombre total de messages non lus
+  const totalUnreadMessages = useMemo(() => {
+    if (!currentUser || !conversations.length) return 0;
+    
+    return conversations.reduce((total, conversation) => {
+      const unreadCount = conversation.unreadCount[currentUser.uid] || 0;
+      return total + unreadCount;
+    }, 0);
+  }, [conversations, currentUser]);
 
   const toggleMenu = useCallback(() => setMenuOpen(v => !v), []);
 
@@ -256,7 +268,7 @@ export const HeaderMobile = memo<HeaderMobileProps>(({ onOpenPublish }) => {
             label="Messages"
             active={activeTab === 'messages'}
             onClick={() => navigateAndClose('/messages', 'messages')}
-            badge={currentUser ? 3 : undefined}
+            badge={currentUser && totalUnreadMessages > 0 ? totalUnreadMessages : undefined}
           />
 
           {/* Paramètres */}

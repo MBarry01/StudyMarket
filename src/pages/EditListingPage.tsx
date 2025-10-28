@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { X, Save } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { MapLocationPicker } from "@/components/ui/MapLocationPicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useListingStore } from "../stores/useListingStore";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -177,162 +178,196 @@ const EditListingPage = () => {
   if (error) return <div className="text-red-500">{error}</div>;
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-lg mx-auto mt-10">
-      <div className="bg-white dark:bg-card rounded-2xl shadow-lg p-8 border border-gray-100 dark:border-border">
-        <h2 className="text-2xl font-bold mb-8 text-left">Modifier mon annonce</h2>
-        
-        {/* Titre */}
-        <div className="mb-5">
-          <Label htmlFor="title" className="block mb-1 text-gray-700">Titre</Label>
-          <Input
-            id="title"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            placeholder="Titre"
-            className="w-full"
-          />
-        </div>
-        
-        {/* Description */}
-        <div className="mb-5">
-          <Label htmlFor="description" className="block mb-1 text-gray-700">Description</Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            placeholder="Description"
-            className="w-full"
-            rows={4}
-          />
-        </div>
-        
-        {/* Prix */}
-        <div className="mb-5">
-          <Label htmlFor="price" className="block mb-1 text-gray-700">Prix (€)</Label>
-          <Input
-            id="price"
-            name="price"
-            value={form.price}
-            onChange={handleChange}
-            placeholder="Prix"
-            type="number"
-            min={0}
-            className="w-full"
-          />
-        </div>
-        
-        {/* Catégorie */}
-        <div className="mb-5">
-          <Label htmlFor="category" className="block mb-1 text-gray-700">Catégorie</Label>
-          <select
-            id="category"
-            name="category"
-            value={category}
-            onChange={e => setCategory(e.target.value as CategoryType | "")}
-            className="w-full border rounded px-3 py-2 bg-gray-50"
-            required
-          >
-            <option value="">Sélectionnez une catégorie</option>
-            {categories.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
-            ))}
-          </select>
-        </div>
-        
-        {/* Tags */}
-        <div className="mb-5">
-          <Label className="block mb-1 text-gray-700">Tags (max 5)</Label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tags.map((tag) => (
-              <span key={tag} className="bg-gray-100 rounded px-2 py-1 flex items-center gap-1 text-sm">
-                {tag}
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="w-4 h-4 p-0"
-                  onClick={() => removeTag(tag)}
-                >×</Button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Ajouter un tag..."
-              value={currentTag}
-              onChange={e => setCurrentTag(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
-              className="flex-1"
-            />
-            <Button type="button" onClick={addTag} disabled={!currentTag.trim() || tags.length >= 5}>
-              Ajouter
-            </Button>
-          </div>
-        </div>
-        
-        {/* Lieu de rencontre */}
-        <div className="mb-5">
-          <MapLocationPicker
-            onLocationSelect={setMeetingLocation}
-            initialLocation={meetingLocation}
-            placeholder="Sélectionnez un nouveau point de rencontre"
-          />
-        </div>
-        
-        {/* Photos */}
-        <div className="mb-8">
-          <Label className="block mb-1 text-gray-700">Photos</Label>
-          <div className="flex flex-wrap gap-4 mt-2">
-            {form.images.map((img, idx) => (
-              <div key={idx} className="relative group">
-                <img src={img} alt={`photo-${idx}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="destructive"
-                  className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                  onClick={() => handleRemoveImage(idx)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-            {newImages.map((file, idx) => (
-              <div key={idx} className="relative group">
-                <img src={URL.createObjectURL(file)} alt={`new-photo-${idx}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="destructive"
-                  className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                  onClick={() => handleRemoveNewImage(idx)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-            <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-              <span className="text-2xl text-gray-400">+</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleImageChange}
-                disabled={isUploading}
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-4xl">
+      <form onSubmit={handleSubmit}>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl">Modifier mon annonce</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 sm:space-y-6">
+            {/* Titre */}
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-foreground">Titre *</Label>
+              <Input
+                id="title"
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                placeholder="Ex: MacBook Pro 13' M1"
+                className="w-full"
               />
-            </label>
-          </div>
-        </div>
+            </div>
+            
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-foreground">Description *</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                placeholder="Décrivez l'objet en détail..."
+                className="w-full"
+                rows={6}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Prix */}
+              <div className="space-y-2">
+                <Label htmlFor="price" className="text-foreground">Prix (€) *</Label>
+                <Input
+                  id="price"
+                  name="price"
+                  value={form.price}
+                  onChange={handleChange}
+                  placeholder="0,00"
+                  type="text"
+                  className="w-full"
+                />
+              </div>
         
-        <Button type="submit" className="w-full" disabled={isUploading}>
-          {isUploading ? "Enregistrement..." : "Enregistrer les modifications"}
-        </Button>
-        {error && <div className="text-red-500 text-center mt-2">{error}</div>}
-      </div>
-    </form>
+              {/* Catégorie */}
+              <div className="space-y-2">
+                <Label htmlFor="category" className="text-foreground">Catégorie *</Label>
+                <Select value={category} onValueChange={(value) => setCategory(value as CategoryType)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionnez une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {/* Tags */}
+            <div className="space-y-2">
+              <Label className="text-foreground">Tags (max 5)</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map((tag) => (
+                  <span key={tag} className="bg-primary/10 text-primary rounded-full px-3 py-1 flex items-center gap-1 text-sm border border-primary/20">
+                    {tag}
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="w-4 h-4 p-0 hover:bg-primary/20"
+                      onClick={() => removeTag(tag)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ajouter un tag..."
+                  value={currentTag}
+                  onChange={e => setCurrentTag(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  className="flex-1"
+                />
+                <Button type="button" onClick={addTag} disabled={!currentTag.trim() || tags.length >= 5}>
+                  Ajouter
+                </Button>
+              </div>
+            </div>
+            
+            {/* Lieu de rencontre */}
+            <div className="space-y-2">
+              <Label className="text-foreground">Lieu de rencontre</Label>
+              <MapLocationPicker
+                onLocationSelect={setMeetingLocation}
+                initialLocation={meetingLocation}
+                placeholder="Sélectionnez un nouveau point de rencontre"
+              />
+            </div>
+            {/* Photos */}
+            <div className="space-y-3">
+              <Label className="text-foreground">Photos</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {form.images.map((img, idx) => (
+                  <div key={idx} className="relative group aspect-square">
+                    <img src={img} alt={`photo-${idx}`} className="w-full h-full object-cover rounded-lg border-2 border-border" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-1 right-1 w-7 h-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      onClick={() => handleRemoveImage(idx)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {newImages.map((file, idx) => (
+                  <div key={idx} className="relative group aspect-square">
+                    <img src={URL.createObjectURL(file)} alt={`new-photo-${idx}`} className="w-full h-full object-cover rounded-lg border-2 border-primary" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-1 right-1 w-7 h-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      onClick={() => handleRemoveNewImage(idx)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <label className="aspect-square flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition border-primary/50 hover:border-primary">
+                  <span className="text-3xl text-primary">+</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageChange}
+                    disabled={isUploading}
+                  />
+                </label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+          <Button
+            type="submit"
+            className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+            disabled={isUploading}
+            size="lg"
+          >
+            {isUploading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Enregistrer les modifications
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/listing/${id}`)}
+            size="lg"
+          >
+            Annuler
+          </Button>
+        </div>
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg text-red-600 dark:text-red-400 text-center">
+            {error}
+          </div>
+        )}
+      </form>
+    </div>
   );
 };
 

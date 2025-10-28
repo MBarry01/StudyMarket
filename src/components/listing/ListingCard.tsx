@@ -28,6 +28,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   const formatPrice = (price: number, currency?: string) => {
     if (listing.transactionType === 'donation') return 'Gratuit';
     if (listing.transactionType === 'exchange') return 'Échange';
+    if (listing.transactionType === 'service') return `${price.toFixed(2)}€/h`;
     
     const currencyCode = currency || 'EUR';
     
@@ -81,6 +82,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         return <Gift className="w-3 h-3" />;
       case 'exchange':
         return <RefreshCw className="w-3 h-3" />;
+      case 'service':
+        return <Leaf className="w-3 h-3" />;
       default:
         return null;
     }
@@ -92,6 +95,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         return 'bg-green-500 text-white hover:bg-green-600';
       case 'exchange':
         return 'bg-purple-500 text-white hover:bg-purple-600';
+      case 'service':
+        return 'bg-blue-500 text-white hover:bg-blue-600';
       default:
         return 'bg-primary text-white hover:bg-primary/90';
     }
@@ -165,7 +170,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             <Badge className={`absolute top-3 left-3 ${getTransactionColor()} border-0 shadow-sm font-medium px-3 py-1.5 rounded-full`}>
               {getTransactionIcon()}
               <span className="ml-1.5 text-sm">
-                {safeTransactionType === 'donation' ? 'Don' : 'Troc'}
+                {safeTransactionType === 'donation' ? 'Don' : 
+                 safeTransactionType === 'exchange' ? 'Troc' :
+                 safeTransactionType === 'service' ? 'Service' : 
+                 'Troc'}
               </span>
             </Badge>
           )}

@@ -1,0 +1,54 @@
+🔥 RÈGLES ULTRA-SIMPLES (POUR DÉBLOQUER L'UPLOAD)
+===================================================
+
+COPIER-COLLER CES RÈGLES DANS FIREBASE CONSOLE:
+https://console.firebase.google.com/project/annonces-app-44d27/storage/rules
+
+================================================================
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // LISTINGS - Upload libre pour tous les utilisateurs authentifiés
+    match /listings/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // USERS - Photos de profil
+    match /users/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // MESSAGES - Images partagées
+    match /messages/{allPaths=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // VERIFICATIONS - Documents
+    match /verifications/{allPaths=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // TEMP - Fichiers temporaires
+    match /temp/{allPaths=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+  }
+}
+
+================================================================
+
+✅ CES RÈGLES SONT ULTRA-PERMISSIVES - Juste pour débloquer l'upload !
+⚠️ Nous les sécuriserons après avoir confirmé que l'upload fonctionne.
+
+📋 Étapes:
+1. Collez le code dans Firebase Console
+2. Cliquez sur "Publier"
+3. Attendez 1 minute
+4. Testez l'upload
+

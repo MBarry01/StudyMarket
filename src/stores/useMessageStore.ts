@@ -531,6 +531,15 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
       
       await batch.commit();
       
+      // Update local state immediately
+      set((state) => ({
+        conversations: state.conversations.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, unreadCount: { ...conv.unreadCount, [userId]: 0 } }
+            : conv
+        )
+      }));
+      
     } catch (error) {
       console.error('Error marking messages as seen:', error);
       // Don't show error toast as this is not critical for user experience

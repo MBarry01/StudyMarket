@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -507,6 +508,7 @@ export const FavoritesPage: React.FC = () => {
   const formatPrice = (price: number, transactionType: string) => {
     if (transactionType === 'donation') return 'Gratuit';
     if (transactionType === 'exchange') return 'Échange';
+    if (transactionType === 'service') return `${price.toFixed(2)}€/h`;
     if (price === 0) return 'Gratuit';
     
     return new Intl.NumberFormat('fr-FR', {
@@ -534,9 +536,21 @@ export const FavoritesPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="min-h-screen bg-background">
+      {/* Breadcrumb */}
+      <Breadcrumb 
+        items={[
+          { label: 'Accueil', to: '/' },
+          { label: 'Favoris' }
+        ]}
+        maxItems={3}
+        showHome={true}
+        showBackButton={true}
+      />
+      
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* En-tête */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Heart className="w-8 h-8 text-red-500" />
@@ -1011,6 +1025,7 @@ export const FavoritesPage: React.FC = () => {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

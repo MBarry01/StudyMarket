@@ -36,6 +36,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ContactButton } from '../components/messaging/ContactButton';
 import { MapViewer } from '@/components/ui/MapViewer';
 import { QuickPaymentButton } from '../components/payment/QuickPaymentButton';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -101,6 +102,7 @@ export const ListingDetailPage: React.FC = () => {
   const formatPrice = (price: number, currency?: string) => {
     if (listing.transactionType === 'donation') return 'Gratuit';
     if (listing.transactionType === 'exchange') return 'Échange';
+    if (listing.transactionType === 'service') return `${price.toFixed(2)}€/h`;
     
     const currencyCode = currency || 'EUR';
     try {
@@ -172,21 +174,15 @@ export const ListingDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Breadcrumb */}
-      <div className="border-b border-border bg-muted/30">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground transition-colors">
-              Accueil
-            </Link>
-            <span>/</span>
-            <Link to="/listings" className="hover:text-foreground transition-colors">
-              Annonces
-            </Link>
-            <span>/</span>
-            <span className="text-foreground">{listing.title}</span>
-          </div>
-        </div>
-      </div>
+      <Breadcrumb 
+        items={[
+          { label: 'Accueil', to: '/' },
+          { label: 'Annonces', to: '/listings' },
+          { label: listing.title }
+        ]}
+        maxItems={3}
+        showHome={false}
+      />
 
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Back Button */}

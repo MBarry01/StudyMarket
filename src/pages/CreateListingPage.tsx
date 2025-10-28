@@ -37,6 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { MapLocationPicker } from '@/components/ui/MapLocationPicker';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingStore } from '../stores/useListingStore';
 import { Listing } from '../types';
@@ -418,9 +419,21 @@ export const CreateListingPage: React.FC = () => {
   };
 
   return (
-    <div className="create-listing-page container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl">
-      {/* Styles locaux pour masquer les icônes internes des inputs date/heure sur tous navigateurs */}
-      <style>
+    <div className="min-h-screen bg-background">
+      {/* Breadcrumb */}
+      <Breadcrumb 
+        items={[
+          { label: 'Accueil', to: '/' },
+          { label: 'Créer une annonce' }
+        ]}
+        maxItems={3}
+        showHome={true}
+        showBackButton={true}
+      />
+      
+      <div className="create-listing-page container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl">
+        {/* Styles locaux pour masquer les icônes internes des inputs date/heure sur tous navigateurs */}
+        <style>
         {`
           .create-listing-page input[type="date"]::-webkit-calendar-picker-indicator,
           .create-listing-page input[type="time"]::-webkit-calendar-picker-indicator {
@@ -1131,6 +1144,7 @@ export const CreateListingPage: React.FC = () => {
           </div>
         </div>
       </form>
+      </div>
     </div>
   );
 };

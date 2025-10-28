@@ -14,7 +14,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import toast from 'react-hot-toast';
+import { NotificationService } from '../services/notificationService';
 
 interface AdminListingRow {
   id: string;
@@ -22,11 +24,13 @@ interface AdminListingRow {
   price?: number;
   currency?: string;
   status?: string;
+  moderationStatus?: string;
   sellerId?: string;
   sellerName?: string;
   category?: string;
   views?: number;
   images?: string[];
+  rejectionReason?: string;
   createdAt?: any;
 }
 
@@ -37,6 +41,8 @@ const AdminListingsPage: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<AdminListingRow | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -88,6 +94,65 @@ const AdminListingsPage: React.FC = () => {
     } catch (error) {
       console.error('Change status error:', error);
       toast.error('Erreur lors du changement de statut');
+    }
+  };
+
+  const handleApproveListing = async (listing: AdminListingRow) => {
+    try {
+      await updateDoc(doc(db, 'listings', listing.id), {
+        status: 'active',
+        moderationStatus: 'approved',
+        updatedAt: new Date(),
+      });
+
+      // Send notification to seller
+      if (listing.sellerId && listing.title) {
+        await NotificationService.notifyListingApproved(
+          listing.sellerId,
+          listing.id,
+          listing.title
+        );
+      }
+
+      toast.success('Annonce approuvée et visible publiquement !');
+      fetchListings();
+    } catch (error) {
+      console.error('Approve error:', error);
+      toast.error('Erreur lors de l\'approbation');
+    }
+  };
+
+  const handleRejectListing = async () => {
+    if (!selectedListing || !rejectionReason.trim()) {
+      toast.error('Veuillez indiquer le motif du refus');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'listings', selectedListing.id), {
+        status: 'removed',
+        moderationStatus: 'removed',
+        rejectionReason: rejectionReason.trim(),
+        updatedAt: new Date(),
+      });
+
+      // Send notification to seller
+      if (selectedListing.sellerId && selectedListing.title) {
+        await NotificationService.notifyListingRejected(
+          selectedListing.sellerId,
+          selectedListing.id,
+          selectedListing.title,
+          rejectionReason.trim()
+        );
+      }
+
+      toast.success('Annonce refusée avec notification envoyée');
+      setShowRejectDialog(false);
+      setRejectionReason('');
+      fetchListings();
+    } catch (error) {
+      console.error('Reject error:', error);
+      toast.error('Erreur lors du refus');
     }
   };
 
@@ -229,14 +294,27 @@ const AdminListingsPage: React.FC = () => {
                         <Eye className="w-4 h-4" />
                       </Button>
                       {l.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleChangeStatus(l, 'active')}
-                          title="Approuver"
-                        >
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleApproveListing(l)}
+                            title="Approuver"
+                          >
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedListing(l);
+                              setShowRejectDialog(true);
+                            }}
+                            title="Refuser"
+                          >
+                            <XCircle className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </>
                       )}
                       {l.status === 'active' && (
                         <Button
@@ -268,6 +346,48 @@ const AdminListingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Reject Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refuser l'annonce</DialogTitle>
+            <DialogDescription>
+              {selectedListing?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Motif du refus *</label>
+              <Textarea
+                placeholder="Ex: Contenu inapproprié, fausses informations..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="mt-2"
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Le vendeur recevra ce motif par notification
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowRejectDialog(false);
+              setRejectionReason('');
+            }}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleRejectListing}
+              disabled={!rejectionReason.trim()}
+            >
+              Refuser l'annonce
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
@@ -296,41 +416,87 @@ const AdminListingsPage: React.FC = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Détail de l'annonce</DialogTitle>
+            <DialogDescription>
+              {selectedListing?.title || 'Aucun titre'}
+            </DialogDescription>
           </DialogHeader>
           {selectedListing && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Images Preview */}
+              {selectedListing.images && selectedListing.images.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Images ({selectedListing.images.length})</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedListing.images.slice(0, 3).map((img, idx) => (
+                      <img key={idx} src={img} alt={`Image ${idx + 1}`} className="rounded-lg object-cover h-24 w-full" />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Key Info */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">ID:</span> {selectedListing.id}
+                  <span className="font-medium text-muted-foreground">ID:</span>
+                  <p className="font-mono text-xs break-all">{selectedListing.id}</p>
                 </div>
                 <div>
-                  <span className="font-medium">Statut:</span> {getStatusBadge(selectedListing.status)}
+                  <span className="font-medium text-muted-foreground">Statut:</span>
+                  <div className="mt-1">{getStatusBadge(selectedListing.status)}</div>
                 </div>
                 <div className="col-span-2">
-                  <span className="font-medium">Titre:</span> {selectedListing.title || '—'}
+                  <span className="font-medium text-muted-foreground">Prix:</span>
+                  <p className="text-lg font-bold">{selectedListing.price} {selectedListing.currency || 'EUR'}</p>
                 </div>
                 <div>
-                  <span className="font-medium">Prix:</span> {selectedListing.price} {selectedListing.currency || 'EUR'}
+                  <span className="font-medium text-muted-foreground">Catégorie:</span>
+                  <p>{selectedListing.category || '—'}</p>
                 </div>
                 <div>
-                  <span className="font-medium">Catégorie:</span> {selectedListing.category || '—'}
+                  <span className="font-medium text-muted-foreground">Vues:</span>
+                  <p>{selectedListing.views || 0}</p>
                 </div>
-                <div>
-                  <span className="font-medium">Vendeur:</span> {selectedListing.sellerName || selectedListing.sellerId || '—'}
+                <div className="col-span-2">
+                  <span className="font-medium text-muted-foreground">Vendeur:</span>
+                  <p>{selectedListing.sellerName || selectedListing.sellerId || '—'}</p>
                 </div>
-                <div>
-                  <span className="font-medium">Vues:</span> {selectedListing.views || 0}
-                </div>
-                {selectedListing.images && selectedListing.images.length > 0 && (
-                  <div className="col-span-2">
-                    <span className="font-medium">Images:</span> {selectedListing.images.length} image(s)
-                  </div>
-                )}
               </div>
+
+              {/* Action Buttons for Pending Listings */}
+              {selectedListing.status === 'pending' && (
+                <div className="border-t pt-4 space-y-3">
+                  <p className="text-sm font-medium">Actions de validation</p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="default"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        handleApproveListing(selectedListing);
+                        setShowDetailDialog(false);
+                      }}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approuver l'annonce
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      onClick={() => {
+                        setShowDetailDialog(false);
+                        setSelectedListing(selectedListing);
+                        setShowRejectDialog(true);
+                      }}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Refuser l'annonce
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setShowDetailDialog(false)}>Fermer</Button>
+            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

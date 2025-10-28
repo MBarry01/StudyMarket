@@ -185,6 +185,11 @@ export const useListingStore = create<ListingStore>((set, get) => ({
       const snapshot = await getDocs(q);
       let newListings = snapshot.docs.map(convertDocToListing);
 
+      // ⚠️ IMPORTANT: Only show active listings (approved by admin)
+      newListings = newListings.filter(
+        listing => listing.status === 'active' && listing.moderationStatus === 'approved'
+      );
+
       // Apply filters client-side to avoid complex Firestore queries
       if (filters.category && filters.category !== 'all') {
         newListings = newListings.filter(listing => listing.category === filters.category);
@@ -260,7 +265,7 @@ export const useListingStore = create<ListingStore>((set, get) => ({
       const snapshot = await getDocs(q);
       console.log(`📊 Found ${snapshot.docs.length} documents`);
       
-      const featuredListings = snapshot.docs.map((doc, index) => {
+      let featuredListings = snapshot.docs.map((doc, index) => {
         try {
           console.log(`🔄 Processing document ${index + 1}:`, doc.id);
           const listing = convertDocToListing(doc);
@@ -304,6 +309,11 @@ export const useListingStore = create<ListingStore>((set, get) => ({
           } as Listing;
         }
       });
+
+      // ⚠️ IMPORTANT: Only show active and approved listings
+      featuredListings = featuredListings.filter(
+        listing => listing.status === 'active' && listing.moderationStatus === 'approved'
+      );
 
       console.log(`🎉 Successfully processed ${featuredListings.length} featured listings`);
       set({ featuredListings });
@@ -360,8 +370,8 @@ export const useListingStore = create<ListingStore>((set, get) => ({
         likes: 0,
         saves: 0,
         reportCount: 0,
-        moderationStatus: 'approved',
-        status: 'active',
+        moderationStatus: 'pending', // ⚠️ Changé en pending pour validation
+        status: 'pending', // ⚠️ Changé en pending pour validation
         createdAt: new Date(),
         updatedAt: new Date(),
         // Ensure location has all required fields
@@ -379,13 +389,30 @@ export const useListingStore = create<ListingStore>((set, get) => ({
         tags: listingData.tags || [],
         condition: listingData.condition || 'good',
         transactionType: listingData.transactionType || 'sale',
+        // Add rejection reason field for admin
+        rejectionReason: null,
       });
 
       console.log('Creating listing with data:', cleanedData);
 
       const docRef = await addDoc(collection(db, 'listings'), cleanedData);
 
-      toast.success('Annonce créée avec succès !');
+      // Send notification to user that their listing is pending
+      const { NotificationService } = await import('../services/notificationService');
+      await NotificationService.notifyListingPending(
+        listingData.sellerId,
+        docRef.id,
+        listingData.title
+      );
+
+      // Notify all admins that a new listing needs validation
+      await NotificationService.notifyAdminNewListing(
+        docRef.id,
+        listingData.title,
+        listingData.sellerName
+      );
+
+      toast.success('Annonce créée ! En attente de validation');
       return docRef.id;
     } catch (error) {
       console.error('Error creating listing:', error);

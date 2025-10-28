@@ -161,6 +161,7 @@ ${userProfile?.displayName || 'Un étudiant intéressé'}`;
   const formatPrice = (price: number, currency?: string) => {
     if (listing.transactionType === 'donation') return 'Gratuit';
     if (listing.transactionType === 'exchange') return 'Échange';
+    if (listing.transactionType === 'service') return `${price.toFixed(2)}€/h`;
     
     const currencyCode = currency || 'EUR';
     try {

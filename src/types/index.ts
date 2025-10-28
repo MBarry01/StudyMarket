@@ -88,7 +88,7 @@ export interface Listing {
   sellerEmail?: string;
   
   // Status and metrics
-  status: 'draft' | 'active' | 'reserved' | 'sold' | 'completed' | 'paused';
+  status: 'draft' | 'pending' | 'active' | 'reserved' | 'sold' | 'completed' | 'paused' | 'removed';
   views: number;
   likes: number;
   saves: number;
@@ -107,6 +107,7 @@ export interface Listing {
   // Safety and moderation
   reportCount: number;
   moderationStatus: 'approved' | 'pending' | 'flagged' | 'removed';
+  rejectionReason?: string; // Motif de refus si l'annonce a été rejetée
   
   // Dates
   createdAt: Date;

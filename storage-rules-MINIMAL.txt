@@ -1,0 +1,56 @@
+🌐 RÈGLES STORAGE MINIMALES (100% FONCTIONNELLES)
+===============================================
+
+Lien: https://console.firebase.google.com/project/annonces-app-44d27/storage/rules
+
+COPIER-COLLER TOUT LE CODE CI-DESSOUS:
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // LISTINGS - Upload d'images
+    match /listings/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // USERS - Photos de profil
+    match /users/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // MESSAGES - Images dans les conversations
+    match /messages/{allPaths=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // VERIFICATIONS - Documents de vérification
+    match /verifications/{allPaths=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // TEMP - Fichiers temporaires
+    match /temp/{allPaths=**} {
+      allow read, write, delete: if request.auth != null;
+    }
+  }
+}
+
+===============================================
+
+✅ Ces règles minimales garantissent que l'upload fonctionne.
+Elles vérifient uniquement l'authentification et l'ownership.
+
+📋 Étapes :
+1. Ouvrez le lien ci-dessus
+2. Supprimez TOUT l'ancien contenu
+3. Collez le code ci-dessus
+4. Cliquez sur "Publier"
+5. Attendez 1 minute
+6. Rechargez l'application (Ctrl+R)
+7. Testez l'upload
+

@@ -1,0 +1,29 @@
+🔥 URGENT - Créer le Bucket Firebase Storage
+===============================================
+
+PROBLÈME: Le bucket Storage n'existe pas encore
+
+SOLUTION: Créer le bucket via Firebase Console
+
+✅ ÉTAPES (3 minutes):
+
+1. Ouvrez Firebase Console Storage :
+   https://console.firebase.google.com/project/annonces-app-44d27/storage
+
+2. Si le bucket n'existe pas :
+   - Cliquez sur "Commencer"
+   - Sélectionnez "Test mode" (développement)
+   - Choix de l'emplacement : "europe-west1" (Europe)
+   - Cliquez sur "Terminé"
+
+3. Après la création, les règles Storage seront automatiquement appliquées
+
+4. Attendez 2-3 minutes
+
+5. Testez l'upload d'images dans votre application
+
+===============================================
+
+💡 ALTERNATIVE: Vérifier si le bucket existe déjà :
+   https://console.firebase.google.com/project/annonces-app-44d27/storage/rules
+

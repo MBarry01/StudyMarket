@@ -418,10 +418,10 @@ const ChatbotWidget: React.FC = () => {
         <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-4 rounded-lg transition-transform duration-300 hover:scale-105">
           <span className="text-2xl font-bold text-white">SM</span>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 text-center">
           Salut {userName} ! 👋
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400 text-center">
           Comment peut-on t'aider ?
         </p>
       </div>

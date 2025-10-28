@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
 import { SearchFilters } from '../types';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
 const categories = [
   { value: 'all', label: 'Toutes catégories', icon: null },
@@ -92,41 +93,53 @@ export const ListingsPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Toutes les annonces</h1>
-        
-        {/* Search Bar */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Rechercher des articles..."
-              value={filters.query || ''}
-              onChange={(e) => handleFilterChange('query', e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-10"
-            />
-          </div>
+    <div className="min-h-screen bg-background">
+      {/* Breadcrumb */}
+      <Breadcrumb 
+        items={[
+          { label: 'Accueil', to: '/' },
+          { label: 'Annonces' }
+        ]}
+        maxItems={3}
+        showHome={true}
+        showBackButton={true}
+      />
+      
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Toutes les annonces</h1>
           
-          <div className="flex gap-2">
-            <Button onClick={handleSearch} className="whitespace-nowrap">
-              <Search className="w-4 h-4 mr-2" />
-              Rechercher
-            </Button>
+          {/* Search Bar */}
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Rechercher des articles..."
+                value={filters.query || ''}
+                onChange={(e) => handleFilterChange('query', e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-10"
+              />
+            </div>
             
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filtres
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleSearch} className="whitespace-nowrap">
+                <Search className="w-4 h-4 mr-2" />
+                Rechercher
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="lg:hidden"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filtres
+              </Button>
+            </div>
           </div>
-        </div>
 
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -365,6 +378,7 @@ export const ListingsPage: React.FC = () => {
             </div>
           )}
         </main>
+      </div>
       </div>
     </div>
   );
