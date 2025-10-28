@@ -433,25 +433,25 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 gap-1 sm:gap-0">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="w-4 h-4" />
+        <TabsList className="grid w-full grid-cols-5 p-0 gap-0 items-center h-10">
+          <TabsTrigger value="profile" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
+            <User className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Profil</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="w-4 h-4" />
+          <TabsTrigger value="notifications" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
+            <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
-          <TabsTrigger value="privacy" className="flex items-center gap-2">
-            <Eye className="w-4 h-4" />
+          <TabsTrigger value="privacy" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
+            <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Confidentialité</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
+          <TabsTrigger value="security" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
+            <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Sécurité</span>
           </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
+          <TabsTrigger value="data" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">
+            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Données</span>
           </TabsTrigger>
         </TabsList>

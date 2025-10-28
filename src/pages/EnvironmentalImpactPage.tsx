@@ -635,11 +635,11 @@ export const EnvironmentalImpactPage: React.FC = () => {
 
           {/* Onglets détaillés */}
           <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-              <TabsTrigger value="categories">Par catégorie</TabsTrigger>
-              <TabsTrigger value="badges">Badges</TabsTrigger>
-              <TabsTrigger value="methodology">Méthodologie</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 p-0 gap-0 items-center h-10">
+              <TabsTrigger value="overview" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">Vue d'ensemble</TabsTrigger>
+              <TabsTrigger value="categories" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">Par catégorie</TabsTrigger>
+              <TabsTrigger value="badges" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">Badges</TabsTrigger>
+              <TabsTrigger value="methodology" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">Méthodologie</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">

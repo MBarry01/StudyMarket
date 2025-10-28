@@ -853,21 +853,23 @@ export const SavedSearchesPage: React.FC = () => {
 
       {/* Contenu principal */}
       <Tabs defaultValue="searches" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="searches" className="flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            Mes Recherches
+        <TabsList className="grid w-full grid-cols-2 p-0 gap-0 items-center h-10">
+          <TabsTrigger value="searches" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
+            <Search className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Mes Recherches</span>
+            <span className="sm:hidden">Recherches</span>
             {stats.totalSearches > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {stats.totalSearches}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="matches" className="flex items-center gap-2">
-            <Target className="w-4 h-4" />
-            Correspondances
+          <TabsTrigger value="matches" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">
+            <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Correspondances</span>
+            <span className="sm:hidden">Matches</span>
             {stats.newMatches > 0 && (
-              <Badge className="ml-1 bg-blue-500">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {stats.newMatches}
               </Badge>
             )}

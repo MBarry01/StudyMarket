@@ -4,7 +4,7 @@ import { CheckCircle2, Clock, XCircle, Shield, Upload, Eye } from 'lucide-react'
 import { VerificationStatus } from '@/types';
 
 interface VerificationBadgeProps {
-  status: VerificationStatus | 'pending' | 'verified' | 'rejected' | boolean; // Support ancien format
+  status: VerificationStatus | 'pending' | 'verified' | 'rejected' | 'unverified' | 'documents_submitted' | 'under_review' | 'suspended' | boolean; // Support ancien format
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
 }

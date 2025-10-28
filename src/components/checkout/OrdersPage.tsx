@@ -255,11 +255,11 @@ export const OrdersPage: React.FC = () => {
 
       {/* Orders List */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Toutes</TabsTrigger>
-          <TabsTrigger value="active">En cours</TabsTrigger>
-          <TabsTrigger value="completed">Terminées</TabsTrigger>
-          <TabsTrigger value="cancelled">Annulées</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 p-0 gap-0 items-center h-10">
+          <TabsTrigger value="all" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">Toutes</TabsTrigger>
+          <TabsTrigger value="active" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">En cours</TabsTrigger>
+          <TabsTrigger value="completed" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">Terminées</TabsTrigger>
+          <TabsTrigger value="cancelled" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">Annulées</TabsTrigger>
         </TabsList>
         
         <TabsContent value="all" className="space-y-4">

@@ -356,18 +356,18 @@ export const HelpPage: React.FC = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="faq" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="faq" className="flex items-center gap-2">
-            <HelpCircle className="w-4 h-4" />
+        <TabsList className="grid w-full grid-cols-3 p-0 gap-0 items-center h-10">
+          <TabsTrigger value="faq" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
+            <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
             FAQ
           </TabsTrigger>
-          <TabsTrigger value="guides" className="flex items-center gap-2">
-            <Book className="w-4 h-4" />
-            Guides
+          <TabsTrigger value="guides" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
+            <Book className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Guides</span>
           </TabsTrigger>
-          <TabsTrigger value="contact" className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4" />
-            Contact
+          <TabsTrigger value="contact" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Contact</span>
           </TabsTrigger>
         </TabsList>
 

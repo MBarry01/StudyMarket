@@ -63,6 +63,7 @@ import { ListingCard } from '../components/listing/ListingCard';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { useFavoritesStore } from '../stores/useFavoritesStore';
 
 // Types pour les favoris
 interface Favorite {
@@ -151,6 +152,7 @@ const sortOptions = [
 
 export const FavoritesPage: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+  const { fetchUserFavorites } = useFavoritesStore();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [favoriteListings, setFavoriteListings] = useState<Listing[]>([]);
   const [stats, setStats] = useState<FavoriteStats>({
@@ -181,6 +183,7 @@ export const FavoritesPage: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       loadFavorites();
+      fetchUserFavorites(currentUser.uid);
     }
   }, [currentUser]);
 

@@ -14,9 +14,9 @@ export const Footer: React.FC = () => {
     <footer className="bg-muted/50 border-t border-border mt-auto">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-          {/* Company Info */}
-          <div className="space-y-4 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start space-x-2">
+              {/* Company Info */}
+              <div className="space-y-4 text-left">
+                <div className="flex items-center justify-start space-x-2">
               <GradientIcon icon={GraduationCap} gradientId="gradient-footer" size={32} />
               <div>
                 <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -27,10 +27,10 @@ export const Footer: React.FC = () => {
                 </div>
               </div>
             </div>
-            <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm">
               La première plateforme d'échange entre étudiants vérifiés. Achetez, vendez, donnez et échangez en toute sécurité au sein de votre communauté universitaire.
             </p>
-            <div className="flex space-x-4 justify-center md:justify-start">
+                <div className="flex space-x-4 justify-start">
               <a href="https://facebook.com/studymarket" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>

@@ -299,30 +299,33 @@ export const PaymentsPage: React.FC = () => {
 
       {/* Contenu principal */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4" />
-            Toutes
+        <TabsList className="grid w-full grid-cols-3 p-0 gap-0 items-center h-10">
+          <TabsTrigger value="all" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
+            <CreditCard className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Toutes</span>
+            <span className="sm:hidden">Toutes</span>
             {stats.totalRequests > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {stats.totalRequests}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="purchases" className="flex items-center gap-2">
-            <ArrowUpRight className="w-4 h-4" />
-            Mes achats
+          <TabsTrigger value="purchases" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
+            <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Mes achats</span>
+            <span className="sm:hidden">Achats</span>
             {getBuyerRequests().length > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {getBuyerRequests().length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="sales" className="flex items-center gap-2">
-            <ArrowDownLeft className="w-4 h-4" />
-            Mes ventes
+          <TabsTrigger value="sales" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">
+            <ArrowDownLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Mes ventes</span>
+            <span className="sm:hidden">Ventes</span>
             {getSellerRequests().length > 0 && (
-              <Badge variant="secondary\" className="ml-1">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {getSellerRequests().length}
               </Badge>
             )}

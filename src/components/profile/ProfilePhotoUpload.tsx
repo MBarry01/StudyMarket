@@ -164,9 +164,6 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
           <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Camera className="w-6 h-6 text-white" />
           </div>
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center border-2 border-background">
-            <Camera className="w-3 h-3 text-white" />
-          </div>
         </div>
       </DialogTrigger>
 

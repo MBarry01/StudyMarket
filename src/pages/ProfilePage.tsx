@@ -38,7 +38,6 @@ import { ListingCard } from '../components/listing/ListingCard';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
-import { Checkbox } from '../components/ui/checkbox';
 import { Label } from '../components/ui/label';
 import { VerificationBadge } from '../components/ui/VerificationBadge';
 import { toast } from 'react-hot-toast';
@@ -741,11 +740,13 @@ export const ProfilePage: React.FC = () => {
 
       {/* Cartes de statistiques */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-4 sm:pt-6">
-            <div className="flex items-center space-x-2">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-              <div>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center mb-2">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold">
                   {loading.listings ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
@@ -759,11 +760,13 @@ export const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-4 sm:pt-6">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-              <div>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center mb-2">
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold">
                   {loading.listings ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
@@ -777,11 +780,13 @@ export const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-4 sm:pt-6">
-            <div className="flex items-center space-x-2">
-              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
-              <div>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center mb-2">
+                <Star className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold">
                   {loading.reviews ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
@@ -795,11 +800,13 @@ export const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-4 sm:pt-6">
-            <div className="flex items-center space-x-2">
-              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
-              <div>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center mb-2">
+                <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold">
                   {loading.favorites ? (
                     <div className="h-6 w-6 sm:h-8 sm:w-8 bg-muted animate-pulse rounded" />
@@ -816,38 +823,38 @@ export const ProfilePage: React.FC = () => {
 
       {/* Contenu des onglets */}
       <Tabs defaultValue="listings" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4">
-          <TabsTrigger value="listings" className="flex items-center gap-1 text-xs sm:text-sm">
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4 p-0 gap-0 items-center h-15">
+          <TabsTrigger value="listings" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
             <Package className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Mes Annonces</span>
             <span className="sm:hidden">Annonces</span>
             {!loading.listings && stats.totalListings > 0 && (
-              <Badge variant="secondary" className="ml-1 text-[8px] sm:text-[10px] px-1 py-0.5">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {stats.totalListings}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="flex items-center gap-1 text-xs sm:text-sm">
+          <TabsTrigger value="reviews" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
             <Star className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Avis Reçus</span>
             <span className="sm:hidden">Avis</span>
             {!loading.reviews && stats.totalReviews > 0 && (
-              <Badge variant="secondary" className="ml-1 text-[8px] sm:text-[10px] px-1 py-0.5">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {stats.totalReviews}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm">
+          <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
             <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Favoris</span>
             <span className="sm:hidden">Favoris</span>
             {!loading.favorites && stats.totalFavorites > 0 && (
-              <Badge variant="secondary" className="ml-1 text-[8px] sm:text-[10px] px-1 py-0.5">
+              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
                 {stats.totalFavorites}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-1 text-xs sm:text-sm">
+          <TabsTrigger value="settings" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">
             <User className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Paramètres</span>
             <span className="sm:hidden">Paramètres</span>
@@ -1129,9 +1136,9 @@ export const ProfilePage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <VerificationBadge status={userProfile?.verificationStatus || 'unverified'} size="md" showText />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <VerificationBadge status={(userProfile?.verificationStatus === 'unverified' ? 'pending' : userProfile?.verificationStatus) || 'pending'} size="md" showText />
                   <div className="text-sm text-muted-foreground">
                     {userProfile?.verificationStatus === 'verified'
                       ? 'Votre compte est vérifié' 
@@ -1140,7 +1147,7 @@ export const ProfilePage: React.FC = () => {
                       : 'Votre compte n\'est pas encore vérifié'}
                   </div>
                 </div>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                   <Link to="/verification">
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     {userProfile?.isVerified ? 'Voir le statut' : 'Demander la vérification'}
