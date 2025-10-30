@@ -5,38 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { useListingStore } from '../stores/useListingStore';
+import { ListingCard } from '../components/listing/ListingCard';
+import { Link } from 'react-router-dom';
 
-interface HousingListing {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  type: 'studio' | 'appartement' | 'chambre' | 'colocation';
-  location: {
-    address: string;
-    city: string;
-    university: string;
-    distance: number; // en km du campus
-  };
-  features: {
-    rooms: number;
-    surface: number; // en m²
-    furnished: boolean;
-    charges: boolean;
-  };
-  images: string[];
-  contact: {
-    name: string;
-    phone?: string;
-    email: string;
-  };
-  availability: Date;
-  createdAt: Date;
-}
+// Cette page consomme désormais les vraies annonces via useListingStore
 
 export const HousingListingsPage: React.FC = () => {
-  const [listings, setListings] = useState<HousingListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { listings, loading, searchListings } = useListingStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     type: '',
@@ -46,87 +23,18 @@ export const HousingListingsPage: React.FC = () => {
     furnished: '',
   });
 
-  // Données d'exemple pour le développement
-  const mockListings: HousingListing[] = [
-    {
-      id: '1',
-      title: 'Studio proche Sorbonne',
-      description: 'Joli studio meublé à 5min à pied de la Sorbonne. Parfait pour étudiant.',
-      price: 650,
-      type: 'studio',
-      location: {
-        address: '12 rue de la Sorbonne',
-        city: 'Paris',
-        university: 'Sorbonne Université',
-        distance: 0.3
-      },
-      features: {
-        rooms: 1,
-        surface: 25,
-        furnished: true,
-        charges: true
-      },
-      images: ['/api/placeholder/400/300'],
-      contact: {
-        name: 'Marie D.',
-        email: 'marie.d@example.com'
-      },
-      availability: new Date('2025-02-01'),
-      createdAt: new Date()
-    },
-    {
-      id: '2',
-      title: 'Chambre en colocation - Dauphine',
-      description: 'Chambre dans coloc sympa avec 3 autres étudiants. Cuisine équipée.',
-      price: 480,
-      type: 'colocation',
-      location: {
-        address: '45 avenue de Neuilly',
-        city: 'Paris',
-        university: 'Université Paris-Dauphine',
-        distance: 0.8
-      },
-      features: {
-        rooms: 1,
-        surface: 15,
-        furnished: true,
-        charges: true
-      },
-      images: ['/api/placeholder/400/300'],
-      contact: {
-        name: 'Thomas L.',
-        email: 'thomas.l@example.com'
-      },
-      availability: new Date('2025-01-20'),
-      createdAt: new Date()
-    }
-  ];
-
+  // Charger et appliquer les filtres supportés par le store (catégorie, recherche, prix)
   useEffect(() => {
-    const fetchHousings = async () => {
-      setLoading(true);
-      try {
-        // Utiliser la vraie recherche Algolia si disponible, sinon les données mock
-        if (searchQuery || Object.keys(filters).length > 0) {
-          // Ici vous pouvez importer et utiliser searchHousing d'algoliaConfig
-          // const { searchHousing } = await import('../components/ui/algoliaConfig');
-          // const results = await searchHousing(searchQuery, filters);
-          // setListings(results.hits);
-        }
-        
-        // Pour l'instant, utiliser les données mock
-        setTimeout(() => {
-          setListings(mockListings);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Erreur recherche logements:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchHousings();
-  }, [searchQuery, filters]);
+    const min = filters.minPrice ? parseInt(filters.minPrice, 10) : undefined;
+    const max = filters.maxPrice ? parseInt(filters.maxPrice, 10) : undefined;
+    searchListings({
+      category: 'housing',
+      query: searchQuery || undefined,
+      minPrice: Number.isFinite(min as number) ? min : undefined,
+      maxPrice: Number.isFinite(max as number) ? max : undefined,
+      sortBy: 'date',
+    });
+  }, [searchQuery, filters.minPrice, filters.maxPrice, searchListings]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -157,8 +65,14 @@ export const HousingListingsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <Breadcrumb
+        items={[{ label: 'Accueil', to: '/' }, { label: 'Logements' }]}
+        maxItems={3}
+        showHome={true}
+        showBackButton={true}
+      />
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -178,13 +92,13 @@ export const HousingListingsPage: React.FC = () => {
               placeholder="Rechercher par ville, université, quartier..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 py-3 text-lg"
+              className="pl-10 py-3 text-base sm:text-lg"
             />
           </div>
         </div>
 
         {/* Filtres */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="mb-6 sm:mb-8 grid grid-cols-1 md:grid-cols-5 gap-3 sm:gap-4">
           <Select onValueChange={(value) => handleFilterChange('type', value)}>
             <SelectTrigger>
               <SelectValue placeholder="Type de logement" />
@@ -250,68 +164,16 @@ export const HousingListingsPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing) => (
-              <Card key={listing.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <div className="relative">
-                  <img
-                    src={listing.images[0]}
-                    alt={listing.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                  <Badge className={`absolute top-3 left-3 ${getTypeBadgeColor(listing.type)}`}>
-                    {getTypeIcon(listing.type)}
-                    <span className="ml-1 capitalize">{listing.type}</span>
-                  </Badge>
-                </div>
-                
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-                    {listing.title}
-                  </h3>
-                  
-                  <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    <span className="text-sm">
-                      {listing.location.city} • {listing.location.distance}km du campus
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center text-primary font-bold text-xl">
-                      <Euro className="w-5 h-5 mr-1" />
-                      {listing.price}
-                      <span className="text-sm font-normal text-gray-500 ml-1">/mois</span>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {listing.features.surface}m²
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {listing.features.furnished && (
-                      <Badge variant="secondary" className="text-xs">Meublé</Badge>
-                    )}
-                    {listing.features.charges && (
-                      <Badge variant="secondary" className="text-xs">Charges comprises</Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      Disponible le {listing.availability.toLocaleDateString('fr-FR')}
-                    </span>
-                    <Button size="sm">
-                      Contacter
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {listings
+              .filter(l => l.category === 'housing')
+              .map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
           </div>
         )}
 
         {/* Message si aucun résultat */}
-        {!loading && listings.length === 0 && (
+        {!loading && listings.filter(l => l.category === 'housing').length === 0 && (
           <div className="text-center py-12">
             <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -333,8 +195,10 @@ export const HousingListingsPage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Publiez votre annonce gratuitement et touchez des milliers d'étudiants
               </p>
-              <Button size="lg">
-                Publier une annonce logement
+              <Button size="lg" className="w-full sm:w-auto" asChild>
+                <Link to="/create?category=housing" aria-label="Publier une annonce logement">
+                  Publier une annonce logement
+                </Link>
               </Button>
             </CardContent>
           </Card>

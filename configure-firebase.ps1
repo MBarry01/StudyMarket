@@ -73,3 +73,7 @@ Write-Host "4. Testez un paiement"
 Write-Host "5. Vérifiez vos commandes dans la page 'Mes Commandes'"
 Write-Host ""
 
+
+
+
+

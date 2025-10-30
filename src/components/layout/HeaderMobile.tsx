@@ -1,7 +1,7 @@
 import React, { useState, useCallback, memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Search, User, Plus, Menu, Heart, MessageCircle, Home, Bell, Settings, Sun, Moon
+  Search, User, Plus, Menu, Heart, MessageCircle, Home, Bell, Settings, Sun, Moon, BadgeCheck
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SearchModal } from '@/components/ui/SearchModal';
@@ -137,12 +137,19 @@ export const HeaderMobile = memo<HeaderMobileProps>(({ onOpenPublish }) => {
             <>
               {/* Info rapide utilisateur */}
               <div className="px-3 py-2.5 mb-1 flex items-center gap-2.5">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={userProfile?.photoURL} />
-                  <AvatarFallback className="text-xs bg-gradient-to-br from-purple-400 to-purple-600">
-                    {userProfile?.displayName?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={userProfile?.photoURL} />
+                    <AvatarFallback className="text-xs bg-gradient-to-br from-purple-400 to-purple-600">
+                      {userProfile?.displayName?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {userProfile?.isVerified && (
+                    <div className="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 z-10">
+                      <BadgeCheck size={12} fill="#3b82f6" stroke="white" strokeWidth={2} />
+                    </div>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm text-white/90 truncate">
                     {userProfile?.displayName || 'Utilisateur'}
@@ -332,19 +339,21 @@ const NavButton: React.FC<NavButtonProps> = ({ icon: Icon, label, active, onClic
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center min-w-[60px] py-1.5 px-2 relative active:scale-95 transition-transform touch-manipulation"
+      className="flex flex-col items-center justify-center min-w-[60px] py-1.5 px-2 relative active:scale-95 transition-transform touch-manipulation nav-icon"
     >
       <div className="relative">
-        <Icon 
-          className={`w-6 h-6 transition-colors ${
-            active ? 'text-cyan-400' : 'text-white/60'
-          }`} 
-        />
-        {badge !== undefined && badge > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-            {badge > 9 ? '9+' : badge}
-          </span>
-        )}
+        <span className="relative inline-block align-middle leading-none">
+          <Icon 
+            className={`w-6 h-6 transition-colors ${
+              active ? 'text-cyan-400' : 'text-white/60'
+            }`} 
+          />
+          {badge !== undefined && badge > 0 && (
+            <span className="pointer-events-none absolute -top-2 -right-2 z-10 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-[#0f1535] badge-pop">
+              {badge > 9 ? '9+' : badge}
+            </span>
+          )}
+        </span>
       </div>
       <span 
         className={`text-[10px] mt-0.5 font-medium transition-colors ${

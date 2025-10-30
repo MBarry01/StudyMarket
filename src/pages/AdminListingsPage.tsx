@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Trash2, CheckCircle, XCircle, RefreshCw, Download } from 'lucide-react';
+import { Eye, Trash2, CheckCircle, XCircle, RefreshCw, Download, LayoutList, LayoutGrid, MapPin } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
@@ -45,6 +45,7 @@ const AdminListingsPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     fetchListings();
@@ -215,10 +216,18 @@ const AdminListingsPage: React.FC = () => {
             {filteredListings.length} annonce(s) sur {listings.length}
           </p>
         </div>
+        <div className="flex items-center gap-2">
         <Button onClick={exportCSV} variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
+          <Button variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')} title="Vue liste">
+            <LayoutList className="w-4 h-4" />
+          </Button>
+          <Button variant={viewMode === 'grid' ? 'default' : 'outline'} onClick={() => setViewMode('grid')} title="Vue cartes">
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -248,7 +257,7 @@ const AdminListingsPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Table */}
+      {/* Table / Grid */}
       {loading ? (
         <div className="text-left py-">Chargement…</div>
       ) : filteredListings.length === 0 ? (
@@ -258,7 +267,7 @@ const AdminListingsPage: React.FC = () => {
             {listings.length === 0 && ' La collection listings est vide.'}
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="overflow-x-auto rounded-md border border-border">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/50">
@@ -343,6 +352,47 @@ const AdminListingsPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredListings.map((l) => (
+            <div key={l.id} className="rounded-xl border border-border bg-card text-card-foreground overflow-hidden">
+              <div className="relative aspect-[4/3] bg-muted">
+                <img src={l.images?.[0] || '/images/placeholder.jpg'} alt={l.title} className="w-full h-full object-cover" />
+                <div className="absolute top-3 left-3">{getStatusBadge(l.status)}</div>
+              </div>
+              <div className="p-4 space-y-2">
+                <h3 className="font-semibold text-foreground line-clamp-2">{l.title || '—'}</h3>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-bold">{typeof l.price === 'number' ? `${l.price.toFixed(2)} ${l.currency || 'EUR'}` : '—'}</span>
+                  <span className="text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{l.category || '—'}</span>
+                </div>
+                <div className="flex items-center justify-end gap-1 pt-2">
+                  <Button size="sm" variant="ghost" onClick={() => { setSelectedListing(l); setShowDetailDialog(true); }}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  {l.status === 'pending' && (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => handleApproveListing(l)} title="Approuver">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSelectedListing(l); setShowRejectDialog(true); }} title="Refuser">
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </>
+                  )}
+                  {l.status === 'active' && (
+                    <Button size="sm" variant="ghost" onClick={() => handleChangeStatus(l, 'removed')} title="Retirer">
+                      <XCircle className="w-4 h-4 text-red-600" />
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => { setSelectedListing(l); setShowDeleteDialog(true); }} title="Supprimer">
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

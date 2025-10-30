@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, Grid, List, SlidersHorizontal, Smartphone, Car, Home, Shirt, Gamepad2, Baby, Briefcase } from 'lucide-react';
+import { Search, Filter, Grid, List, SlidersHorizontal, Smartphone, Car, Home, Shirt, Gamepad2, Baby, Briefcase, Bed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,7 @@ const categories = [
   { value: 'electronics', label: 'Électronique', icon: Smartphone },
   { value: 'vehicles', label: 'Véhicules', icon: Car },
   { value: 'real-estate', label: 'Immobilier', icon: Home },
+  { value: 'furniture', label: 'Mobilier', icon: Bed },
   { value: 'fashion', label: 'Mode', icon: Shirt },
   { value: 'gaming', label: 'Jeux & Jouets', icon: Gamepad2 },
   { value: 'baby', label: 'Bébé & Enfant', icon: Baby },
@@ -74,8 +75,20 @@ export const ListingsPage: React.FC = () => {
   };
 
   const handleFilterChange = (key: keyof SearchFilters, value: any) => {
-    const newFilters = { ...filters, [key]: value };
+    const newFilters: SearchFilters = { ...filters, [key]: value };
     setFilters(newFilters);
+
+    // Appliquer immédiatement les filtres et synchroniser l'URL
+    searchListings(newFilters);
+
+    const params = new URLSearchParams();
+    if (newFilters.query) params.set('q', newFilters.query);
+    if (newFilters.category) params.set('category', newFilters.category);
+    if (newFilters.minPrice !== undefined) params.set('min', String(newFilters.minPrice));
+    if (newFilters.maxPrice !== undefined) params.set('max', String(newFilters.maxPrice));
+    if (newFilters.sortBy) params.set('sort', newFilters.sortBy);
+    if (newFilters.condition && newFilters.condition.length > 0) params.set('cond', newFilters.condition.join(','));
+    setSearchParams(params);
   };
 
   const loadMore = () => {

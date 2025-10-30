@@ -1,6 +1,5 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Clock, XCircle, Shield, Upload, Eye } from 'lucide-react';
+import { BadgeCheck, Clock, XCircle, Shield, Upload, Eye } from 'lucide-react';
 import { VerificationStatus } from '@/types';
 
 interface VerificationBadgeProps {
@@ -37,9 +36,9 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
       case 'verified':
         return {
           variant: 'success' as const,
-          icon: <CheckCircle2 className={iconSize[size]} />,
+          icon: <BadgeCheck className={iconSize[size]} />,
           text: 'Vérifié',
-          className: 'bg-green-100 text-green-800 border-green-200',
+          className: 'text-green-600 dark:text-green-400',
         };
       case VerificationStatus.DOCUMENTS_SUBMITTED:
         return {
@@ -68,7 +67,7 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
           variant: 'destructive' as const,
           icon: <Shield className={iconSize[size]} />,
           text: 'Suspendu',
-          className: 'bg-orange-100 text-orange-800 border-orange-200',
+          className: 'bg-gray-100 text-gray-800 border-gray-200',
         };
       case VerificationStatus.UNVERIFIED:
       default:
@@ -82,14 +81,34 @@ export const VerificationBadge: React.FC<VerificationBadgeProps> = ({
   };
 
   const content = getBadgeContent();
+  const isVerified =
+    verificationStatus === VerificationStatus.VERIFIED ||
+    String(verificationStatus) === 'verified';
 
   if (!showText) {
+    if (isVerified) {
+      return (
+        <span title={content.text} className={content.className}>
+          <BadgeCheck className={`${iconSize[size]}`} />
+        </span>
+      );
+    }
+
     return (
       <div
         className={`inline-flex items-center justify-center rounded-full ${content.className} ${sizeClasses[size]} p-1 flex-shrink-0`}
         title={content.text}
       >
         {content.icon}
+      </div>
+    );
+  }
+
+  if (isVerified) {
+    return (
+      <div className={`inline-flex items-center gap-1 text-xs font-semibold ${content.className}`}>
+        <BadgeCheck className={iconSize[size]} />
+        <span className={sizeClasses[size]}>{content.text}</span>
       </div>
     );
   }

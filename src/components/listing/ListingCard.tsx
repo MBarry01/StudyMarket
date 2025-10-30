@@ -1,13 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, Eye, Shield, Gift, RefreshCw, Leaf, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Clock, Eye, Shield, Gift, RefreshCw, Leaf, Edit, Trash2, Home, BadgeCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { Button } from '@/components/ui/button';
-import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { Listing } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -26,6 +25,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   onDelete 
 }) => {
   const formatPrice = (price: number, currency?: string) => {
+    if (listing.category === 'housing') return `${(price || 0).toFixed(0)}€/mois`;
     if (listing.transactionType === 'donation') return 'Gratuit';
     if (listing.transactionType === 'exchange') return 'Échange';
     if (listing.transactionType === 'service') return `${price.toFixed(2)}€/h`;
@@ -143,7 +143,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       <Link to={`/listing/${listing.id}`} className="block touch-manipulation">
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
           <img
-            src={listing.images?.[0] || '/placeholder.jpg'}
+            src={listing.images?.[0] || '/images/placeholder.jpg'}
             alt={listing.title}
             className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 touch-manipulation"
           />
@@ -165,8 +165,13 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             />
           </div>
 
-          {/* Transaction Type Badge */}
-          {safeTransactionType !== 'sale' && (
+          {/* Housing Badge */}
+          {listing.category === 'housing' ? (
+            <Badge className={"absolute top-3 left-3 bg-blue-500 text-white border-0 shadow-sm font-medium px-3 py-1.5 rounded-full"}>
+              <Home className="w-3 h-3" />
+              <span className="ml-1.5 text-sm">Logement</span>
+            </Badge>
+          ) : safeTransactionType !== 'sale' && (
             <Badge className={`absolute top-3 left-3 ${getTransactionColor()} border-0 shadow-sm font-medium px-3 py-1.5 rounded-full`}>
               {getTransactionIcon()}
               <span className="ml-1.5 text-sm">
@@ -263,26 +268,24 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         {/* Seller Section */}
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Avatar className="w-9 h-9 border-2 border-border">
-              <AvatarImage src={listing.sellerAvatar} />
-              <AvatarFallback className="text-sm bg-muted text-muted-foreground font-medium">
-                {listing.sellerName?.[0]?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="w-9 h-9 border-2 border-border">
+                <AvatarImage src={listing.sellerAvatar} />
+                <AvatarFallback className="text-sm bg-muted text-muted-foreground font-medium">
+                  {listing.sellerName?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              {((listing.sellerVerificationStatus === 'verified' || listing.sellerVerificationStatus === 'Verified') || listing.sellerVerified) && (
+                <div className="absolute bottom-0 right-0 transform translate-x-1/4 -translate-y-1/4 z-10">
+                  <BadgeCheck size={14} fill="#3b82f6" stroke="white" strokeWidth={2} />
+                </div>
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-foreground truncate">
                   {listing.sellerName || 'Utilisateur'}
                 </span>
-                {listing.sellerVerificationStatus ? (
-                  <VerificationBadge 
-                    status={listing.sellerVerificationStatus} 
-                    size="sm" 
-                    showText={false}
-                  />
-                ) : listing.sellerVerified && (
-                  <Shield className="w-4 h-4 text-green-500 flex-shrink-0" />
-                )}
               </div>
               <span className="text-xs text-muted-foreground truncate block text-left">
                 {listing.sellerUniversity || 'Université non spécifiée'}

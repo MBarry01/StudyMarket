@@ -50,6 +50,82 @@ export class NotificationService {
   }
 
   /**
+   * 📋 Notification: Annonce soumise et en attente de validation
+   */
+  static async notifyListingPending(
+    userId: string,
+    listingId: string,
+    listingTitle: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'listing',
+      title: '📋 Annonce en attente de validation',
+      message: `Votre annonce "${listingTitle}" a été soumise et sera publiée après approbation.`,
+      data: { url: `/listing/${listingId}`, listingId },
+      priority: 'normal'
+    });
+  }
+
+  /**
+   * 🛡️ Notification: Nouvelle annonce à valider (diffusion admins)
+   * Note: En l'absence d'un système de rôles complet, on envoie sur un userId "admin_broadcast".
+   * Les apps admin peuvent écouter ce canal et redistribuer si nécessaire.
+   */
+  static async notifyAdminNewListing(
+    listingId: string,
+    listingTitle: string,
+    sellerName: string
+  ) {
+    const adminBroadcastUserId = 'admin_broadcast';
+    return await this.createNotification({
+      userId: adminBroadcastUserId,
+      type: 'listing',
+      title: '🛡️ Nouvelle annonce à valider',
+      message: `${sellerName} a créé "${listingTitle}"`,
+      data: { url: `/admin/listings?highlight=${listingId}`, listingId },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * ✅ Notification: Annonce approuvée
+   */
+  static async notifyListingApproved(
+    userId: string,
+    listingId: string,
+    listingTitle: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'listing',
+      title: '✅ Annonce approuvée',
+      message: `Votre annonce "${listingTitle}" est maintenant visible publiquement.`,
+      data: { url: `/listing/${listingId}`, listingId },
+      priority: 'high'
+    });
+  }
+
+  /**
+   * ❌ Notification: Annonce refusée
+   */
+  static async notifyListingRejected(
+    userId: string,
+    listingId: string,
+    listingTitle: string,
+    reason?: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'listing',
+      title: '❌ Annonce refusée',
+      message: reason ? `"${listingTitle}" a été refusée: ${reason}` : `"${listingTitle}" a été refusée.`,
+      data: { url: `/listing/${listingId}`, listingId },
+      priority: 'normal'
+    });
+  }
+
+  /**
    * 💬 Notification : Nouveau message reçu
    */
   static async notifyNewMessage(

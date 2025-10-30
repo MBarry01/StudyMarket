@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Trash2, AlertTriangle, RefreshCw, Download, MessageSquare } from 'lucide-react';
+import { Eye, Trash2, AlertTriangle, RefreshCw, Download, MessageSquare, LayoutList, LayoutGrid } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
@@ -55,6 +55,7 @@ const AdminMessagesPage: React.FC = () => {
   const [conversationMessages, setConversationMessages] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     fetchConversations();
@@ -262,6 +263,14 @@ const AdminMessagesPage: React.FC = () => {
           Export CSV
         </Button>
       </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')} title="Vue liste">
+          <LayoutList className="w-4 h-4" />
+        </Button>
+        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} onClick={() => setViewMode('grid')} title="Vue cartes">
+          <LayoutGrid className="w-4 h-4" />
+        </Button>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -314,7 +323,7 @@ const AdminMessagesPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Table */}
+      {/* Table / Grid */}
       {loading ? (
         <div className="text-left py-">Chargement…</div>
       ) : filteredConversations.length === 0 ? (
@@ -324,7 +333,7 @@ const AdminMessagesPage: React.FC = () => {
             {conversations.length === 0 && ' La collection conversations est vide.'}
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="overflow-x-auto rounded-md border border-border">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/50">
@@ -402,6 +411,33 @@ const AdminMessagesPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredConversations.map((c) => (
+            <div key={c.id} className="rounded-xl border border-border bg-card text-card-foreground overflow-hidden p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-foreground line-clamp-2">{c.listingTitle || '—'}</h3>
+                  <p className="text-xs text-muted-foreground">{Object.values(c.participantDetails).map((p: any) => p.name).join(' • ')}</p>
+                </div>
+                <Badge className={c.status === 'active' ? 'bg-green-500 text-white' : c.status === 'archived' ? 'bg-gray-500 text-white' : 'bg-red-500 text-white'}>
+                  {c.status}
+                </Badge>
+              </div>
+              <div className="mt-3 text-sm text-muted-foreground line-clamp-2">
+                {c.lastMessage?.text || '—'}
+              </div>
+              <div className="mt-3 flex justify-end gap-1">
+                <Button size="sm" variant="ghost" onClick={() => handleViewConversation(c)} title="Voir">
+                  <Eye className="w-4 h-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { setSelectedConversation(c); setShowDeleteDialog(true); }} title="Supprimer">
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

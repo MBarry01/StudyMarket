@@ -47,7 +47,7 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { VerificationBadge } from '@/components/ui/VerificationBadge';
 
 // -------------------------- Helpers --------------------------
 // formatMessageTime helper
@@ -216,7 +216,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                           {otherUser?.name || 'Utilisateur'}
                         </h3>
                             {otherUser?.verified && (
-                              <Shield className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                              <VerificationBadge status="verified" size="sm" showText={false} />
                             )}
                           </div>
                           {conversation.lastMessage && (
@@ -480,7 +480,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
                 <h2 className="font-semibold text-sm truncate">{otherUser?.name || 'Utilisateur'}</h2>
-                {otherUser?.verified && (<Shield className="w-3.5 h-3.5 text-blue-500" />)}
+                {otherUser?.verified && (<VerificationBadge status="verified" size="sm" showText={false} />)}
               </div>
               <p className="text-xs text-muted-foreground truncate">{otherUser?.university}</p>
             </div>

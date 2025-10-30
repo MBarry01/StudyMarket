@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   TrendingUp,
   ShoppingCart,
-  Package
+  Package,
+  BadgeCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,19 +158,19 @@ export const Header: React.FC = () => {
                 </Button>
 
                 {/* Cart */}
-                <div className="relative hidden sm:block">
-                  <Button variant="ghost" size="icon" asChild className="h-8 w-8 sm:h-9 sm:w-9">
-                    <Link to="/cart">
+                <div className="hidden sm:block">
+                  <Link to="/cart" className="inline-flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 cursor-pointer select-none outline-none nav-icon">
+                    <span className="relative inline-block align-middle leading-none">
                       <ShoppingCart className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                  {cartItemCount > 0 && (
-                    <Badge 
-                      className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[16px] h-4 flex items-center justify-center px-1 rounded-full border-2 border-background"
-                    >
-                      {cartItemCount > 99 ? '99+' : cartItemCount}
-                    </Badge>
-                  )}
+                      {cartItemCount > 0 && (
+                        <Badge 
+                          className="pointer-events-none absolute -top-1 right-0 transform -translate-y-1/2 translate-x-1/2 z-10 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-background"
+                        >
+                          {cartItemCount > 99 ? '99+' : cartItemCount}
+                        </Badge>
+                      )}
+                    </span>
+                  </Link>
                 </div>
 
                 {/* Notifications */}
@@ -178,25 +179,25 @@ export const Header: React.FC = () => {
                 </div>
 
                 {/* Messages avec badge de notification */}
-                <div className="relative hidden sm:block">
-                  <Button variant="ghost" size="icon" asChild className="h-8 w-8 sm:h-9 sm:w-9">
-                    <Link to="/messages">
+                <div className="hidden sm:block">
+                  <Link to="/messages" className="inline-flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 cursor-pointer select-none outline-none nav-icon">
+                    <span className="relative inline-block align-middle leading-none">
                       <MessageCircle className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                  {totalUnreadMessages > 0 && (
-                    <Badge 
-                      className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[16px] h-4 flex items-center justify-center px-1 rounded-full border-2 border-background"
-                    >
-                      {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
-                    </Badge>
-                  )}
+                      {totalUnreadMessages > 0 && (
+                        <Badge 
+                          className="pointer-events-none absolute -top-1 right-0 transform -translate-y-1/2 translate-x-1/2 z-10 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-background"
+                        >
+                          {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
+                        </Badge>
+                      )}
+                    </span>
+                  </Link>
                 </div>
 
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full p-0 hover:bg-transparent">
+                    <span role="button" tabIndex={0} className="relative inline-flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-full p-0 cursor-pointer select-none outline-none nav-icon">
                       <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                         <AvatarImage src={userProfile?.photoURL} />
                         <AvatarFallback className="text-xs sm:text-sm">
@@ -204,23 +205,17 @@ export const Header: React.FC = () => {
                         </AvatarFallback>
                       </Avatar>
                       {userProfile?.isVerified && (
-                        <Badge className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 p-0 bg-green-500 hover:bg-green-500 border-2 border-background rounded-full flex items-center justify-center">
-                          <Shield className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
-                        </Badge>
+                        <div className="absolute bottom-0 right-0 transform translate-x-1/3 translate-y-1/5 z-10">
+                          <BadgeCheck size={16} fill="#3b82f6" stroke="white" strokeWidth={2} />
+                        </div>
                       )}
-                    </Button>
+                    </span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-64" align="end">
                     <div className="flex items-center justify-start gap-2 p-2">
                       <div className="flex flex-col space-y-1 leading-none">
-                        <div className="flex items-center gap-2">
+                        <div>
                           <p className="font-medium">{userProfile?.displayName}</p>
-                          {userProfile?.isVerified && (
-                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Vérifié
-                            </Badge>
-                          )}
                         </div>
                         <p className="w-[200px] truncate text-sm text-muted-foreground">
                           {userProfile?.university}

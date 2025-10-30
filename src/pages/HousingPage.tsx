@@ -35,6 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
 import { useAuth } from '../contexts/AuthContext';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
 interface HousingFilter {
   priceRange: [number, number];
@@ -46,7 +47,7 @@ interface HousingFilter {
 }
 
 const HousingPage: React.FC = () => {
-  const { listings, fetchListings, loading } = useListingStore();
+  const { listings, loading, searchListings } = useListingStore();
   const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<HousingFilter>({
@@ -88,9 +89,15 @@ const HousingPage: React.FC = () => {
     { value: 'flexible', label: 'Date flexible' }
   ];
 
+  // Charger les annonces logement (catégorie housing) au montage
   useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    searchListings({ category: 'housing', sortBy: 'date' });
+  }, [searchListings]);
+
+  // Appliquer recherche texte instantanée
+  useEffect(() => {
+    searchListings({ category: 'housing', query: searchQuery, sortBy: 'date' });
+  }, [searchQuery, searchListings]);
 
   const handleAmenityToggle = (amenityId: string) => {
     setFilters(prev => ({
@@ -106,6 +113,14 @@ const HousingPage: React.FC = () => {
       ...prev,
       priceRange: [value[0], value[1]]
     }));
+    // Appliquer immédiatement (seul critère supporté côté store: minPrice/maxPrice)
+    searchListings({
+      category: 'housing',
+      query: searchQuery,
+      minPrice: value[0],
+      maxPrice: value[1],
+      sortBy: 'date'
+    });
   };
 
   const clearFilters = () => {
@@ -118,10 +133,18 @@ const HousingPage: React.FC = () => {
       sortBy: 'newest'
     });
     setSearchQuery('');
+    searchListings({ category: 'housing', sortBy: 'date' });
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <Breadcrumb 
+        items={[{ label: 'Accueil', to: '/' }, { label: 'Logement & Colocation' }]} 
+        maxItems={3}
+        showHome={true}
+        showBackButton={true}
+      />
+      <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -134,7 +157,7 @@ const HousingPage: React.FC = () => {
             </p>
           </div>
           {currentUser && (
-            <Button asChild className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
+            <Button asChild className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
               <Link to="/create?category=housing">
                 <Plus className="w-4 h-4 mr-2" />
                 Publier un logement
@@ -156,7 +179,7 @@ const HousingPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
         {/* Filtres */}
         <div className="lg:col-span-1">
           <Card>
@@ -355,7 +378,7 @@ const HousingPage: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : housingListings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {housingListings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
@@ -369,7 +392,7 @@ const HousingPage: React.FC = () => {
                   Essayez de modifier vos critères de recherche ou de publier une annonce.
                 </p>
                 {currentUser && (
-                  <Button asChild>
+                  <Button asChild className="w-full sm:w-auto">
                     <Link to="/create?category=housing">
                       <Plus className="w-4 h-4 mr-2" />
                       Publier un logement
@@ -431,6 +454,7 @@ const HousingPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

@@ -161,20 +161,24 @@ export const NotificationBell: React.FC = () => {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative"
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label="Notifications"
+          className="relative inline-flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 cursor-pointer select-none outline-none focus:outline-none nav-icon"
         >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs bg-red-500 hover:bg-red-600"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
-        </Button>
+          <span className="relative inline-block align-middle leading-none">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <Badge
+                aria-label={`Notifications: ${unreadCount}`}
+                className="pointer-events-none absolute -top-3 -right-2 z-10 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-background badge-pop"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </span>
+        </span>
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" className="w-80">
@@ -242,8 +246,8 @@ export const NotificationBell: React.FC = () => {
             <DropdownMenuItem 
               className="cursor-pointer"
               onClick={() => {
-                // TODO: Navigate to full notifications page
-                window.location.href = '/notifications';
+                // Rediriger vers les paramètres > notifications (page existante)
+                navigate('/settings?tab=notifications');
               }}
             >
               Voir toutes les notifications

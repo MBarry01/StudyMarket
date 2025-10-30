@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
 interface JobListing {
   id: string;
@@ -218,8 +219,14 @@ export const JobSearchPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <Breadcrumb 
+        items={[{ label: 'Accueil', to: '/' }, { label: 'Jobs & Stages' }]} 
+        maxItems={3}
+        showHome={true}
+        showBackButton={true}
+      />
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -239,13 +246,13 @@ export const JobSearchPage: React.FC = () => {
               placeholder="Rechercher par poste, entreprise, compétences..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 py-3 text-lg"
+              className="pl-10 py-3 text-base sm:text-lg"
             />
           </div>
         </div>
 
         {/* Filtres */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="mb-6 sm:mb-8 grid grid-cols-1 md:grid-cols-5 gap-3 sm:gap-4">
           <Select onValueChange={(value) => handleFilterChange('type', value)}>
             <SelectTrigger>
               <SelectValue placeholder="Type d'emploi" />
@@ -318,11 +325,11 @@ export const JobSearchPage: React.FC = () => {
           <div className="space-y-4">
             {jobs.map((job) => (
               <Card key={job.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-4 mb-4">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold">{job.title}</h3>
+                        <h3 className="text-lg sm:text-xl font-semibold leading-snug break-words">{job.title}</h3>
                         <Badge className={getTypeBadgeColor(job.type)}>
                           {getTypeIcon(job.type)}
                           <span className="ml-1 capitalize">{job.type.replace('-', ' ')}</span>
@@ -333,22 +340,19 @@ export const JobSearchPage: React.FC = () => {
                         {job.company}
                       </p>
                       
-                      <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-2">
+                      <p className="text-gray-700 dark:text-gray-300 mb-2 sm:mb-4 line-clamp-2">
                         {job.description}
                       </p>
                     </div>
-                    
-                    <div className="text-right ml-4">
-                      <div className="text-2xl font-bold text-primary mb-1">
+                    <div className="md:text-right md:ml-4">
+                      <div className="text-primary font-bold text-xl sm:text-2xl leading-tight break-words">
                         {formatSalary(job.salary)}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {job.schedule.hours}
-                      </div>
+                      <div className="text-xs sm:text-sm text-gray-500">{job.schedule.hours}</div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-wrap gap-3 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center">
                       <MapPin className="w-4 h-4 mr-1" />
                       {job.location.city}
@@ -370,7 +374,7 @@ export const JobSearchPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
                     {job.requirements.skills.slice(0, 4).map((skill, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {skill}
@@ -383,8 +387,8 @@ export const JobSearchPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="text-xs sm:text-sm text-gray-500">
                       {job.deadline && (
                         <span>
                           Candidature avant le {job.deadline.toLocaleDateString('fr-FR')}
@@ -392,7 +396,7 @@ export const JobSearchPage: React.FC = () => {
                       )}
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 self-end sm:self-auto">
                       <Button variant="outline" size="sm">
                         Sauvegarder
                       </Button>

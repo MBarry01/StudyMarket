@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Unlock, Eye, RefreshCw, Download, UserCog } from 'lucide-react';
+import { Shield, Lock, Unlock, Eye, RefreshCw, Download, UserCog, LayoutList, LayoutGrid } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,7 @@ const AdminUsersPage: React.FC = () => {
   const [blockReason, setBlockReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     fetchUsers();
@@ -54,7 +55,39 @@ const AdminUsersPage: React.FC = () => {
     try {
       const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(100));
       const snap = await getDocs(q);
-      setUsers(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+      const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+
+      // Déduplication par email (source de vérité proche de Firebase Auth)
+      // Règles: garder l'utilisateur vérifié en priorité, sinon le plus récent
+      const emailToUser = new Map<string, AdminUserRow>();
+      for (const u of rows) {
+        const emailKey = (u.email || '').toLowerCase();
+        if (!emailKey) {
+          // Pas d'email: conserver tel quel (clé unique par id)
+          emailToUser.set(`${u.id}#noemail`, u);
+          continue;
+        }
+        const existing = emailToUser.get(emailKey);
+        if (!existing) {
+          emailToUser.set(emailKey, u);
+          continue;
+        }
+        const existingVerified = Boolean(existing.isVerified);
+        const currentVerified = Boolean(u.isVerified);
+        const existingCreated = (existing as any).createdAt?.toMillis?.() || (existing as any).createdAt?.seconds || 0;
+        const currentCreated = (u as any).createdAt?.toMillis?.() || (u as any).createdAt?.seconds || 0;
+
+        // Choisir le meilleur candidat
+        let winner: AdminUserRow = existing;
+        if (currentVerified && !existingVerified) {
+          winner = u;
+        } else if (currentVerified === existingVerified && currentCreated > existingCreated) {
+          winner = u;
+        }
+        emailToUser.set(emailKey, winner);
+      }
+
+      setUsers(Array.from(emailToUser.values()));
     } finally {
       setLoading(false);
     }
@@ -177,10 +210,18 @@ const AdminUsersPage: React.FC = () => {
             {filteredUsers.length} utilisateur(s) sur {users.length}
           </p>
         </div>
+        <div className="flex items-center gap-2">
         <Button onClick={exportCSV} variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
+          <Button variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')} title="Vue liste">
+            <LayoutList className="w-4 h-4" />
+          </Button>
+          <Button variant={viewMode === 'grid' ? 'default' : 'outline'} onClick={() => setViewMode('grid')} title="Vue cartes">
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -208,7 +249,7 @@ const AdminUsersPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {loading ? (
         <div className="text-left py-">Chargement…</div>
       ) : filteredUsers.length === 0 ? (
@@ -218,7 +259,7 @@ const AdminUsersPage: React.FC = () => {
             {users.length === 0 && ' La collection users est vide.'}
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="overflow-x-auto rounded-md border border-border">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/50">
@@ -305,6 +346,46 @@ const AdminUsersPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredUsers.map((u) => (
+            <div key={u.id} className="rounded-xl border border-border bg-card text-card-foreground overflow-hidden">
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-foreground">{u.displayName || '—'}</h3>
+                  <p className="text-xs text-muted-foreground">{u.email || '—'}</p>
+                </div>
+                {getStatusBadge(u)}
+              </div>
+              <div className="px-4 pb-4 text-sm text-muted-foreground">
+                <div>Université: <span className="text-foreground">{u.university || '—'}</span></div>
+                <div>CO₂: <span className="text-foreground">{u.co2Saved || 0} kg</span></div>
+              </div>
+              <div className="px-4 pb-4 flex justify-end gap-1">
+                <Button size="sm" variant="ghost" onClick={() => { setSelectedUser(u); setShowDetailDialog(true); }}>
+                  <Eye className="w-4 h-4" />
+                </Button>
+                {!u.isVerified && (
+                  <Button size="sm" variant="ghost" onClick={() => handleVerifyUser(u)} title="Vérifier">
+                    <Shield className="w-4 h-4 text-green-600" />
+                  </Button>
+                )}
+                {u.blocked ? (
+                  <Button size="sm" variant="ghost" onClick={() => { setSelectedUser(u); handleBlockUser(false); }} title="Débloquer">
+                    <Unlock className="w-4 h-4 text-green-600" />
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" onClick={() => { setSelectedUser(u); setShowBlockDialog(true); }} title="Bloquer">
+                    <Lock className="w-4 h-4 text-red-600" />
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" title="Changer rôle" onClick={() => { const newRole = prompt('Nouveau rôle (user/admin/moderator):', u.role || 'user'); if (newRole) handleChangeRole(u, newRole); }}>
+                  <UserCog className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

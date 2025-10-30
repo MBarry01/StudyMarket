@@ -59,6 +59,26 @@ export class UserService {
       createdAt: serverTimestamp(),
       lastSeen: serverTimestamp(),
     });
+
+    // Deduplication côté Firestore: un email ne doit exister qu'une seule fois
+    if (newUser.email) {
+      await this.deduplicateUsersByEmail(uid, newUser.email);
+    }
+  }
+
+  // Trouver tous les profils avec le même email et supprimer les doublons (sauf uid courant)
+  static async deduplicateUsersByEmail(uid: string, email: string): Promise<void> {
+    const usersRef = collection(db, COLLECTIONS.USERS);
+    const qUsers = query(usersRef, where('email', '==', email));
+    const snapshot = await getDocs(qUsers);
+    if (snapshot.empty) return;
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(docSnap => {
+      if (docSnap.id !== uid) {
+        batch.delete(docSnap.ref);
+      }
+    });
+    await batch.commit();
   }
   
   static async getUser(uid: string): Promise<User | null> {

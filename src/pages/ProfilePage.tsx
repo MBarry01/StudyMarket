@@ -19,7 +19,8 @@ import {
   User,
   ThumbsUp,
   ThumbsDown,
-  CheckCircle2
+  CheckCircle2,
+  BadgeCheck
 } from 'lucide-react';
 import { 
   collection, 
@@ -39,7 +40,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
 import { Label } from '../components/ui/label';
-import { VerificationBadge } from '../components/ui/VerificationBadge';
 import { toast } from 'react-hot-toast';
 import { Textarea } from '../components/ui/textarea';
 import { Input } from '../components/ui/input';
@@ -401,11 +401,21 @@ export const ProfilePage: React.FC = () => {
         });
 
         const listings = await Promise.all(listingPromises);
-        setFavoriteListings(listings.filter(listing => listing !== null) as Listing[]);
+        // Dédupliquer les listings par ID pour éviter les clés dupliquées
+        const uniqueListings = listings
+          .filter(listing => listing !== null) as Listing[];
+        const deduplicatedListings = Array.from(
+          new Map(uniqueListings.map(listing => [listing.id, listing])).values()
+        );
+        setFavoriteListings(deduplicatedListings);
+      } else {
+        // Aucun favori, initialiser à un tableau vide
+        setFavoriteListings([]);
       }
       
     } catch (error: unknown) {
       console.error('Erreur lors du chargement des favoris:', error);
+      setFavoriteListings([]);
     } finally {
       setLoading(prev => ({ ...prev, favorites: false }));
     }
@@ -690,8 +700,8 @@ export const ProfilePage: React.FC = () => {
                 displayName={displayName}
               />
               {isVerified && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-background">
-                  <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                <div className="absolute bottom-0 right-0 transform translate-x-1/1 -translate-y-1/4 z-10">
+                  <BadgeCheck size={18} fill="#3b82f6" stroke="white" strokeWidth={2} />
                 </div>
               )}
             </div>
@@ -700,12 +710,6 @@ export const ProfilePage: React.FC = () => {
                 <CardTitle className="text-xl sm:text-2xl lg:text-3xl text-center sm:text-left w-full sm:w-auto">
                   {displayName}
                 </CardTitle>
-                {isVerified && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200 mt-2 sm:mt-0 text-xs sm:text-sm">
-                    <Shield className="w-3 h-3 mr-1" />
-                    Vérifié
-                  </Badge>
-                )}
               </div>
               <CardDescription className="text-sm sm:text-base text-center sm:text-left break-all">{email}</CardDescription>
               <div className="flex flex-col gap-1 mt-2 text-muted-foreground text-center sm:text-left text-xs sm:text-sm">
@@ -824,40 +828,40 @@ export const ProfilePage: React.FC = () => {
       {/* Contenu des onglets */}
       <Tabs defaultValue="listings" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4 p-0 gap-0 items-center h-15">
-          <TabsTrigger value="listings" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
-            <Package className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Mes Annonces</span>
-            <span className="sm:hidden">Annonces</span>
+          <TabsTrigger value="listings" className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10 px-1 sm:px-2">
+            <Package className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">Mes Annonces</span>
+            <span className="sm:hidden whitespace-nowrap">Annonces</span>
             {!loading.listings && stats.totalListings > 0 && (
-              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
-                {stats.totalListings}
-              </Badge>
+              <span className="pointer-events-none h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[9px] sm:text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-background badge-pop ml-0.5 sm:ml-1 flex-shrink-0">
+                {stats.totalListings > 9 ? '9+' : stats.totalListings}
+              </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
-            <Star className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Avis Reçus</span>
-            <span className="sm:hidden">Avis</span>
+          <TabsTrigger value="reviews" className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm rounded-none h-10 px-1 sm:px-2">
+            <Star className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">Avis Reçus</span>
+            <span className="sm:hidden whitespace-nowrap">Avis</span>
             {!loading.reviews && stats.totalReviews > 0 && (
-              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
-                {stats.totalReviews}
-              </Badge>
+              <span className="pointer-events-none h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[9px] sm:text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-background badge-pop ml-0.5 sm:ml-1 flex-shrink-0">
+                {stats.totalReviews > 9 ? '9+' : stats.totalReviews}
+              </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">
-            <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Favoris</span>
-            <span className="sm:hidden">Favoris</span>
+          <TabsTrigger value="favorites" className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm rounded-none h-10 px-1 sm:px-2">
+            <Heart className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">Favoris</span>
+            <span className="sm:hidden whitespace-nowrap">Favoris</span>
             {!loading.favorites && stats.totalFavorites > 0 && (
-              <Badge className="ml-1 h-5 min-w-[18px] px-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] leading-none flex items-center justify-center">
-                {stats.totalFavorites}
-              </Badge>
+              <span className="pointer-events-none h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[9px] sm:text-[10px] font-semibold bg-red-600 text-white rounded-full shadow-sm ring-2 ring-background badge-pop ml-0.5 sm:ml-1 flex-shrink-0">
+                {stats.totalFavorites > 9 ? '9+' : stats.totalFavorites}
+              </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">
-            <User className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Paramètres</span>
-            <span className="sm:hidden">Paramètres</span>
+          <TabsTrigger value="settings" className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10 px-1 sm:px-2">
+            <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">Paramètres</span>
+            <span className="sm:hidden whitespace-nowrap">Paramètres</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1138,7 +1142,16 @@ export const ProfilePage: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <VerificationBadge status={(userProfile?.verificationStatus === 'unverified' ? 'pending' : userProfile?.verificationStatus) || 'pending'} size="md" showText />
+                  {userProfile?.isVerified ? (
+                    <div className="flex items-center gap-2">
+                      <BadgeCheck size={20} fill="#3b82f6" stroke="white" strokeWidth={2} />
+                      <span className="text-sm font-medium text-foreground">Vérifié</span>
+                    </div>
+                  ) : (
+                    <Badge className="bg-yellow-500 text-white">
+                      {userProfile?.verificationStatus === 'rejected' ? 'Rejeté' : 'En attente'}
+                    </Badge>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     {userProfile?.verificationStatus === 'verified'
                       ? 'Votre compte est vérifié' 

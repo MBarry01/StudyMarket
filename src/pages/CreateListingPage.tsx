@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { listingSchema } from '../lib/validations';
+// import { listingSchema } from '../lib/validations';
 import { 
   Upload, 
   X, 
@@ -14,17 +14,18 @@ import {
   Camera, 
   AlertCircle,
   Sparkles,
-  Leaf,
+  // Leaf,
   Shield,
   Clock,
-  Tag,
+  // Tag,
   Plus,
   Minus,
   CreditCard,
   Smartphone,
   Banknote,
-  Phone,
-  Calendar
+  // Phone,
+  Calendar,
+  Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { MapLocationPicker } from '@/components/ui/MapLocationPicker';
@@ -53,6 +53,13 @@ const baseSchema = z.object({
   availableDate: z.string().optional(),
   availableTimeStart: z.string().optional(),
   availableTimeEnd: z.string().optional(),
+});
+
+// Schéma minimal pour logement: uniquement titre + description
+const housingSchema = z.object({
+  title: z.string().min(5, 'Le titre doit contenir au moins 5 caractères').max(80, 'Le titre ne peut pas dépasser 80 caractères'),
+  description: z.string().min(20, 'La description doit contenir au moins 20 caractères').max(1000, 'La description ne peut pas dépasser 1000 caractères'),
+  meetingLocation: z.string().optional(),
 });
 
 const sellSchema = baseSchema.extend({
@@ -107,18 +114,7 @@ const paymentMethods = [
   { value: 'paypal', label: 'PayPal', icon: CreditCard },
 ];
 
-const campuses = [
-  'Campus Pierre et Marie Curie (Sorbonne)',
-  'Campus Dauphine',
-  'Campus de Palaiseau (Polytechnique)',
-  'Campus ENS Ulm',
-  'Campus CentraleSupélec',
-  'Campus MINES ParisTech',
-  'Campus HEC Jouy-en-Josas',
-  'Campus ESSEC Cergy',
-  'Campus Sciences Po',
-  'Autre campus'
-];
+// const campuses = [...] // Non utilisé actuellement
 
 export const CreateListingPage: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
@@ -127,8 +123,24 @@ export const CreateListingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   
   const [transactionType, setTransactionType] = useState<TransactionType>(() => {
-    const typeParam = searchParams.get('type');
-    return (typeParam as TransactionType) || 'sell';
+    const typeParam = searchParams.get('type') as TransactionType | null;
+    const catParam = searchParams.get('category');
+    if (!typeParam && catParam === 'housing') return 'service';
+    return typeParam || 'sell';
+  });
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    const catParam = searchParams.get('category');
+    return catParam || 'electronics';
+  });
+  // Champs spécifiques logement
+  const [housing, setHousing] = useState({
+    roomType: '',
+    surface: '',
+    furnished: false,
+    chargesIncluded: false,
+    monthlyRent: '',
+    startDate: '',
+    endDate: '',
   });
   
   const [images, setImages] = useState<string[]>([]);
@@ -143,9 +155,13 @@ export const CreateListingPage: React.FC = () => {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const submitLockRef = useRef(false);
 
   // Schéma dynamique selon le type de transaction
   const getSchema = () => {
+    if (selectedCategory === 'housing') {
+      return housingSchema;
+    }
     switch (transactionType) {
       case 'sell': return sellSchema;
       case 'gift': return giftSchema;
@@ -178,6 +194,18 @@ export const CreateListingPage: React.FC = () => {
     },
     mode: 'onChange'
   });
+
+  // Mettre à jour la catégorie si l'URL change (navigation interne)
+  useEffect(() => {
+    const catParam = searchParams.get('category');
+    if (catParam && catParam !== selectedCategory) {
+      setSelectedCategory(catParam);
+    }
+    // Si la catégorie est logement, aligner par défaut sur un type cohérent (service)
+    if (catParam === 'housing' && transactionType !== 'service') {
+      setTransactionType('service');
+    }
+  }, [searchParams, selectedCategory]);
 
   // Réinitialiser le formulaire quand le type change
   useEffect(() => {
@@ -278,7 +306,7 @@ export const CreateListingPage: React.FC = () => {
     if (currentDesiredItem.trim()) {
       const newItems = [...desiredItems.filter(item => item.trim()), currentDesiredItem.trim()];
       setDesiredItems(newItems);
-      form.setValue('desiredItems', newItems);
+      form.setValue('desiredItems', newItems as any);
       setCurrentDesiredItem('');
     }
   };
@@ -286,7 +314,7 @@ export const CreateListingPage: React.FC = () => {
   const removeDesiredItem = (index: number) => {
     const newItems = desiredItems.filter((_, i) => i !== index);
     setDesiredItems(newItems);
-    form.setValue('desiredItems', newItems);
+    form.setValue('desiredItems', newItems as any);
   };
 
   const handlePaymentMethodChange = (method: string, checked: boolean) => {
@@ -295,11 +323,25 @@ export const CreateListingPage: React.FC = () => {
       : selectedPaymentMethods.filter(m => m !== method);
     
     setSelectedPaymentMethods(newMethods);
-    form.setValue('paymentMethods', newMethods);
+    form.setValue('paymentMethods', newMethods as any);
   };
 
   const onSubmit = async (data: any) => {
-    if (!currentUser || !userProfile) return;
+    if (submitLockRef.current) {
+      console.warn('[CreateListing] submission locked to prevent duplicates');
+      return;
+    }
+    submitLockRef.current = true;
+    console.log('[CreateListing] onSubmit called', {
+      category: selectedCategory,
+      transactionType,
+      hasImages: images?.length || 0,
+      hasMeeting: Boolean(meetingLocation),
+    });
+    if (!currentUser || !userProfile) {
+      alert('Veuillez vous connecter pour publier une annonce.');
+      return;
+    }
 
     setIsSubmitting(true);
     
@@ -308,7 +350,7 @@ export const CreateListingPage: React.FC = () => {
         title: data.title,
         description: data.description,
         currency: 'EUR',
-        category: 'electronics' as any, // Sera déterminé par l'IA plus tard
+        category: (selectedCategory as any) || ('electronics' as any),
         images: images,
         tags: [], // Tags supprimés - remplacés par recherche sémantique
         phone: data.phone || null,
@@ -319,8 +361,8 @@ export const CreateListingPage: React.FC = () => {
           city: meetingLocation?.address.split(',')[0] || 'Paris',
           state: 'Île-de-France',
           country: 'France',
-          campus: userProfile.campus || null,
-          university: userProfile.university || null,
+          campus: userProfile.campus || undefined,
+          university: userProfile.university || undefined,
           coordinates: meetingLocation ? {
             lat: meetingLocation.latitude,
             lng: meetingLocation.longitude
@@ -332,17 +374,35 @@ export const CreateListingPage: React.FC = () => {
         sellerAvatar: userProfile.photoURL,
         sellerUniversity: userProfile.university,
         sellerVerified: userProfile.isVerified,
-        status: 'active' as const,
+        status: 'pending' as const,
         views: 0,
         likes: 0,
         saves: 0,
         reportCount: 0,
-        moderationStatus: 'approved' as const,
+        moderationStatus: 'pending' as const,
       };
 
       let listingData: Omit<Listing, 'id' | 'createdAt' | 'updatedAt'>;
 
-      switch (transactionType) {
+      // Pour la catégorie logement, créer une fiche dédiée (location)
+      if (selectedCategory === 'housing') {
+        listingData = {
+          ...baseListingData,
+          category: 'housing' as any,
+          price: parseFloat(housing.monthlyRent || '0') || 0,
+          condition: 'good' as any,
+          transactionType: 'service',
+          availableDate: housing.startDate || data.availableDate || null,
+          expiresAt: housing.endDate ? new Date(housing.endDate) as any : undefined,
+          description: `${data.description}
+\nType de logement: ${housing.roomType || '—'}
+Surface: ${housing.surface ? `${housing.surface}m²` : '—'}
+Meublé: ${housing.furnished ? 'Oui' : 'Non'}
+Charges comprises: ${housing.chargesIncluded ? 'Oui' : 'Non'}
+Loyer mensuel: ${housing.monthlyRent ? `${housing.monthlyRent}€` : '—'}
+Période: ${housing.startDate || '—'} → ${housing.endDate || '—'}`,
+        };
+      } else switch (transactionType) {
         case 'sell':
           listingData = {
             ...baseListingData,
@@ -397,6 +457,7 @@ export const CreateListingPage: React.FC = () => {
       console.error('Error creating listing:', error);
     } finally {
       setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -404,6 +465,14 @@ export const CreateListingPage: React.FC = () => {
     const errors = form.formState.errors;
     const hasRequiredFields = form.watch('title') && form.watch('description') && meetingLocation;
     
+    if (selectedCategory === 'housing') {
+      // Logement: exiger Titre + Description + au moins 1 image
+      const titleOk = !!form.watch('title');
+      const descOk = !!form.watch('description');
+      const hasImage = images && images.length > 0;
+      return titleOk && descOk && hasImage;
+    }
+
     switch (transactionType) {
       case 'sell':
         return hasRequiredFields && form.watch('price') && selectedPaymentMethods.length > 0 && !errors.title && !errors.description && !errors.price;
@@ -463,12 +532,12 @@ export const CreateListingPage: React.FC = () => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Transaction Type Selection */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-foreground">
               <Sparkles className="w-5 h-5" />
               Type d'annonce
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-center">
               Le formulaire s'adapte automatiquement selon votre choix
             </CardDescription>
           </CardHeader>
@@ -480,8 +549,8 @@ export const CreateListingPage: React.FC = () => {
               >
                 <CardContent className="p-4 text-center">
                   <Euro className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <h3 className="font-semibold text-foreground">Vendre</h3>
-                  <p className="text-xs text-muted-foreground">Vendre un objet</p>
+                  <h3 className="font-semibold text-foreground text-center">Vendre</h3>
+                  <p className="text-xs text-muted-foreground text-center">Vendre un objet</p>
                 </CardContent>
               </Card>
 
@@ -491,8 +560,8 @@ export const CreateListingPage: React.FC = () => {
               >
                 <CardContent className="p-4 text-center">
                   <Gift className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                  <h3 className="font-semibold text-foreground">Donner</h3>
-                  <p className="text-xs text-muted-foreground">Don gratuit</p>
+                  <h3 className="font-semibold text-foreground text-center">Donner</h3>
+                  <p className="text-xs text-muted-foreground text-center">Don gratuit</p>
                 </CardContent>
               </Card>
 
@@ -502,8 +571,8 @@ export const CreateListingPage: React.FC = () => {
               >
                 <CardContent className="p-4 text-center">
                   <RefreshCw className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                  <h3 className="font-semibold text-foreground">Troc</h3>
-                  <p className="text-xs text-muted-foreground">Échanger des objets</p>
+                  <h3 className="font-semibold text-foreground text-center">Troc</h3>
+                  <p className="text-xs text-muted-foreground text-center">Échanger des objets</p>
                 </CardContent>
               </Card>
 
@@ -513,8 +582,8 @@ export const CreateListingPage: React.FC = () => {
               >
                 <CardContent className="p-4 text-center">
                   <Clock className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <h3 className="font-semibold text-foreground">Service</h3>
-                  <p className="text-xs text-muted-foreground">Proposer un service</p>
+                  <h3 className="font-semibold text-foreground text-center">Service</h3>
+                  <p className="text-xs text-muted-foreground text-center">Proposer un service</p>
                 </CardContent>
               </Card>
             </div>
@@ -535,10 +604,12 @@ export const CreateListingPage: React.FC = () => {
                   <Input
                     id="title"
                     placeholder={
-                      transactionType === 'sell' ? "Ex: MacBook Pro 13' M1 - Parfait état" :
-                      transactionType === 'gift' ? "Ex: Vélo de ville - Don gratuit" :
-                      transactionType === 'swap' ? "Ex: Livre de maths contre livre de physique" :
-                      "Ex: Cours particuliers de mathématiques"
+                      selectedCategory === 'housing'
+                        ? 'Ex: Studio 20m² meublé – Proche Sorbonne'
+                        : transactionType === 'sell' ? "Ex: MacBook Pro 13' M1 - Parfait état" :
+                          transactionType === 'gift' ? 'Ex: Vélo de ville - Don gratuit' :
+                          transactionType === 'swap' ? 'Ex: Livre de maths contre livre de physique' :
+                          'Ex: Cours particuliers de mathématiques'
                     }
                     {...form.register('title')}
                     className="mt-1"
@@ -555,10 +626,12 @@ export const CreateListingPage: React.FC = () => {
                   <Textarea
                     id="description"
                     placeholder={
-                      transactionType === 'sell' ? "Décrivez l'état, l'utilisation, la raison de la vente..." :
-                      transactionType === 'gift' ? "Décrivez l'objet et pourquoi vous le donnez..." :
-                      transactionType === 'swap' ? "Décrivez ce que vous proposez et ce que vous recherchez..." :
-                      "Décrivez vos compétences, votre expérience, votre méthode..."
+                      selectedCategory === 'housing'
+                        ? 'Décrivez le logement: surface, pièces, équipements, charges, transport, disponibilité...'
+                        : transactionType === 'sell' ? "Décrivez l'état, l'utilisation, la raison de la vente..." :
+                          transactionType === 'gift' ? "Décrivez l'objet et pourquoi vous le donnez..." :
+                          transactionType === 'swap' ? 'Décrivez ce que vous proposez et ce que vous recherchez...' :
+                          'Décrivez vos compétences, votre expérience, votre méthode...'
                     }
                     rows={6}
                     {...form.register('description')}
@@ -574,6 +647,97 @@ export const CreateListingPage: React.FC = () => {
             </Card>
 
             {/* Champs spécifiques selon le type */}
+            {selectedCategory === 'housing' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Home className="w-5 h-5 text-blue-600" />
+                    Informations logement
+                  </CardTitle>
+                  <CardDescription>
+                    Ces champs sont spécifiques aux annonces de location (logement & colocation)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-foreground">Type de logement *</Label>
+                      <Select value={housing.roomType} onValueChange={(v) => setHousing(prev => ({ ...prev, roomType: v }))}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Sélectionnez" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="studio">Studio</SelectItem>
+                          <SelectItem value="chambre">Chambre</SelectItem>
+                          <SelectItem value="colocation">Colocation</SelectItem>
+                          <SelectItem value="appartement">Appartement</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-foreground">Surface (m²) *</Label>
+                      <Input
+                        type="number"
+                        min={5}
+                        placeholder="25"
+                        value={housing.surface}
+                        onChange={(e) => setHousing(prev => ({ ...prev, surface: e.target.value }))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-foreground">Loyer mensuel (€) *</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="650"
+                        value={housing.monthlyRent}
+                        onChange={(e) => setHousing(prev => ({ ...prev, monthlyRent: e.target.value }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="furnished" checked={housing.furnished} onCheckedChange={(c) => setHousing(prev => ({ ...prev, furnished: Boolean(c) }))} />
+                      <Label htmlFor="furnished" className="text-foreground">Meublé</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="charges" checked={housing.chargesIncluded} onCheckedChange={(c) => setHousing(prev => ({ ...prev, chargesIncluded: Boolean(c) }))} />
+                      <Label htmlFor="charges" className="text-foreground">Charges comprises</Label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-foreground font-semibold block mb-2">Période de colocation</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="colocStart" className="text-sm text-muted-foreground">De</Label>
+                        <Input
+                          id="colocStart"
+                          type="date"
+                          value={housing.startDate}
+                          onChange={(e) => setHousing(prev => ({ ...prev, startDate: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="colocEnd" className="text-sm text-muted-foreground">À</Label>
+                        <Input
+                          id="colocEnd"
+                          type="date"
+                          value={housing.endDate}
+                          onChange={(e) => setHousing(prev => ({ ...prev, endDate: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {transactionType === 'sell' && (
               <Card>
                 <CardHeader>
@@ -758,7 +922,7 @@ export const CreateListingPage: React.FC = () => {
               </Card>
             )}
 
-            {transactionType === 'service' && (
+            {transactionType === 'service' && selectedCategory !== 'housing' && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground">
@@ -899,19 +1063,19 @@ export const CreateListingPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Tags et localisation */}
+            {/* Coordonnées - variante logement vs générique */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <MapPin className="w-5 h-5" />
-                  Coordonnées et disponibilité
+                  {selectedCategory === 'housing' ? 'Coordonnées du logement' : 'Coordonnées et disponibilité'}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Numéro de téléphone (optionnel) */}
                 <div>
                   <Label htmlFor="phone" className="text-foreground font-semibold">
-                    Numéro de téléphone (optionnel)
+                    {selectedCategory === 'housing' ? 'Téléphone du propriétaire (optionnel)' : 'Numéro de téléphone (optionnel)'}
                   </Label>
                   <Input
                     id="phone"
@@ -921,75 +1085,79 @@ export const CreateListingPage: React.FC = () => {
                     className="mt-1"
                   />
                   <p className="text-sm text-muted-foreground mt-1">
-                    Pour faciliter le contact avec les acheteurs
+                    {selectedCategory === 'housing' ? 'Pour faciliter le contact avec les locataires' : 'Pour faciliter le contact avec les acheteurs'}
                   </p>
                 </div>
 
-                {/* Date de disponibilité (optionnel) */}
-                <div>
-                  <Label htmlFor="availableDate" className="text-foreground font-semibold">
-                    Date de disponibilité (optionnel)
-                  </Label>
-                  <div className="relative mt-1">
-                    {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="availableDate"
-                      type="date"
-                      {...form.register('availableDate')}
-                      className="pl-10 appearance-none cursor-pointer"
-                      onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    À partir de quelle date l'article est disponible
-                  </p>
-                </div>
+                {selectedCategory !== 'housing' && (
+                  <>
+                    {/* Date de disponibilité (optionnel) */}
+                    <div>
+                      <Label htmlFor="availableDate" className="text-foreground font-semibold">
+                        Date de disponibilité (optionnel)
+                      </Label>
+                      <div className="relative mt-1">
+                        {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="availableDate"
+                          type="date"
+                          {...form.register('availableDate')}
+                          className="pl-10 appearance-none cursor-pointer"
+                          onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        À partir de quelle date l'article est disponible
+                      </p>
+                    </div>
 
-                {/* Plage horaire (optionnel) */}
-                <div>
-                  <Label className="text-foreground font-semibold block mb-2">
-                    Plage horaire de disponibilité (optionnel)
-                  </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Plage horaire (optionnel) */}
                     <div>
-                      <Label htmlFor="availableTimeStart" className="text-sm text-muted-foreground">
-                        De
+                      <Label className="text-foreground font-semibold block mb-2">
+                        Plage horaire de disponibilité (optionnel)
                       </Label>
-                      <div className="relative mt-1">
-                        {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          id="availableTimeStart"
-                          type="time"
-                          {...form.register('availableTimeStart')}
-                          className="pl-10 appearance-none cursor-pointer"
-                          onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="availableTimeStart" className="text-sm text-muted-foreground">
+                            De
+                          </Label>
+                          <div className="relative mt-1">
+                            {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                              id="availableTimeStart"
+                              type="time"
+                              {...form.register('availableTimeStart')}
+                              className="pl-10 appearance-none cursor-pointer"
+                              onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="availableTimeEnd" className="text-sm text-muted-foreground">
+                            À
+                          </Label>
+                          <div className="relative mt-1">
+                            {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                              id="availableTimeEnd"
+                              type="time"
+                              {...form.register('availableTimeEnd')}
+                              className="pl-10 appearance-none cursor-pointer"
+                              onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                            />
+                          </div>
+                        </div>
                       </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Vos horaires de disponibilité pour la remise en main propre
+                      </p>
                     </div>
-                    <div>
-                      <Label htmlFor="availableTimeEnd" className="text-sm text-muted-foreground">
-                        À
-                      </Label>
-                      <div className="relative mt-1">
-                        {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          id="availableTimeEnd"
-                          type="time"
-                          {...form.register('availableTimeEnd')}
-                          className="pl-10 appearance-none cursor-pointer"
-                          onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Vos horaires de disponibilité pour la remise en main propre
-                  </p>
-                </div>
+                  </>
+                )}
 
                 <MapLocationPicker
                   onLocationSelect={(location) => {
@@ -997,7 +1165,7 @@ export const CreateListingPage: React.FC = () => {
                     form.setValue('meetingLocation', location.address);
                   }}
                   initialLocation={meetingLocation || undefined}
-                  placeholder="Cliquez sur la carte ou recherchez une adresse"
+                  placeholder={selectedCategory === 'housing' ? 'Cliquez sur la carte pour localiser le logement' : 'Cliquez sur la carte ou recherchez une adresse'}
                 />
               </CardContent>
             </Card>
@@ -1027,6 +1195,13 @@ export const CreateListingPage: React.FC = () => {
                     <div className={`w-2 h-2 rounded-full ${meetingLocation ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <span>Point de rencontre</span>
                   </div>
+
+                  {selectedCategory === 'housing' && (
+                    <div className={`flex items-center gap-2 ${images && images.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      <div className={`w-2 h-2 rounded-full ${images && images.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Photo du logement (au moins 1)</span>
+                    </div>
+                  )}
                   
                   {transactionType === 'sell' && (
                     <>
@@ -1061,7 +1236,7 @@ export const CreateListingPage: React.FC = () => {
                     </>
                   )}
                   
-                  {transactionType === 'service' && (
+                  {transactionType === 'service' && selectedCategory !== 'housing' && (
                     <>
                       <div className={`flex items-center gap-2 ${form.watch('hourlyRate') ? 'text-green-600' : 'text-muted-foreground'}`}>
                         <div className={`w-2 h-2 rounded-full ${form.watch('hourlyRate') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
@@ -1113,7 +1288,15 @@ export const CreateListingPage: React.FC = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white"
-                  disabled={isSubmitting || !isFormValid() || isUploadingImages}
+                  disabled={isSubmitting || isUploadingImages || !isFormValid()}
+                  onClick={() => {
+                    console.log('[CreateListing] Publish button clicked', {
+                      isSubmitting,
+                      isUploadingImages,
+                      isFormValid: isFormValid(),
+                      category: selectedCategory,
+                    });
+                  }}
                 >
                   {isSubmitting ? (
                     <>
@@ -1135,8 +1318,8 @@ export const CreateListingPage: React.FC = () => {
                 
                 <p className="text-xs text-muted-foreground mt-2">
                   {isFormValid() 
-                    ? "Votre annonce sera visible immédiatement" 
-                    : "Complétez tous les champs obligatoires"
+                    ? "Votre annonce sera soumise à validation et publiée après approbation."
+                    : "Complétez les champs requis pour continuer."
                   }
                 </p>
               </CardContent>

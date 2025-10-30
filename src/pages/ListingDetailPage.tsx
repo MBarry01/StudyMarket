@@ -15,12 +15,14 @@ import {
   Gift,
   RefreshCw,
   Euro,
+  Home,
   User,
   TrendingUp,
   AlertTriangle,
   CheckCircle,
   Info,
   Camera,
+  BadgeCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +31,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader } from '@/components/ui/dialog';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { ShareButton } from '@/components/ui/ShareButton';
-import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { useListingStore } from '../stores/useListingStore';
 import { useFavoritesStore } from '../stores/useFavoritesStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -138,6 +139,7 @@ export const ListingDetailPage: React.FC = () => {
   };
 
   const getTransactionIcon = () => {
+    if (listing.category === 'housing') return <Home className="w-4 h-4" />;
     switch (listing.transactionType) {
       case 'donation': return <Gift className="w-4 h-4" />;
       case 'exchange': return <RefreshCw className="w-4 h-4" />;
@@ -147,6 +149,7 @@ export const ListingDetailPage: React.FC = () => {
   };
 
   const getTransactionLabel = () => {
+    if (listing.category === 'housing') return 'Logement';
     switch (listing.transactionType) {
       case 'donation': return 'Don gratuit';
       case 'exchange': return 'Troc';
@@ -301,23 +304,14 @@ export const ListingDetailPage: React.FC = () => {
                       {getTransactionIcon()}
                       <span className="ml-1">{getTransactionLabel()}</span>
                     </Badge>
-                    {listing.sellerVerificationStatus ? (
-                      <VerificationBadge 
-                        status={listing.sellerVerificationStatus} 
-                        size="sm" 
-                        showText={false}
-                      />
-                    ) : listing.sellerVerified && (
-                      <Badge className="bg-green-100 text-green-800 border-green-200">
-                        <Shield className="w-3 h-3 mr-1" />
-                        Vérifié
-                      </Badge>
-                    )}
                   </div>
 
                   {/* Price */}
                   <div className="text-3xl font-bold text-primary">
                     {formatPrice(listing.price, listing.currency)}
+                    {listing.category === 'housing' && (
+                      <span className="text-lg text-muted-foreground">/mois</span>
+                    )}
                     {listing.transactionType === 'service' && (
                       <span className="text-lg text-muted-foreground">/h</span>
                     )}
@@ -356,11 +350,13 @@ export const ListingDetailPage: React.FC = () => {
                       <>
                         <ContactButton listing={listing} className="w-full" />
                         
-                        {/* Bouton de paiement rapide */}
-                        <QuickPaymentButton 
-                          listing={listing} 
-                          className="w-full"
-                        />
+                        {/* Bouton de paiement rapide (vente uniquement, pas logement) */}
+                        {listing.transactionType === 'sale' && listing.category !== 'housing' && (
+                          <QuickPaymentButton 
+                            listing={listing} 
+                            className="w-full"
+                          />
+                        )}
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
@@ -409,24 +405,22 @@ export const ListingDetailPage: React.FC = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={listing.sellerAvatar || undefined} />
-                      <AvatarFallback>
-                        {listing.sellerName[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={listing.sellerAvatar || undefined} />
+                        <AvatarFallback>
+                          {listing.sellerName[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {((listing.sellerVerificationStatus === 'verified' || listing.sellerVerificationStatus === 'Verified') || listing.sellerVerified) && (
+                        <div className="absolute bottom-0 right-0 transform translate-x-1/4 -translate-y-1/4 z-10">
+                          <BadgeCheck size={16} fill="#3b82f6" stroke="white" strokeWidth={2} />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{listing.sellerName}</h3>
-                        {listing.sellerVerificationStatus ? (
-                          <VerificationBadge 
-                            status={listing.sellerVerificationStatus} 
-                            size="sm" 
-                            showText={false}
-                          />
-                        ) : listing.sellerVerified && (
-                          <Shield className="w-4 h-4 text-green-600" />
-                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {listing.sellerUniversity}

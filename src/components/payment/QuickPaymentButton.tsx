@@ -27,6 +27,11 @@ export const QuickPaymentButton: React.FC<QuickPaymentButtonProps> = ({
   const navigate = useNavigate();
 
   const canPurchase = (): boolean => {
+    // Bloquer tout achat pour logement et pour types non-vente
+    if ((listing as any).category === 'housing' || listing.transactionType !== 'sale') {
+      toast.error('Achat indisponible pour ce type d\'annonce');
+      return false;
+    }
     if (!currentUser) {
       toast('Connectez-vous pour continuer');
       navigate('/auth');
@@ -114,8 +119,8 @@ export const QuickPaymentButton: React.FC<QuickPaymentButtonProps> = ({
     toast.error(error || 'Erreur lors du paiement');
   };
 
-  // Ne pas afficher le bouton pour les dons ou échanges
-  if (listing.transactionType === 'donation' || listing.transactionType === 'exchange') {
+  // Ne pas afficher le bouton pour les listings non-vente ou logement
+  if (listing.transactionType !== 'sale' || (listing as any).category === 'housing') {
     return null;
   }
 
