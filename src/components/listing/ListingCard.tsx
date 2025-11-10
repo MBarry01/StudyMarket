@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, Eye, Shield, Gift, RefreshCw, Leaf, Edit, Trash2, Home, BadgeCheck } from 'lucide-react';
+import { MapPin, Eye, Shield, Gift, RefreshCw, Leaf, Edit, Trash2, Home, BadgeCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,8 +8,7 @@ import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { Button } from '@/components/ui/button';
 import { Listing } from '../../types';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ListingCardProps {
   listing: Listing;
@@ -24,6 +23,31 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   onEdit, 
   onDelete 
 }) => {
+  const { currentUser, userProfile } = useAuth();
+  const isOwner = currentUser?.uid === listing.sellerId;
+  const displayedSellerName = isOwner
+    ? userProfile?.displayName || listing.sellerName || 'Utilisateur'
+    : listing.sellerName || 'Utilisateur';
+  const displayedSellerUniversity = isOwner
+    ? userProfile?.university || 'Université non spécifiée'
+    : listing.sellerUniversity || 'Université non spécifiée';
+  const displayedCampus = isOwner
+    ? userProfile?.campus || listing.location?.campus || null
+    : listing.location?.campus || null;
+
+  const displayedLocation = (() => {
+    if (displayedCampus) return displayedCampus;
+    if (isOwner && userProfile?.location) return userProfile.location;
+    if (listing.location?.city && listing.location?.state) {
+      return `${listing.location.city}, ${listing.location.state}`;
+    }
+    return (
+      listing.location?.city ||
+      listing.location?.state ||
+      listing.location?.country ||
+      'Localisation non spécifiée'
+    );
+  })();
   const formatPrice = (price: number, currency?: string) => {
     if (listing.category === 'housing') return `${(price || 0).toFixed(0)}€/mois`;
     if (listing.transactionType === 'donation') return 'Gratuit';
@@ -99,36 +123,6 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         return 'bg-blue-500 text-white hover:bg-blue-600';
       default:
         return 'bg-primary text-white hover:bg-primary/90';
-    }
-  };
-
-  const formatSafeDate = (date: any) => {
-    try {
-      let validDate: Date;
-      
-      if (!date) return 'Date inconnue';
-      
-      if (date instanceof Date) {
-        validDate = date;
-      } else if (typeof date === 'string' || typeof date === 'number') {
-        validDate = new Date(date);
-      } else if (date && typeof date.toDate === 'function') {
-        validDate = date.toDate();
-      } else if (date && typeof date === 'object' && date.seconds) {
-        validDate = new Date(date.seconds * 1000);
-      } else {
-        return 'Date inconnue';
-      }
-      
-      if (isNaN(validDate.getTime())) return 'Date inconnue';
-      
-      return formatDistanceToNow(validDate, { 
-        addSuffix: true, 
-        locale: fr 
-      });
-    } catch (error) {
-      console.warn('Error formatting date:', error);
-      return 'Date inconnue';
     }
   };
 
@@ -250,18 +244,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="truncate">
-                {listing.location?.campus || 
-                 (listing.location?.city && listing.location?.state ? 
-                  `${listing.location.city}, ${listing.location.state}` : 
-                  'Localisation non spécifiée')}
+                {displayedLocation}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="whitespace-nowrap">
-                {formatSafeDate(listing.createdAt)}
-              </span>
-            </div>
+            {/* Publication timer removed on cards */}
           </div>
         </Link>
 
@@ -270,9 +256,9 @@ export const ListingCard: React.FC<ListingCardProps> = ({
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative">
               <Avatar className="w-9 h-9 border-2 border-border">
-                <AvatarImage src={listing.sellerAvatar} />
+                <AvatarImage src={isOwner ? userProfile?.photoURL || undefined : listing.sellerAvatar || undefined} />
                 <AvatarFallback className="text-sm bg-muted text-muted-foreground font-medium">
-                  {listing.sellerName?.[0]?.toUpperCase() || 'U'}
+                  {displayedSellerName?.[0]?.toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               {((listing.sellerVerificationStatus === 'verified' || listing.sellerVerificationStatus === 'Verified') || listing.sellerVerified) && (
@@ -284,11 +270,11 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-foreground truncate">
-                  {listing.sellerName || 'Utilisateur'}
+                  {displayedSellerName}
                 </span>
               </div>
               <span className="text-xs text-muted-foreground truncate block text-left">
-                {listing.sellerUniversity || 'Université non spécifiée'}
+                {displayedSellerUniversity}
               </span>
             </div>
           </div>

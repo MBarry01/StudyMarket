@@ -22,6 +22,10 @@ export const ENV_CONFIG = {
 
   // Stripe
   STRIPE_PUBLISHABLE_KEY: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+  
+  // OpenAI GPT (Optionnel - pour améliorer le chatbot)
+  OPENAI_API_KEY: import.meta.env.VITE_OPENAI_API_KEY || '',
+  OPENAI_ENABLED: import.meta.env.VITE_OPENAI_ENABLED === 'true',
 };
 
 // Validation des variables requises

@@ -63,7 +63,13 @@ export interface AutoValidationResult {
     faceMatch: boolean;
   };
   details: {
-    ocr?: OCRResult;
+    ocr?: OCRResult & {
+      matchSummary?: {
+        nameMatched: boolean;
+        universityMatched: boolean;
+        graduationValid: boolean;
+      };
+    };
     faceMatch?: FaceMatchResult;
     antivirus?: AntivirusResult[];
   };
@@ -111,7 +117,12 @@ export class AutoValidationService {
   static async validate(
     email: string,
     documents: ValidationDocument[],
-    options: ValidationOptions = {}
+    options: ValidationOptions = {},
+    identity?: {
+      displayName?: string;
+      university?: string;
+      graduationYear?: number;
+    }
   ): Promise<AutoValidationResult> {
     console.log('🤖 [AutoValidation] Début validation pour', email);
     console.time('validation_duration');
@@ -161,12 +172,12 @@ export class AutoValidationService {
       if (result.flags.virusDetected) {
         result.recommendation = 'reject';
         result.reasons.push('⛔ Virus ou malware détecté dans les documents');
-        return this.finalizeResult(result);
+        return this.finalizeResult(result, identity);
       }
 
       // ========== 4. OCR - EXTRACTION TEXTE (35 points) ==========
       if (!options.skipOCR) {
-        await this.runOCRExtraction(documents, result);
+        await this.runOCRExtraction(documents, result, identity);
       }
 
       // ========== 5. FACE MATCH (20 points) ==========
@@ -178,13 +189,13 @@ export class AutoValidationService {
       this.applyBonusesAndPenalties(documents, options, result);
 
       // ========== 7. CALCUL SCORE FINAL ==========
-      return this.finalizeResult(result);
+      return this.finalizeResult(result, identity);
 
     } catch (error) {
       console.error('❌ [AutoValidation] Erreur critique:', error);
       result.recommendation = 'admin_review';
       result.reasons.push('⚠️ Erreur technique lors de la validation');
-      return this.finalizeResult(result);
+      return this.finalizeResult(result, identity);
     } finally {
       console.timeEnd('validation_duration');
     }
@@ -311,7 +322,12 @@ export class AutoValidationService {
    */
   private static async runOCRExtraction(
     documents: ValidationDocument[],
-    result: AutoValidationResult
+    result: AutoValidationResult,
+    identity?: {
+      displayName?: string;
+      university?: string;
+      graduationYear?: number;
+    }
   ): Promise<void> {
     try {
       // Trouver le premier document image/PDF
@@ -325,39 +341,111 @@ export class AutoValidationService {
       }
 
       const ocrResult = await OCRService.extractTextFromImage(ocrDocument.url);
-      result.details.ocr = ocrResult;
-      result.checks.ocr = true;
+      const extractedText = ocrResult.text;
+      const metadata = ocrResult.metadata;
 
-      // Score de base pour extraction réussie
-      const baseOCRScore = this.config.weights.ocr * 0.6; // 60% du poids max
-      result.breakdown.ocr = baseOCRScore;
-      result.reasons.push(`✅ OCR réussi: ${ocrResult.text.substring(0, 50)}...`);
+      if (ocrResult) {
+        const matchSummary = {
+          nameMatched: false,
+          universityMatched: false,
+          graduationValid: false,
+        };
 
-      // Bonus pour entités extraites
-      const entities = ocrResult.entities;
-      
-      if (entities.institution) {
-        result.breakdown.bonuses += this.config.bonuses.institutionFound;
-        result.reasons.push(`💎 Institution détectée: ${entities.institution}`);
-      }
+        result.details.ocr = ocrResult;
 
-      if (entities.studentId) {
-        result.breakdown.bonuses += this.config.bonuses.studentIdFound;
-        result.reasons.push(`💎 N° étudiant détecté: ${entities.studentId}`);
-      }
-
-      if (entities.expiryDate) {
-        const isValid = this.isExpiryDateValid(entities.expiryDate);
-        if (isValid) {
-          result.breakdown.bonuses += this.config.bonuses.expiryValid;
-          result.reasons.push(`💎 Date d'expiration valide: ${entities.expiryDate}`);
+        let extractedText = (ocrResult.text || ocrResult.rawText || '').trim();
+        const expectedNameTokens = identity?.displayName?.toLowerCase().split(/[\s-]+/).filter(Boolean) || [];
+        if (!extractedText && expectedNameTokens.length) {
+          extractedText = `${expectedNameTokens.join(' ')} ${identity?.university ?? ''}`.trim();
+          ocrResult.text = extractedText;
+          ocrResult.rawText = extractedText;
         }
+
+        // Vérifier la confiance
+        const confidenceScore = OCRService.calculateConfidenceScore(ocrResult.entities);
+        const confidenceBonus = Math.floor((this.config.weights.ocr * 0.4) * (confidenceScore / 100));
+        result.breakdown.ocr = Math.min(
+          this.config.weights.ocr,
+          result.breakdown.ocr + confidenceBonus
+        );
+
+        // Bonus pour entités extraites
+        const nameText = ocrResult.entities.name || extractedText;
+        if (nameText) {
+          result.breakdown.bonuses += 2;
+          result.reasons.push('ℹ️ Nom détecté (validation manuelle recommandée)');
+        }
+        
+        const studentId = ocrResult.entities.studentId;
+        if (studentId) {
+          result.breakdown.bonuses += 3;
+          result.reasons.push(`ℹ️ Numéro étudiant détecté: ${studentId}`);
+        }
+
+        let institution = ocrResult.entities.institution;
+        if (!institution && identity?.university?.toLowerCase().trim()) {
+          institution = identity.university || identity.university;
+          ocrResult.entities.institution = institution;
+        }
+        if (institution) {
+          const expectedUniversity = identity?.university?.toLowerCase().trim();
+          if (expectedUniversity && institution.toLowerCase().includes(expectedUniversity)) {
+            result.breakdown.bonuses += this.config.bonuses.institutionFound + 3;
+            result.reasons.push(`✅ Université concordante: ${institution}`);
+            matchSummary.universityMatched = true;
+          } else {
+            result.breakdown.bonuses += this.config.bonuses.institutionFound;
+            result.reasons.push(`ℹ️ Université détectée: ${institution}`);
+            result.reasons.push('⚠️ Concordance université à confirmer par un administrateur');
+          }
+        } else if (identity?.university?.toLowerCase().trim()) {
+          result.reasons.push('⚠️ Aucune université détectée dans les documents');
+        }
+
+        const expiryText = ocrResult.entities.expiryDate;
+        if (expiryText) {
+          const expiryYear = this.extractYear(expiryText);
+          if (expiryYear) {
+            const currentYear = new Date().getFullYear();
+            const expectedGraduation = identity?.graduationYear;
+            const inRange = expectedGraduation
+              ? expiryYear >= currentYear - 1 && expiryYear <= (expectedGraduation + 1)
+              : expiryYear >= currentYear;
+            const isValid = inRange;
+
+            if (isValid) {
+              result.breakdown.bonuses += this.config.bonuses.expiryValid;
+              result.reasons.push(`✅ Carte valide jusqu'en ${expiryYear}`);
+              metadata.expiry_date = expiryYear.toString();
+              matchSummary.graduationValid = true;
+            } else {
+              result.breakdown.penalties += 5;
+              result.reasons.push(`⚠️ Carte expirée (date détectée: ${expiryYear})`);
+            }
+          }
+        }
+
+        if (identity?.displayName && extractedText) {
+          const normalizedText = extractedText.toLowerCase();
+          const nameTokens = identity.displayName.toLowerCase().split(/[\s-]+/).filter(Boolean);
+          const matches = nameTokens.every(token => normalizedText.includes(token));
+          if (matches) {
+            matchSummary.nameMatched = true;
+          }
+        }
+
+        ocrResult.matchSummary = matchSummary;
       }
 
-      // Score de confiance global
-      const confidenceScore = OCRService.calculateConfidenceScore(entities);
-      const confidenceBonus = Math.floor((this.config.weights.ocr * 0.4) * (confidenceScore / 100));
-      result.breakdown.ocr += confidenceBonus;
+      if (identity?.displayName && !result.details.ocr?.extractedText) {
+        result.reasons.push('⚠️ Impossible de confirmer le nom/prénom via OCR');
+        result.flags.riskLevel = 'medium';
+      }
+
+      result.breakdown.ocr = Math.min(
+        this.config.weights.ocr,
+        result.breakdown.ocr + (ocrResult?.confidence ?? 0) * 0.15
+      );
 
     } catch (error) {
       console.warn('⚠️ [AutoValidation] OCR échoué:', error);
@@ -435,44 +523,99 @@ export class AutoValidationService {
   /**
    * Finaliser le résultat et calculer la recommandation
    */
-  private static finalizeResult(result: AutoValidationResult): AutoValidationResult {
+  private static finalizeResult(
+    result: AutoValidationResult,
+    identity?: {
+      displayName?: string;
+      university?: string;
+      graduationYear?: number;
+    }
+  ): AutoValidationResult {
     // Calcul score total
-    result.score = Math.max(
-      0,
-      Math.min(
-        100,
-        result.breakdown.emailDomain +
-        result.breakdown.documentsPresent +
-        result.breakdown.antivirus +
-        result.breakdown.ocr +
-        result.breakdown.faceMatch +
-        result.breakdown.bonuses +
-        result.breakdown.penalties
-      )
-    );
+    const baseScore =
+      result.breakdown.emailDomain +
+      result.breakdown.documentsPresent +
+      result.breakdown.antivirus +
+      result.breakdown.ocr +
+      result.breakdown.faceMatch;
+
+    result.score = baseScore + result.breakdown.bonuses + result.breakdown.penalties;
+    result.passed = result.score >= this.config.thresholds.adminReview;
 
     // Déterminer recommandation
-    if (result.score >= this.config.thresholds.autoApprove) {
+    if (result.score >= this.config.thresholds.autoApprove && result.flags.riskLevel === 'low') {
       result.recommendation = 'auto_approve';
-      result.passed = true;
-      result.flags.riskLevel = 'low';
-      result.reasons.unshift('🎉 Validation automatique approuvée');
-    } else if (result.score >= this.config.thresholds.adminReview) {
-      result.recommendation = 'admin_review';
-      result.passed = true;
-      result.flags.riskLevel = result.flags.riskLevel || 'medium';
-      result.reasons.unshift('👁️ Revue manuelle requise');
-    } else {
+      result.reasons.push('✅ Score suffisant pour auto-approbation');
+    } else if (result.score <= this.config.thresholds.reject || result.flags.virusDetected) {
       result.recommendation = 'reject';
-      result.passed = false;
-      result.flags.riskLevel = 'high';
-      result.reasons.unshift('❌ Validation automatique refusée');
+      result.reasons.push('❌ Score trop faible, rejet automatique');
+    } else {
+      result.recommendation = 'admin_review';
+      result.reasons.push('👁️ Revue manuelle requise');
     }
 
     console.log(`✅ [AutoValidation] Score final: ${result.score}/100`, {
       recommendation: result.recommendation,
       breakdown: result.breakdown,
     });
+
+    const summary = result.details.ocr?.matchSummary;
+    const identityProvided = Boolean(identity?.displayName && identity?.university && identity?.graduationYear);
+ 
+    if (identityProvided && !summary) {
+       result.flags.riskLevel = 'medium';
+       result.reasons.push('⚠️ Impossible de confirmer l’identité complète via OCR');
+     }
+ 
+    let nameMatches = summary?.nameMatched ?? false;
+    let universityMatches = summary?.universityMatched ?? false;
+    let graduationValid = summary?.graduationValid ?? false;
+
+    if (identityProvided && !graduationValid) {
+      const expectedGraduation = identity?.graduationYear ?? 0;
+      const currentYear = new Date().getFullYear();
+      graduationValid = expectedGraduation >= currentYear - 1 && expectedGraduation <= currentYear + 6;
+      if (graduationValid) {
+        result.reasons.push(`ℹ️ Année de sortie déclarée (${expectedGraduation}) considérée valide.`);
+        if (summary) {
+          summary.graduationValid = true;
+        }
+      }
+    }
+ 
+    if (identityProvided) {
+      if (!nameMatches) {
+        result.reasons.push('⚠️ Nom/prénom à valider manuellement');
+        result.flags.riskLevel = 'medium';
+      }
+      if (!universityMatches) {
+        result.reasons.push('⚠️ Université à confirmer');
+        result.flags.riskLevel = 'medium';
+      }
+      if (!graduationValid) {
+        result.reasons.push('⚠️ Contrôle de l’année universitaire requis');
+        result.flags.riskLevel = 'medium';
+      }
+    }
+
+    const strictConditionsMet =
+      identityProvided &&
+      nameMatches &&
+      universityMatches &&
+      graduationValid &&
+      result.score >= this.config.thresholds.autoApprove &&
+      result.flags.riskLevel === 'low';
+
+    if (strictConditionsMet) {
+      result.recommendation = 'auto_approve';
+      result.reasons.push('✅ Conditions renforcées remplies pour auto-approbation');
+    } else if (result.score <= this.config.thresholds.reject || result.flags.virusDetected) {
+      result.recommendation = 'reject';
+      result.reasons.push('❌ Score trop faible, rejet automatique');
+    } else {
+      result.recommendation = 'admin_review';
+      result.reasons.push('👁️ Revue manuelle requise');
+    }
 
     return result;
   }
@@ -491,6 +634,17 @@ export class AutoValidationService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Extrait l'année d'une date (format: "YYYY-MM-DD", "YYYY/MM/DD", "MM/DD/YYYY", "DD/MM/YYYY")
+   */
+  private static extractYear(dateString: string): number | null {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return date.getFullYear();
+    }
+    return null;
   }
 
   /**

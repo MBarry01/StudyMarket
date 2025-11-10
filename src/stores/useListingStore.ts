@@ -21,6 +21,7 @@ import { db } from '../lib/firebase';
 import { Listing, SearchFilters } from '../types';
 import toast from 'react-hot-toast';
 import { cache } from '../lib/cache'; // 🆕 Système de cache
+import { getUniversityMetadata } from '@/constants/universities';
 
 interface ListingStore {
   listings: Listing[];
@@ -114,6 +115,17 @@ const safeToDate = (timestamp: any): Date => {
 const convertDocToListing = (doc: QueryDocumentSnapshot<DocumentData>): Listing => {
   const data = doc.data();
   
+  const metadata = getUniversityMetadata(data.sellerUniversity || data.location?.university || null);
+  const campus =
+    data.location?.campus ??
+    metadata.campus ??
+    null;
+  const university =
+    data.location?.university ??
+    data.sellerUniversity ??
+    metadata.name ??
+    null;
+
   return {
     id: doc.id,
     ...data,
@@ -132,8 +144,8 @@ const convertDocToListing = (doc: QueryDocumentSnapshot<DocumentData>): Listing 
       city: data.location?.city || 'Paris',
       state: data.location?.state || 'Île-de-France',
       country: data.location?.country || 'France',
-      campus: data.location?.campus || null,
-      university: data.location?.university || null,
+      campus,
+      university,
       coordinates: data.location?.coordinates || null,
     },
     transactionType: data.transactionType || 'sale',

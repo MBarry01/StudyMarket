@@ -5,19 +5,22 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { VerificationService, VerificationRequest, VerificationDocument } from '@/services/verificationService';
-import { CheckCircle2, XCircle, Clock, Eye, RefreshCw } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Eye, RefreshCw, Ban, Shield, ShieldCheck, ShieldAlert, Hourglass } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { PDFViewerModal } from '@/components/verification/PDFViewerModal';
+import { cn } from '@/lib/utils';
 
 export const AdminVerificationsPage: React.FC = () => {
   const { currentUser } = useAuth();
+  const [allRequests, setAllRequests] = useState<VerificationRequest[]>([]);
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDocumentDialog, setShowDocumentDialog] = useState(false);
   const [selectedDocuments, setSelectedDocuments] = useState<VerificationDocument[]>([]);
   const [selectedDocumentIndex, setSelectedDocumentIndex] = useState<number>(0);
@@ -26,6 +29,7 @@ export const AdminVerificationsPage: React.FC = () => {
   const [currentPDFName, setCurrentPDFName] = useState<string>('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [revocationReason, setRevocationReason] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   // Ouvrir automatiquement le PDF quand un PDF est détecté
@@ -45,26 +49,24 @@ export const AdminVerificationsPage: React.FC = () => {
   }, [showDocumentDialog, selectedDocumentIndex, selectedDocuments, showPDFModal]);
 
   useEffect(() => {
-    const unsubscribe = VerificationService.subscribeToAllRequests(
-      filter === 'all' ? undefined : filter,
-      (data) => {
-        setRequests(data);
-        setLoading(false);
-      }
-    );
+    setLoading(true);
+    const unsubscribe = VerificationService.subscribeToAllRequests('all', (data) => {
+      setAllRequests(data);
+      setLoading(false);
+    });
 
     return () => {
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [filter]);
+  }, []);
 
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const data = await VerificationService.getAllRequests(filter === 'all' ? undefined : filter);
-      setRequests(data);
+      const data = await VerificationService.getAllRequests('all');
+      setAllRequests(data);
     } catch (error) {
       console.error('Erreur lors de la récupération:', error);
       toast.error('Erreur lors du chargement des demandes');
@@ -124,6 +126,12 @@ export const AdminVerificationsPage: React.FC = () => {
     setShowRevokeDialog(true);
   };
 
+  const openCancelDialog = (request: VerificationRequest) => {
+    setSelectedRequest(request);
+    setCancelReason('');
+    setShowCancelDialog(true);
+  };
+
   const openDocumentDialog = async (request: VerificationRequest, index?: number) => {
     // ✅ Marquer comme "en revue" quand l'admin ouvre un document
     if (request.status === 'documents_submitted' || request.status === 'pending') {
@@ -148,6 +156,21 @@ export const AdminVerificationsPage: React.FC = () => {
     } catch (error) {
       console.error('Erreur lors de la révocation:', error);
       toast.error('Erreur lors de la révocation');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!selectedRequest || !currentUser) return;
+
+    try {
+      await VerificationService.cancelVerification(selectedRequest.id!, cancelReason || undefined, currentUser.uid);
+      toast.success('Demande annulée');
+      setShowCancelDialog(false);
+      setSelectedRequest(null);
+      setCancelReason('');
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation:', error);
+      toast.error('Erreur lors de l\'annulation');
     }
   };
 
@@ -212,29 +235,90 @@ export const AdminVerificationsPage: React.FC = () => {
     });
   };
 
-  const filteredRequests = requests.filter(req => {
-    if (filter === 'all') return true;
-    
-    // Mapper les filtres anciens vers les nouveaux statuts
-    if (filter === 'pending') {
-      return req.status === 'pending' || req.status === 'documents_submitted' || req.status === 'under_review';
-    }
-    if (filter === 'approved') {
-      return req.status === 'approved' || req.status === 'verified';
-    }
-    if (filter === 'rejected') {
-      return req.status === 'rejected';
-    }
-    
-    return req.status === filter;
-  });
+  useEffect(() => {
+    const filtered = allRequests.filter(req => {
+      if (filter === 'all') return true;
+      if (filter === 'pending') {
+        return ['pending', 'documents_submitted', 'under_review'].includes(req.status);
+      }
+      if (filter === 'approved') {
+        return ['approved', 'verified'].includes(req.status);
+      }
+      if (filter === 'rejected') {
+        return req.status === 'rejected';
+      }
+      return req.status === filter;
+    });
+
+    setRequests(filtered);
+  }, [allRequests, filter]);
 
   const stats = {
-    total: requests.length,
-    pending: requests.filter(r => r.status === 'pending' || r.status === 'documents_submitted' || r.status === 'under_review').length,
-    approved: requests.filter(r => r.status === 'approved' || r.status === 'verified').length,
-    rejected: requests.filter(r => r.status === 'rejected').length,
+    total: allRequests.length,
+    pending: allRequests.filter(r => ['pending', 'documents_submitted', 'under_review'].includes(r.status)).length,
+    approved: allRequests.filter(r => ['approved', 'verified'].includes(r.status)).length,
+    rejected: allRequests.filter(r => r.status === 'rejected').length,
   };
+
+  const statsCards = (
+    [
+      {
+        key: 'total',
+        label: 'Total',
+        value: stats.total,
+        description: 'Demandes reçues',
+        accent: 'from-slate-900 via-slate-800 to-slate-700 text-slate-100',
+        icon: Shield,
+      },
+      {
+        key: 'pending',
+        label: 'En attente',
+        value: stats.pending,
+        description: 'À examiner',
+        accent: 'from-sky-900 via-sky-800 to-sky-700 text-sky-100',
+        icon: Hourglass,
+      },
+      {
+        key: 'approved',
+        label: 'Approuvées',
+        value: stats.approved,
+        description: 'Comptes certifiés',
+        accent: 'from-emerald-900 via-emerald-800 to-emerald-700 text-emerald-100',
+        icon: ShieldCheck,
+      },
+      {
+        key: 'rejected',
+        label: 'Rejetées',
+        value: stats.rejected,
+        description: 'Actions à communiquer',
+        accent: 'from-red-900 via-red-800 to-red-700 text-red-100',
+        icon: ShieldAlert,
+      },
+    ] as const
+  );
+
+  const filterMeta = {
+    all: {
+      title: 'Toutes les demandes',
+      description: 'Vue complète pour suivre l’ensemble des vérifications en cours ou clôturées.',
+      icon: Shield,
+    },
+    pending: {
+      title: 'Demandes en attente',
+      description: 'Contrôlez les documents soumis et décidez de l’issue de la vérification.',
+      icon: Hourglass,
+    },
+    approved: {
+      title: 'Demandes approuvées',
+      description: 'Comptes certifiés : possibilité de consulter ou révoquer si nécessaire.',
+      icon: ShieldCheck,
+    },
+    rejected: {
+      title: 'Demandes rejetées',
+      description: 'Historique des refus : identifiez les motifs et anticipez les recours.',
+      icon: ShieldAlert,
+    },
+  } as const;
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -246,71 +330,58 @@ export const AdminVerificationsPage: React.FC = () => {
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approuvées</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Rejetées</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+        {statsCards.map((card) => (
+          <Card key={card.key} className="overflow-hidden">
+            <div className={`h-full bg-gradient-to-br ${card.accent} p-5 flex flex-col justify-between`}> 
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/10 rounded-lg p-2">
+                    <card.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm uppercase tracking-wide opacity-80">{card.label}</p>
+                    <p className="text-3xl font-semibold mt-1">{card.value}</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm opacity-75 mt-4">{card.description}</p>
+            </div>
+          </Card>
+        ))}
       </div>
 
       {/* Filtres */}
-      <div className="flex gap-2 mb-6">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('all')}
-        >
-          Tous ({stats.total})
-        </Button>
-        <Button
-          variant={filter === 'pending' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('pending')}
-        >
-          En attente ({stats.pending})
-        </Button>
-        <Button
-          variant={filter === 'approved' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('approved')}
-        >
-          Approuvées ({stats.approved})
-        </Button>
-        <Button
-          variant={filter === 'rejected' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('rejected')}
-        >
-          Rejetées ({stats.rejected})
-        </Button>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {([
+          { key: 'all', label: 'Tous', count: stats.total },
+          { key: 'pending', label: 'En attente', count: stats.pending },
+          { key: 'approved', label: 'Approuvées', count: stats.approved },
+          { key: 'rejected', label: 'Rejetées', count: stats.rejected },
+        ] as const).map((option) => (
+          <Button
+            key={option.key}
+            variant="outline"
+            size="sm"
+            className={cn(
+              'rounded-xl border border-border/60 bg-transparent text-muted-foreground hover:bg-muted/40 transition-colors',
+              filter === option.key && 'bg-primary text-primary-foreground border-primary shadow-sm'
+            )}
+            onClick={() => setFilter(option.key)}
+          >
+            {option.label} ({option.count})
+          </Button>
+        ))}
+      </div>
+
+      <div className="mb-8 flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-muted">
+          {React.createElement(filterMeta[filter].icon, { className: 'h-5 w-5 text-foreground' })}
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold">{filterMeta[filter].title}</h2>
+          <p className="text-sm text-muted-foreground">{filterMeta[filter].description}</p>
+        </div>
       </div>
 
       {/* Liste des demandes */}
@@ -321,7 +392,7 @@ export const AdminVerificationsPage: React.FC = () => {
             <p className="text-muted-foreground">Chargement...</p>
           </CardContent>
         </Card>
-      ) : filteredRequests.length === 0 ? (
+      ) : requests.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <p className="text-muted-foreground">Aucune demande trouvée</p>
@@ -329,7 +400,7 @@ export const AdminVerificationsPage: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredRequests.map((request) => (
+          {requests.map((request) => (
             <Card key={request.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="text-left">
                 <div className="flex items-start justify-between">
@@ -340,10 +411,14 @@ export const AdminVerificationsPage: React.FC = () => {
                     </div>
                     <div className="text-sm text-muted-foreground space-y-1 text-left">
                       <p className="text-left">📧 {request.userEmail}</p>
-                      {request.university && <p className="text-left">🏫 {request.university}</p>}
-                      {request.metadata?.university && <p className="text-left">🏫 {request.metadata.university}</p>}
-                      {request.studentId && <p className="text-left">🆔 Numéro étudiant : {request.studentId}</p>}
-                      {request.metadata?.studentId && <p className="text-left">🆔 Numéro étudiant : {request.metadata.studentId}</p>}
+                      <p className="text-left">
+                        🏫 {request.metadata?.university || request.university || 'Université non renseignée'}
+                      </p>
+                      {(request.studentId || request.metadata?.studentId) && (
+                        <p className="text-left">
+                          🆔 Numéro étudiant : {request.studentId || request.metadata?.studentId}
+                        </p>
+                      )}
                       {(request.requestedAt || request.submittedAt) && <p className="text-left">📅 Demande le : {formatDate(request.requestedAt || request.submittedAt)}</p>}
                     </div>
                   </div>
@@ -375,6 +450,15 @@ export const AdminVerificationsPage: React.FC = () => {
                         <XCircle className="h-4 w-4 mr-1" />
                         Rejeter
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-slate-600 border-slate-400 hover:bg-slate-50"
+                        onClick={() => openCancelDialog(request)}
+                      >
+                        <Ban className="h-4 w-4 mr-1" />
+                        Annuler
+                      </Button>
                     </div>
                   )}
                   {(request.status === 'verified' || request.status === 'approved') && (
@@ -390,7 +474,7 @@ export const AdminVerificationsPage: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        className="text-sky-600 border-sky-500 hover:bg-sky-50"
                         onClick={() => openRevokeDialog(request)}
                       >
                         <XCircle className="h-4 w-4 mr-1" />
@@ -510,6 +594,36 @@ export const AdminVerificationsPage: React.FC = () => {
               className="bg-orange-600 hover:bg-orange-700 text-white"
             >
               Révoquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Annuler */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Annuler la demande</DialogTitle>
+            <DialogDescription>
+              Confirmez l'annulation de la demande de vérification de {selectedRequest?.userName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Motif d'annulation (optionnel)"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+              Fermer
+            </Button>
+            <Button
+              onClick={handleCancel}
+              className="bg-slate-700 hover:bg-slate-800 text-white"
+            >
+              Confirmer l'annulation
             </Button>
           </DialogFooter>
         </DialogContent>

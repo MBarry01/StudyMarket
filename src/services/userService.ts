@@ -15,26 +15,44 @@ import {
 } from 'firebase/firestore';
 import { db, COLLECTIONS } from '../lib/firebase';
 import { User } from '../types';
+import { getUniversityMetadata } from '../constants/universities';
 
 export class UserService {
   
   static async createUser(uid: string, userData: Partial<User>): Promise<void> {
     const userRef = doc(db, COLLECTIONS.USERS, uid);
+
+    const sanitizedUserData = Object.fromEntries(
+      Object.entries(userData).filter(([, value]) => value !== undefined)
+    ) as Partial<User>;
+
+    const metadata = getUniversityMetadata(sanitizedUserData.university || '');
+    const campus =
+      sanitizedUserData.campus ??
+      (metadata.campus ? metadata.campus : 'Campus principal');
+    const location =
+      sanitizedUserData.location ??
+      (metadata.location ? metadata.location : 'Paris, France');
+    const locationCoordinates =
+      sanitizedUserData.locationCoordinates ??
+      metadata.coordinates ??
+      null;
     
     const newUser: User = {
       id: uid,
-      email: userData.email!,
-      displayName: userData.displayName || 'Utilisateur',
-      photoURL: userData.photoURL || null,
+      email: sanitizedUserData.email!,
+      displayName: sanitizedUserData.displayName || 'Utilisateur',
+      photoURL: sanitizedUserData.photoURL || null,
       phone: null,
       isVerified: false,
       verificationStatus: 'pending',
-      university: userData.university || 'Université non spécifiée',
-      fieldOfStudy: userData.fieldOfStudy || 'Non spécifié',
-      graduationYear: userData.graduationYear || new Date().getFullYear() + 2,
-      campus: userData.campus || 'Campus principal',
+      university: sanitizedUserData.university || 'Université non spécifiée',
+      fieldOfStudy: sanitizedUserData.fieldOfStudy || 'Non spécifié',
+      graduationYear: sanitizedUserData.graduationYear || new Date().getFullYear() + 2,
+      campus,
       bio: null,
-      location: 'Paris, France',
+      location,
+      locationCoordinates: locationCoordinates || undefined,
       rating: 0,
       reviewCount: 0,
       trustScore: 0,
@@ -54,7 +72,7 @@ export class UserService {
     // ✅ Fusionner avec TOUTES les données passées (firstName, lastName, otherUniversity, otherFieldOfStudy, etc.)
     await setDoc(userRef, {
       ...newUser,
-      ...userData, // Ajouter toutes les données supplémentaires
+      ...sanitizedUserData, // Ajouter toutes les données supplémentaires
       id: uid, // S'assurer que l'ID n'est pas écrasé
       createdAt: serverTimestamp(),
       lastSeen: serverTimestamp(),
@@ -133,12 +151,25 @@ export class UserService {
     // Nettoyer les valeurs undefined
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, value]) => value !== undefined)
-    );
+    ) as Partial<User>;
     
     await updateDoc(userRef, {
       ...cleanUpdates,
       updatedAt: serverTimestamp(),
     });
+
+    const propagateKeys: (keyof User)[] = [
+      'displayName',
+      'photoURL',
+      'university',
+      'campus',
+      'isVerified',
+      'verificationStatus',
+    ];
+
+    if (propagateKeys.some(key => key in cleanUpdates)) {
+      await this.propagateProfileToListings(uid, cleanUpdates);
+    }
   }
   
   static async updateUserStats(uid: string, stats: {
@@ -253,6 +284,76 @@ export class UserService {
     } catch (error) {
       console.error('Error getting users by university:', error);
       return [];
+    }
+  }
+
+  private static async propagateProfileToListings(
+    uid: string,
+    updates: Partial<User>
+  ): Promise<void> {
+    try {
+      const listingsRef = collection(db, COLLECTIONS.LISTINGS);
+      const q = query(listingsRef, where('sellerId', '==', uid));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        return;
+      }
+
+      const batches: ReturnType<typeof writeBatch>[] = [];
+      let currentBatch = writeBatch(db);
+      let batchCount = 0;
+
+      const prepareListingUpdates = (listingRef: any) => {
+        const listingUpdates: Record<string, unknown> = {
+          updatedAt: serverTimestamp(),
+        };
+
+        if (updates.displayName !== undefined) {
+          listingUpdates.sellerName = updates.displayName;
+        }
+        if (updates.photoURL !== undefined) {
+          listingUpdates.sellerAvatar = updates.photoURL;
+        }
+        if (updates.university !== undefined) {
+          listingUpdates.sellerUniversity = updates.university || 'Université non spécifiée';
+          listingUpdates['location.university'] = updates.university || null;
+        }
+        if (updates.campus !== undefined) {
+          listingUpdates['location.campus'] = updates.campus || null;
+        }
+        if (updates.isVerified !== undefined) {
+          listingUpdates.sellerVerified = updates.isVerified;
+        }
+        if (updates.verificationStatus !== undefined) {
+          listingUpdates.sellerVerificationStatus = updates.verificationStatus;
+        }
+
+        if (Object.keys(listingUpdates).length > 1) {
+          currentBatch.update(listingRef, listingUpdates);
+          batchCount += 1;
+        }
+      };
+
+      snapshot.docs.forEach((docSnap) => {
+        prepareListingUpdates(docSnap.ref);
+
+        if (batchCount >= 450) {
+          batches.push(currentBatch);
+          currentBatch = writeBatch(db);
+          batchCount = 0;
+        }
+      });
+
+      if (batchCount > 0) {
+        batches.push(currentBatch);
+      }
+
+      for (const batch of batches) {
+        await batch.commit();
+      }
+    } catch (error) {
+      console.error('Error propagating profile updates to listings:', error);
     }
   }
 }

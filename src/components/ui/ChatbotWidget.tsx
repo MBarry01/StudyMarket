@@ -1,16 +1,22 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { MessageCircle, X, Send, Bot, Home, Mail, ArrowLeft, Check, ArrowRight, ArrowDown, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Home, Mail, ArrowLeft, Check, ArrowRight, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { MinimizeIcon } from '@/components/ui/icons/lucide-minimize';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase, supabaseStatus } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { chatbot } from '@/lib/chatbot/chatbotOrchestrator';
+import { useListingStore } from '@/stores/useListingStore';
+import { useMessageStore } from '@/stores/useMessageStore';
+import { useOrderStore } from '@/stores/useOrderStore';
+import { useFavoritesStore } from '@/stores/useFavoritesStore';
 
 interface Message {
   id: string;
@@ -36,8 +42,8 @@ type ViewMode = 'menu' | 'chat' | 'contact' | 'home';
 
 // Configuration
 const MAX_MESSAGES = 100;
+const MAX_FIRESTORE_MESSAGES = 50; // Limit Firestore history to prevent 1MB limit
 const SAVE_DEBOUNCE_MS = 2000;
-const BOT_TYPING_DELAY = 800;
 
 // Utilitaire de debounce
 const debounce = <T extends (...args: any[]) => any>(
@@ -51,140 +57,8 @@ const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
-// Logique métier externalisée
-const generateBotResponse = (userInput: string, userName?: string): {
-  text: string;
-  suggestions?: string[];
-  action?: { type: string; payload: any };
-} => {
-  const input = userInput.toLowerCase().trim();
-  
-  if (/créer|publier|poster|vendre|nouvelle annonce/i.test(input)) {
-    return {
-      text: userName
-        ? `Salut ${userName} ! 🎉 Je vais t'aider à créer ton annonce.\n\nPour commencer, dis-moi quel article tu veux vendre ou clique sur une catégorie.`
-        : 'Super ! Je vais t\'aider à créer ton annonce. 🎉\n\nQuel article veux-tu vendre ?',
-      suggestions: [
-        '📚 Créer annonce Livres',
-        '💻 Créer annonce Électronique',
-        '👕 Créer annonce Vêtements',
-        '📋 Voir formulaire création'
-      ],
-      action: { type: 'navigate', payload: '/create' }
-    };
-  }
-  
-  if (/chercher|trouver|recherche|acheter|besoin|voir/i.test(input)) {
-    let category = '';
-    if (/livre|bouquin|manuel/i.test(input)) category = 'books';
-    if (/téléphone|iphone|samsung|smartphone/i.test(input)) category = 'electronics';
-    if (/ordinateur|laptop|macbook/i.test(input)) category = 'electronics';
-    if (/vêtement|pull|chemise|pantalon/i.test(input)) category = 'clothing';
-    
-    return {
-      text: category
-        ? `Parfait ! Je lance la recherche de ${category} pour toi ! 🔍`
-        : 'Bien sûr ! Que cherches-tu exactement ? 🔍\n\nChoisis une catégorie ou dis-moi ce que tu recherches.',
-      suggestions: [
-        '📚 Chercher des livres',
-        '💻 Chercher électronique',
-        '👕 Chercher vêtements',
-        '🎮 Chercher jeux'
-      ],
-      action: category ? { type: 'navigate', payload: `/listings?category=${category}` } : undefined
-    };
-  }
-  
-  if (/mes annonces|mes articles|mes ventes|voir mes annonces/i.test(input)) {
-    return {
-      text: 'Bien sûr ! Je vais t\'afficher tes annonces. 📋',
-      suggestions: ['➕ Créer une annonce', '📊 Statistiques', '✏️ Modifier annonce'],
-      action: { type: 'navigate', payload: '/profile#listings' }
-    };
-  }
-  
-  if (/message|conversation|discussion|chat/i.test(input)) {
-    return {
-      text: 'Voici tes conversations ! 💬',
-      suggestions: ['💬 Voir conversations', '✉️ Nouveau message'],
-      action: { type: 'navigate', payload: '/messages' }
-    };
-  }
-  
-  if (/favori|sauvegardé|j'aime|like/i.test(input)) {
-    return {
-      text: 'Tes favoris ! ⭐',
-      suggestions: ['🔍 Continuer recherche', '➕ Créer annonce'],
-      action: { type: 'navigate', payload: '/favorites' }
-    };
-  }
-  
-  if (/aide|help|comment|tutoriel|guide|que peux-tu/i.test(input)) {
-    return {
-      text: `Je peux t'aider avec : 📚
-
-• Créer et gérer tes annonces 📝
-• Rechercher des articles 🔍
-• Gérer tes messages 💬
-• Voir tes favoris ⭐
-• Suivre tes commandes 📦
-
-Que veux-tu faire ?`,
-      suggestions: ['🔍 Rechercher', '➕ Créer annonce', '💬 Messages', '📋 Mes annonces']
-    };
-  }
-  
-  if (/bonjour|salut|hello|hey|coucou/i.test(input)) {
-    return {
-      text: userName
-        ? `Salut ${userName} ! 👋 Ravi de te revoir ! Que puis-je faire pour toi aujourd'hui ?`
-        : 'Salut ! 👋 Bienvenue sur StudyMarket ! Je suis ton assistant personnel. Comment puis-je t\'aider ?',
-      suggestions: ['🔍 Rechercher', '➕ Créer annonce', '💬 Messages', '📋 Mes annonces']
-    };
-  }
-  
-  if (/merci|thanks|super|cool|génial|parfait/i.test(input)) {
-    return {
-      text: 'De rien ! 😊 Content d\'avoir pu t\'aider. Autre chose ?',
-      suggestions: ['🔍 Rechercher', '➕ Créer annonce', '💬 Messages']
-    };
-  }
-  
-  if (/prix|coût|gratuit|tarif|commission|frais/i.test(input)) {
-    return {
-      text: 'StudyMarket est 100% gratuit ! 🎓\n\n✓ Pas de frais pour publier\n✓ Pas de commission sur ventes\n✓ Gratuit pour tous les étudiants\n\nOn veut juste faciliter les échanges ! 💙',
-      suggestions: ['➕ Créer annonce', '🔍 Rechercher', '❓ Questions sécurité']
-    };
-  }
-  
-  if (/sécurité|sûr|fiable|confiance|protégé|safe/i.test(input)) {
-    return {
-      text: 'StudyMarket est sécurisé ! 🛡️\n\n✓ Étudiants vérifiés par email universitaire\n✓ Badge de confiance sur les profils\n✓ Rencontres dans lieux publics recommandées\n✓ Système de signalement rapide\n\nRestons prudents et solidaires ! 💪',
-      suggestions: ['🛡️ En savoir plus', '➕ Créer annonce', '❓ Questions']
-    };
-  }
-  
-  if (/logement|chambre|colocation|studio|appartement|location/i.test(input)) {
-    return {
-      text: '🏠 Section Logement ! Tu peux chercher des colocations, studios ou chambres près de ton campus. Visite toujours avant de t\'engager !',
-      suggestions: ['🔍 Chercher logement', '➕ Publier logement', '📋 Voir annonces'],
-      action: { type: 'navigate', payload: '/housing' }
-    };
-  }
-  
-  if (/job|stage|travail|emploi|mission|emploi/i.test(input)) {
-    return {
-      text: '💼 Jobs & Stages ! Parfait pour ton budget étudiant. Stages, petits boulots, missions... Postule directement !',
-      suggestions: ['🔍 Chercher job', '➕ Publier offre', '📋 Voir offres'],
-      action: { type: 'navigate', payload: '/jobs' }
-    };
-  }
-  
-  return {
-    text: 'Hmm, je ne suis pas sûr de bien comprendre ! 🤔\n\nJe peux t\'aider avec :\n• Créer/gérer des annonces\n• Rechercher des articles\n• Voir tes messages\n• Questions de sécurité\n\nRéessaie avec une question plus spécifique ! 😊',
-    suggestions: ['🔍 Rechercher', '➕ Créer annonce', '💬 Messages', '❓ Aide']
-  };
-};
+// Logique métier externalisée - Utilise maintenant le système NLP expert
+// La fonction generateBotResponse a été remplacée par le chatbot orchestrator
 
 // Hooks personnalisés pour la persistance
 const useMessagePersistence = (currentUser: any) => {
@@ -223,7 +97,28 @@ const useMessagePersistence = (currentUser: any) => {
     try {
       const chatRef = doc(db, 'chatHistory', currentUser.uid);
       
-      const cleanedMessages = messages.map(msg => {
+      // Helper function to recursively remove undefined values
+      const removeUndefined = (obj: any): any => {
+        if (obj === null || obj === undefined) return null;
+        if (Array.isArray(obj)) {
+          return obj.map(item => removeUndefined(item)).filter(item => item !== undefined);
+        }
+        if (typeof obj === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            if (value !== undefined) {
+              cleaned[key] = removeUndefined(value);
+            }
+          }
+          return cleaned;
+        }
+        return obj;
+      };
+      
+      // Only save last MAX_FIRESTORE_MESSAGES to prevent document size limit
+      const recentMessages = messages.slice(-MAX_FIRESTORE_MESSAGES);
+      
+      const cleanedMessages = recentMessages.map(msg => {
         const cleanMsg: any = {
           id: msg.id,
           text: msg.text,
@@ -231,21 +126,37 @@ const useMessagePersistence = (currentUser: any) => {
           timestamp: msg.timestamp.toISOString()
         };
         
-        if (msg.suggestions !== undefined && msg.suggestions !== null) {
+        if (msg.suggestions !== undefined && msg.suggestions !== null && msg.suggestions.length > 0) {
           cleanMsg.suggestions = msg.suggestions;
         }
         
+        // Only save lightweight action data (exclude large components)
         if (msg.action !== undefined && msg.action !== null) {
-          cleanMsg.action = msg.action;
+          const lightweightAction = {
+            type: msg.action.type,
+            payload: msg.action.payload ? {
+              // Only include essential fields
+              action: msg.action.payload.action,
+              path: msg.action.payload.path,
+              ...(msg.action.payload.prefill ? { prefill: msg.action.payload.prefill } : {})
+            } : undefined
+          };
+          cleanMsg.action = removeUndefined(lightweightAction);
         }
         
-        return cleanMsg;
+        if (msg.feedback !== undefined && msg.feedback !== null) {
+          cleanMsg.feedback = msg.feedback;
+        }
+        
+        return removeUndefined(cleanMsg);
       });
       
-      await setDoc(chatRef, {
+      const finalData = removeUndefined({
         messages: cleanedMessages,
         lastUpdated: new Date().toISOString()
-      }, { merge: true });
+      });
+      
+      await setDoc(chatRef, finalData, { merge: true });
     } catch (error) {
       console.warn('Erreur sauvegarde Firestore:', error);
     }
@@ -291,6 +202,7 @@ const useMessagePersistence = (currentUser: any) => {
 const ChatbotWidget: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   
   const isMessagesPage = location.pathname.includes('/messages');
@@ -317,6 +229,35 @@ const ChatbotWidget: React.FC = () => {
   const [swipeProgress, setSwipeProgress] = useState(0);
 
   const { saveToCache, loadFromFirestore, saveToFirestore } = useMessagePersistence(currentUser);
+
+  // Initialize chatbot stores
+  const listingStore = useListingStore();
+  const messageStore = useMessageStore();
+  const orderStore = useOrderStore();
+  const favoritesStore = useFavoritesStore();
+
+  // Generate persistent session ID
+  const sessionId = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      let id = sessionStorage.getItem('chatbot_session_id');
+      if (!id) {
+        id = `session_${currentUser?.uid || 'anonymous'}_${Date.now()}`;
+        sessionStorage.setItem('chatbot_session_id', id);
+      }
+      return id;
+    }
+    return `session_${currentUser?.uid || 'anonymous'}_${Date.now()}`;
+  }, [currentUser?.uid]);
+
+  // Initialize chatbot on mount (only once)
+  useEffect(() => {
+    chatbot.init({
+      listing: listingStore,
+      message: messageStore,
+      order: orderStore,
+      favorites: favoritesStore
+    });
+  }, []); // Empty deps to run only once
 
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current && viewMode === 'chat') {
@@ -367,20 +308,43 @@ const ChatbotWidget: React.FC = () => {
     return messages.length > 0 ? messages[messages.length - 1] : null;
   }, [messages]);
 
-  const handleBotAction = useCallback((action: { type: string; payload: any }) => {
-    if (action.type === 'navigate') {
+  const handleBotAction = useCallback((data: any) => {
+    console.log('🎯 handleBotAction called with:', data);
+    if (data?.action === 'display_contact') {
+      console.log('📧 Opening contact form');
+      setViewMode('contact');
+    } else if (data?.action === 'navigate' && data.path) {
+      console.log('📍 Navigating to:', data.path);
+      // Store prefill data if provided
+      if (data.prefill) {
+        localStorage.setItem('chatbot_prefill', JSON.stringify(data.prefill));
+      }
+      // Minimize chatbot before navigation
+      setIsMinimized(true);
       setTimeout(() => {
-        window.location.href = action.payload;
+        navigate(data.path);
+      }, 500);
+    } else if (data?.path) {
+      // Fallback for direct path
+      console.log('📍 [FALLBACK] Navigating to:', data.path);
+      if (data.prefill) {
+        localStorage.setItem('chatbot_prefill', JSON.stringify(data.prefill));
+      }
+      // Minimize chatbot before navigation
+      setIsMinimized(true);
+      setTimeout(() => {
+        navigate(data.path);
       }, 500);
     }
-  }, []);
+  }, [navigate]);
 
-  const sendMessage = useCallback(async () => {
-    if (!inputValue.trim() || isTyping) return;
+  const sendMessage = useCallback(async (textOverride?: string) => {
+    const messageText = textOverride || inputValue.trim();
+    if (!messageText || isTyping) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputValue.trim(),
+      text: messageText,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -393,14 +357,28 @@ const ChatbotWidget: React.FC = () => {
     saveToCache(newMessages);
     saveToFirestore(newMessages);
 
-    typingTimeoutRef.current = setTimeout(() => {
-      const botResponseData = generateBotResponse(userMessage.text, currentUser ? userName : undefined);
+    // Use chatbot orchestrator instead of regex-based logic
+    try {
+      const result = await chatbot.processMessage({
+        message: userMessage.text,
+        config: {
+          sessionId,
+          userId: currentUser?.uid,
+          currentPage: location.pathname
+        }
+      });
+      
+      console.log('📦 Chatbot result:', {
+        hasActionResult: !!result.actionResult,
+        actionResultType: result.actionResult?.success ? 'success' : 'failed',
+        hasData: !!result.actionResult?.data
+      });
       
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: botResponseData.text,
-        suggestions: botResponseData.suggestions,
-        action: botResponseData.action,
+        text: result.botResponse.text,
+        suggestions: result.botResponse.suggestions,
+        action: result.actionResult?.data,
         sender: 'bot',
         timestamp: new Date(),
       };
@@ -412,11 +390,25 @@ const ChatbotWidget: React.FC = () => {
       saveToCache(finalMessages);
       saveToFirestore(finalMessages);
       
-      if (botResponseData.action) {
-        handleBotAction(botResponseData.action);
+      if (result.actionResult?.data) {
+        handleBotAction(result.actionResult.data);
+      } else {
+        console.log('⚠️ No action result data, skipping navigation');
       }
-    }, BOT_TYPING_DELAY);
-  }, [inputValue, isTyping, messages, saveToCache, saveToFirestore, currentUser, userName, handleBotAction]);
+    } catch (error) {
+      console.error('Chatbot error:', error);
+      // Fallback to simple message
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Désolé, une erreur s'est produite. Peux-tu réessayer ? 😔",
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      const finalMessages = [...newMessages, botResponse].slice(-MAX_MESSAGES);
+      setMessages(finalMessages);
+      setIsTyping(false);
+    }
+  }, [inputValue, isTyping, messages, saveToCache, saveToFirestore, currentUser, userName, handleBotAction, location.pathname, listingStore, messageStore, orderStore, favoritesStore]);
 
   useEffect(() => {
     return () => {
@@ -706,10 +698,10 @@ const ChatbotWidget: React.FC = () => {
                     {message.suggestions.map((suggestion, idx) => (
                       <button
                         key={idx}
-                        onClick={() => {
-                          const cleanSuggestion = suggestion.replace(/[^\w\s]/g, '').trim();
-                          setInputValue(cleanSuggestion);
-                          setTimeout(() => sendMessage(), 100);
+                        onClick={async () => {
+                          // Remove emojis but keep letters with accents
+                          const cleanSuggestion = suggestion.replace(/\p{Emoji}/gu, '').trim();
+                          await sendMessage(cleanSuggestion);
                         }}
                         className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-full text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:scale-105 active:scale-95"
                       >
@@ -797,7 +789,7 @@ const ChatbotWidget: React.FC = () => {
             disabled={isTyping}
           />
           <Button
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={!inputValue.trim() || isTyping}
             size="icon"
             className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center touch-manipulation active:scale-95"
@@ -939,25 +931,27 @@ const ChatbotWidget: React.FC = () => {
 
       {isOpen && (
         <>
-          <div 
-            className={`fixed inset-0 z-[40] bg-black/50 backdrop-blur-sm transition-all duration-300 md:duration-200 ${isClosing ? 'animate-[fadeOut_0.3s_ease-out]' : 'animate-[fadeIn_0.3s_ease-out]'}`}
-            style={{
-              opacity: isClosing ? undefined : (0.5 * (1 - swipeProgress))
-            }}
-            onClick={closeWidget}
-          />
+          {!isMinimized && (
+            <div 
+              className={`fixed inset-0 z-[40] bg-black/50 backdrop-blur-sm transition-all duration-300 md:duration-200 ${isClosing ? 'animate-[fadeOut_0.3s_ease-out]' : 'animate-[fadeIn_0.3s_ease-out]'}`}
+              style={{
+                opacity: isClosing ? undefined : (0.5 * (1 - swipeProgress))
+              }}
+              onClick={closeWidget}
+            />
+          )}
           
           <Card 
-            className={`fixed z-[50] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden
+            className={`fixed z-[50] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden transition-all duration-300 ease-out
             ${isClosing && !isMinimized ? 'animate-[slideDown_0.4s_ease-out]' : !isClosing && !isMinimized ? 'animate-[slideUp_0.4s_ease-out]' : ''}
             ${isMinimized 
-              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14 md:bottom-6 md:right-6 md:left-auto md:w-[380px]' 
+              ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14 rounded-2xl md:bottom-6 md:right-6 md:left-auto md:w-[380px]' 
               : 'inset-0 md:bottom-6 md:right-6 md:left-auto md:w-[480px] md:h-[680px] md:rounded-2xl md:top-auto'
             }`}
             style={{
               transform: swipeProgress > 0 ? `translateY(${swipeProgress * 100}%)` : undefined,
               opacity: isMinimized && swipeProgress === 0 ? undefined : (1 - swipeProgress * 0.5),
-              transition: swipeProgress === 0 ? 'transform 0.3s ease-out, opacity 0.3s ease-out' : 'none'
+              transition: swipeProgress > 0 ? 'none' : undefined
             }}
           >
             <CardContent className="p-0 h-full flex flex-col">
@@ -967,42 +961,68 @@ const ChatbotWidget: React.FC = () => {
                 </div>
               )}
               
-              <div 
-                className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation md:hidden"
-                style={{ touchAction: 'none' }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
+              {/* Mobile minimized header - shown when minimized on mobile */}
+              {isMinimized && (
                 <div 
-                  className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
-                  onClick={toggleMinimize}
+                  className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white md:hidden"
+                  style={{ touchAction: 'none' }}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                 >
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                    {isMinimized ? (
-                      <ArrowDown className="w-6 h-6 text-white transform rotate-180" />
-                    ) : (
-                      <MessageCircle className="w-6 h-6 text-white" />
-                    )}
+                  <div 
+                    className="flex items-center space-x-2 flex-1 min-w-0 cursor-pointer"
+                    onClick={toggleMinimize}
+                  >
+                    <MessageCircle className="w-5 h-5 text-white" />
+                    <h2 className="font-semibold text-sm">Chat</h2>
                   </div>
-                  <div className="min-w-0">
-                    <h2 className="font-semibold text-base">StudyMarket</h2>
-                    {!isMinimized && (
-                      <p className="text-xs text-white/80">Assistant en ligne</p>
-                    )}
-                  </div>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeWidget();
+                    }}
+                    variant="ghost"
+                    className="text-white hover:bg-white/20 p-0 w-8 h-8 flex-shrink-0 touch-manipulation active:scale-95 flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeWidget();
-                  }}
-                  variant="ghost"
-                  className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 touch-manipulation active:scale-95 flex items-center justify-center"
+              )}
+              
+              {/* Mobile full header - shown when open on mobile */}
+              {!isMinimized && (
+                <div 
+                  className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white touch-manipulation md:hidden"
+                  style={{ touchAction: 'none' }}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                 >
-                  <X className="w-6 h-6" />
-                </Button>
-              </div>
+                  <div 
+                    className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
+                    onClick={toggleMinimize}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-base">StudyMarket</h2>
+                      <p className="text-xs text-white/80">Assistant en ligne</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeWidget();
+                    }}
+                    variant="ghost"
+                    className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 touch-manipulation active:scale-95 flex items-center justify-center"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+              )}
 
               {!isMinimized && (
                 <>
@@ -1016,13 +1036,22 @@ const ChatbotWidget: React.FC = () => {
                         <p className="text-xs text-white/80">Assistant en ligne</p>
                       </div>
                     </div>
-                    <Button
-                      onClick={closeWidget}
-                      variant="ghost"
-                      className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 transition-all duration-200 hover:scale-105"
-                    >
-                      <X className="w-6 h-6" />
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        onClick={toggleMinimize}
+                        variant="ghost"
+                        className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 transition-all duration-200 hover:scale-105"
+                      >
+                        <MinimizeIcon className="w-6 h-6" />
+                      </Button>
+                      <Button
+                        onClick={closeWidget}
+                        variant="ghost"
+                        className="text-white hover:bg-white/20 p-0 w-10 h-10 flex-shrink-0 transition-all duration-200 hover:scale-105"
+                      >
+                        <X className="w-6 h-6" />
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="flex-1 overflow-hidden min-h-0 animate-fade-in">
@@ -1032,6 +1061,45 @@ const ChatbotWidget: React.FC = () => {
                   </div>
                   {renderBottomNav()}
                 </>
+              )}
+              
+              {/* Desktop minimized header - shown when minimized on desktop */}
+              {isMinimized && (
+                <div className="hidden md:flex items-center justify-between px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white">
+                  <div 
+                    className="flex items-center space-x-2 flex-1 min-w-0"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-sm text-white leading-tight">StudyMarket</h2>
+                      <p className="text-xs text-white/80 leading-tight">Assistant en ligne</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMinimize();
+                      }}
+                      variant="ghost"
+                      className="text-white hover:bg-white/20 p-0 w-8 h-8 flex-shrink-0 transition-all duration-200 hover:scale-105"
+                    >
+                      <MinimizeIcon className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeWidget();
+                      }}
+                      variant="ghost"
+                      className="text-white hover:bg-white/20 p-0 w-8 h-8 flex-shrink-0 transition-all duration-200 hover:scale-105"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

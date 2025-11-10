@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, Grid, List, SlidersHorizontal, Smartphone, Car, Home, Shirt, Gamepad2, Baby, Briefcase, Bed } from 'lucide-react';
+import { Search, Filter, Grid, List, Smartphone, Car, Home, Shirt, Gamepad2, Baby, Briefcase, Bed, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
+import { ListingsMap } from '@/components/listing/ListingsMap';
 import { SearchFilters } from '../types';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 
@@ -51,6 +52,8 @@ export const ListingsPage: React.FC = () => {
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [showListingsMap, setShowListingsMap] = useState(false);
+  const listingsMapContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const initialFilters: SearchFilters = {
@@ -105,6 +108,14 @@ export const ListingsPage: React.FC = () => {
     setSearchParams({});
   };
 
+  useEffect(() => {
+    if (showListingsMap) {
+      requestAnimationFrame(() => {
+        listingsMapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [showListingsMap]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Breadcrumb */}
@@ -142,6 +153,14 @@ export const ListingsPage: React.FC = () => {
                 <Search className="w-4 h-4 mr-2" />
                 Rechercher
               </Button>
+              <Button
+                variant={showListingsMap ? 'default' : 'outline'}
+                className="whitespace-nowrap hidden sm:flex"
+                onClick={() => setShowListingsMap((prev) => !prev)}
+              >
+                <MapPin className="w-4 h-4 mr-2" />
+                {showListingsMap ? 'Masquer la carte' : 'Carte interactive'}
+              </Button>
               
               <Button
                 variant="outline"
@@ -153,6 +172,14 @@ export const ListingsPage: React.FC = () => {
               </Button>
             </div>
           </div>
+          <Button
+            variant={showListingsMap ? 'default' : 'outline'}
+            className="sm:hidden mb-4"
+            onClick={() => setShowListingsMap((prev) => !prev)}
+          >
+            <MapPin className="w-4 h-4 mr-2" />
+            {showListingsMap ? 'Masquer la carte' : 'Carte interactive'}
+          </Button>
 
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -176,7 +203,8 @@ export const ListingsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      
+      <div className="flex flex-col lg:flex-row lg:items-start gap-8">
         {/* Sidebar Filters */}
         <aside className={`lg:w-80 space-y-6 ${showFilters ? 'block' : 'hidden lg:block'}`}>
           <Card>
@@ -270,125 +298,136 @@ export const ListingsPage: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1">
-          {/* Results Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <span className="text-muted-foreground">
-                {listings.length} résultat(s)
-              </span>
-              
-              {(filters.query || filters.category || filters.minPrice || filters.maxPrice) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Filtres actifs:</span>
-                  {filters.query && (
-                    <Badge variant="secondary">
-                      "{filters.query}"
-                    </Badge>
-                  )}
-                  {filters.category && (
-                    <Badge variant="secondary">
-                      {categories.find(c => c.value === filters.category)?.label}
-                    </Badge>
+        <main className="flex-1 pt-0.5">
+          {showListingsMap ? (
+            <section
+              ref={listingsMapContainerRef}
+              className="w-full rounded-2xl border border-border overflow-hidden"
+            >
+              <ListingsMap listings={listings} heightClass="min-h-[70vh] sm:h-[75vh]" useCard={false} />
+            </section>
+          ) : (
+            <>
+              {/* Results Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground">
+                    {listings.length} résultat(s)
+                  </span>
+                  
+                  {(filters.query || filters.category || filters.minPrice || filters.maxPrice) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Filtres actifs:</span>
+                      {filters.query && (
+                        <Badge variant="secondary">
+                          "{filters.query}"
+                        </Badge>
+                      )}
+                      {filters.category && (
+                        <Badge variant="secondary">
+                          {categories.find(c => c.value === filters.category)?.label}
+                        </Badge>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            <div className="flex items-center gap-2">
-              {/* Sort */}
-              <Select
-                value={filters.sortBy || 'date'}
-                onValueChange={(value) => handleFilterChange('sortBy', value)}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Separator orientation="vertical" className="h-6" />
-
-              {/* View Mode avec icônes uniquement */}
-              <div className="flex border rounded-lg overflow-hidden">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-none w-15 h-15"
-                  title="Vue en grille"
-                >
-                  <Grid className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-none w-15 h-15"
-                  title="Vue en liste"
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Results */}
-          {loading && listings.length === 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="aspect-[4/3] bg-muted" />
-                  <CardContent className="p-4 space-y-2">
-                    <div className="h-4 bg-muted rounded w-1/2" />
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-4 bg-muted rounded w-1/4" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : listings.length > 0 ? (
-            <>
-              <div className={`grid gap-4 sm:gap-6 lg:gap-8 justify-items-center ${
-                viewMode === 'grid' 
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
-                  : 'grid-cols-1'
-              }`}>
-                {listings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
-                ))}
-              </div>
-
-              {/* Load More */}
-              {hasMore && (
-                <div className="text-center mt-8">
-                  <Button 
-                    onClick={loadMore} 
-                    disabled={loading}
-                    variant="outline"
-                    size="lg"
+                <div className="flex items-center gap-2">
+                  {/* Sort */}
+                  <Select
+                    value={filters.sortBy || 'date'}
+                    onValueChange={(value) => handleFilterChange('sortBy', value)}
                   >
-                    {loading ? 'Chargement...' : 'Charger plus'}
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sortOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Separator orientation="vertical" className="h-6" />
+
+                  {/* View Mode avec icônes uniquement */}
+                  <div className="flex border rounded-lg overflow-hidden">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="icon"
+                      onClick={() => setViewMode('grid')}
+                      className="rounded-none w-15 h-15"
+                      title="Vue en grille"
+                    >
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="icon"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-none w-15 h-15"
+                      title="Vue en liste"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Results */}
+              {loading && listings.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <div className="aspect-[4/3] bg-muted" />
+                      <CardContent className="p-4 space-y-2">
+                        <div className="h-4 bg-muted rounded w-1/2" />
+                        <div className="h-4 bg-muted rounded w-3/4" />
+                        <div className="h-4 bg-muted rounded w-1/4" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : listings.length > 0 ? (
+                <>
+                  <div className={`grid gap-4 sm:gap-6 lg:gap-8 justify-items-center ${
+                    viewMode === 'grid' 
+                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+                      : 'grid-cols-1'
+                  }`}>
+                    {listings.map((listing) => (
+                      <ListingCard key={listing.id} listing={listing} />
+                    ))}
+                  </div>
+
+                  {/* Load More */}
+                  {hasMore && (
+                    <div className="text-center mt-8">
+                      <Button 
+                        onClick={loadMore} 
+                        disabled={loading}
+                        variant="outline"
+                        size="lg"
+                      >
+                        {loading ? 'Chargement...' : 'Charger plus'}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <h3 className="text-lg font-semibold mb-2">Aucun résultat trouvé</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Essayez de modifier vos critères de recherche
+                  </p>
+                  <Button onClick={clearFilters} variant="outline">
+                    Effacer les filtres
                   </Button>
                 </div>
               )}
             </>
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-semibold mb-2">Aucun résultat trouvé</h3>
-              <p className="text-muted-foreground mb-4">
-                Essayez de modifier vos critères de recherche
-              </p>
-              <Button onClick={clearFilters} variant="outline">
-                Effacer les filtres
-              </Button>
-            </div>
           )}
         </main>
       </div>

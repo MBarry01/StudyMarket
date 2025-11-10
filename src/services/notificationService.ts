@@ -407,4 +407,23 @@ export class NotificationService {
       priority: 'normal'
     });
   }
+
+  /**
+   * 📤 Toast local : Confirmation de l'ajout de documents
+   */
+  static notifyDocumentUpload(count: number) {
+    const label = count > 1 ? `${count} documents ajoutés` : 'Document ajouté';
+    toast.success(`📤 ${label}`, {
+      id: 'verification-upload',
+    });
+  }
+
+  /**
+   * ⚠️ Toast local : Erreur d'upload
+   */
+  static notifyUploadError(message?: string) {
+    toast.error(message || 'Erreur lors du téléversement des documents', {
+      id: 'verification-upload-error',
+    });
+  }
 }

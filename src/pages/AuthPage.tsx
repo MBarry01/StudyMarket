@@ -16,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, reload, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, db, emailConfig } from "../lib/firebase";
+import { UNIVERSITY_NAMES, getUniversityMetadata } from '@/constants/universities';
 // import { EmailVerificationModal } from "@/components/ui/EmailVerificationModal";
 
 const signInSchema = z.object({
@@ -96,23 +97,6 @@ const completeProfileSchema = z.object({
 type SignInFormData = z.infer<typeof signInSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
 type CompleteProfileFormData = z.infer<typeof completeProfileSchema>;
-
-const universities = [
-  'Sorbonne Université',
-  'Université Paris-Dauphine',
-  'École Polytechnique',
-  'ENS Paris',
-  'CentraleSupélec',
-  'MINES ParisTech',
-  'HEC Paris',
-  'ESSEC',
-  'ESCP',
-  'Université Paris 1 Panthéon-Sorbonne',
-  'Université Paris 3 Sorbonne',
-  'Université Paris Cité',
-  'Sciences Po Paris',
-  'Autre université'
-];
 
 const fieldsOfStudy = [
   'Informatique',
@@ -350,6 +334,7 @@ export const AuthPage: React.FC = () => {
                 const universityToSave = data.university === 'Autre université' ? data.otherUniversity : data.university;
                 const fieldOfStudyToSave = data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : data.fieldOfStudy;
                 const cleanData = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+                const metadata = getUniversityMetadata(universityToSave || '');
                 await setDoc(doc(db, 'users', googleUserData.uid), {
                   email: googleUserData.email,
                   displayName: cleanData.displayName,
@@ -359,6 +344,9 @@ export const AuthPage: React.FC = () => {
                   fieldOfStudy: fieldOfStudyToSave,
                   otherFieldOfStudy: data.fieldOfStudy === 'Autre' ? data.otherFieldOfStudy : null,
                   graduationYear: parseInt(data.graduationYear),
+                  campus: metadata.campus || null,
+                  location: metadata.location || null,
+                  locationCoordinates: metadata.coordinates || null,
                   createdAt: new Date().toISOString(),
                   emailVerified: true,
                   isStudent: true,
@@ -388,7 +376,7 @@ export const AuthPage: React.FC = () => {
                     <SelectValue placeholder="Sélectionnez votre université" />
                   </SelectTrigger>
                   <SelectContent>
-                    {universities.map((uni) => (
+                    {UNIVERSITY_NAMES.map((uni) => (
                       <SelectItem key={uni} value={uni}>
                         {uni}
                       </SelectItem>
@@ -668,6 +656,8 @@ export const AuthPage: React.FC = () => {
         graduationYear: data.graduationYear
       });
       
+      const universityMetadata = getUniversityMetadata(universityToSave);
+
       const userDataToSave = {
         firstName, 
         lastName, 
@@ -681,8 +671,9 @@ export const AuthPage: React.FC = () => {
         photoURL: null,
         bio: null,
         phone: null,
-        campus: null,
-        location: null,
+        campus: universityMetadata.campus || null,
+        location: universityMetadata.location || null,
+        locationCoordinates: universityMetadata.coordinates || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         emailVerified: false, // Sera mis à true après validation email
@@ -891,7 +882,7 @@ export const AuthPage: React.FC = () => {
                       <SelectValue placeholder="Sélectionnez votre université" />
                     </SelectTrigger>
                     <SelectContent>
-                      {universities.map((uni) => (
+                      {UNIVERSITY_NAMES.map((uni) => (
                         <SelectItem key={uni} value={uni}>
                           {uni}
                         </SelectItem>

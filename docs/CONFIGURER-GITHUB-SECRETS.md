@@ -29,6 +29,20 @@ Cliquer "Add secret"
 
 Cliquer "Add secret"
 
+### Étape 4 : Ajouter `VITE_OPENAI_API_KEY` (Optionnel)
+
+**Name** : `VITE_OPENAI_API_KEY`
+**Secret** : `VOTRE_CLE_API_OPENAI_ICI`
+
+Cliquer "Add secret"
+
+### Étape 5 : Ajouter `VITE_OPENAI_ENABLED` (Optionnel)
+
+**Name** : `VITE_OPENAI_ENABLED`
+**Secret** : `true`
+
+Cliquer "Add secret"
+
 ---
 
 ## 🔍 TROUVER VOTRE UID
@@ -59,7 +73,18 @@ VITE_SUPABASE_URL=https://...
 VITE_SUPABASE_ANON_KEY=...
 VITE_ALGOLIA_APP_ID=...
 VITE_ALGOLIA_SEARCH_KEY=...
+VITE_OPENAI_API_KEY=sk-proj-...
+VITE_OPENAI_ENABLED=true
 ```
+
+### 🤖 Configuration OpenAI (Optionnel)
+
+**Pour activer le chatbot intelligent** :
+1. Aller sur GitHub Settings > Secrets > Actions
+2. Ajouter `VITE_OPENAI_API_KEY` avec votre clé API OpenAI
+3. Ajouter `VITE_OPENAI_ENABLED` avec la valeur `true`
+
+**Note** : Le chatbot fonctionne sans OpenAI, mais sera plus intelligent avec.
 
 ---
 

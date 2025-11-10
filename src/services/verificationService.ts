@@ -148,7 +148,17 @@ export class VerificationService {
       console.log('🤖 Démarrage validation automatique...');
       let validationResult;
       let finalStatus = VerificationStatus.DOCUMENTS_SUBMITTED;
-      
+      const rawGraduationYear = userData.graduationYear as number | string | undefined;
+      const parsedGraduationYear = typeof rawGraduationYear === 'number'
+        ? rawGraduationYear
+        : rawGraduationYear
+          ? parseInt(String(rawGraduationYear), 10)
+          : NaN;
+      const currentYear = new Date().getFullYear();
+      let graduationYearOk = Number.isFinite(parsedGraduationYear)
+        ? parsedGraduationYear >= currentYear - 1 && parsedGraduationYear <= currentYear + 6
+        : false;
+ 
       try {
         const validationDocs = uploadedDocuments.map(d => ({
           url: d.url,
@@ -162,13 +172,27 @@ export class VerificationService {
           {
             ipAddress: 'client', // TODO: Récupérer IP réelle
             previousAttempts: 0, // TODO: Compter tentatives réelles
+          },
+          {
+            displayName: userData.displayName,
+            university: userData.university,
+            graduationYear: typeof userData.graduationYear === 'number' ? userData.graduationYear : undefined,
           }
         );
 
         console.log('✅ Validation automatique terminée:', validationResult);
 
+        // Contrôle additionnel : cohérence de l'année universitaire
+        if (!graduationYearOk) {
+          validationResult?.reasons.push('⚠️ Année universitaire hors plage attendue');
+        }
+
         // Déterminer le statut final basé sur la recommandation
-        if (validationResult.recommendation === 'auto_approve' && validationResult.passed) {
+        if (
+          validationResult.recommendation === 'auto_approve' &&
+          validationResult.passed &&
+          graduationYearOk
+        ) {
           finalStatus = VerificationStatus.VERIFIED;
           console.log('🎉 Auto-approbation ! Score:', validationResult.score);
         } else if (validationResult.recommendation === 'reject') {
@@ -188,6 +212,7 @@ export class VerificationService {
       const baseMetadata: any = {
         email_domain_ok: false,
         id_expiry_ok: false,
+        graduation_year_ok: graduationYearOk,
         ocr_text: {},
         face_match: { confidence: 0, verified: false },
         fraud_signals: { disposable_email: false, ip_mismatch: false, multiple_attempts: false },
@@ -198,7 +223,21 @@ export class VerificationService {
         campus: userData.campus,
       };
 
-      // Ajouter les résultats de validation automatique si disponible
+      // Ajouter métadonnées de validation automatique si dispo
+      if (validationResult) {
+        baseMetadata.email_domain_ok = validationResult.checks.emailDomain;
+        baseMetadata.id_expiry_ok = Boolean(validationResult.details?.ocr?.expiryValid ?? false);
+        baseMetadata.ocr_text = validationResult.details?.ocr?.extractedText;
+        if (validationResult.details?.ocr?.matchSummary) {
+          baseMetadata.ocr_match_summary = validationResult.details.ocr.matchSummary;
+        }
+        baseMetadata.face_match = {
+          confidence: validationResult.details?.faceMatch?.confidence ?? 0,
+          verified: validationResult.details?.faceMatch?.verified ?? false,
+        };
+        baseMetadata.antivirus_results = validationResult.details?.antivirus;
+      }
+
       const finalMetadata = {
         ...baseMetadata,
         ...(validationResult && {
@@ -447,6 +486,53 @@ export class VerificationService {
   }
 
   /**
+   * Annuler une demande de vérification (Admin only)
+   */
+  static async cancelVerification(
+    requestId: string,
+    reason: string | undefined,
+    adminId: string
+  ): Promise<void> {
+    try {
+      const requestRef = doc(db, this.COLLECTION, requestId);
+      const requestSnap = await getDoc(requestRef);
+
+      if (!requestSnap.exists()) {
+        throw new Error('Demande de vérification introuvable');
+      }
+
+      const data = requestSnap.data();
+
+      await updateDoc(requestRef, {
+        status: VerificationStatus.UNVERIFIED,
+        reviewedAt: serverTimestamp(),
+        reviewedBy: adminId,
+        cancellationReason: reason ?? null,
+        cancelledAt: serverTimestamp(),
+        cancelledBy: adminId,
+      });
+
+      const userRef = doc(db, 'users', data.userId);
+      await updateDoc(userRef, {
+        verificationStatus: VerificationStatus.UNVERIFIED,
+        isVerified: false,
+      });
+
+      await AuditService.logCancellation(
+        requestId,
+        adminId,
+        reason,
+        {
+          previousStatus: data.status,
+        }
+      );
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Révoquer une certification (Admin only)
    */
   static async revokeVerification(
@@ -540,10 +626,15 @@ export class VerificationService {
       let snapshot;
       
       if (statusFilter && statusFilter !== 'all') {
-        // Filtrer par status avec where (nécessite index)
+        const statusGroups: Record<string, string[]> = {
+          pending: ['pending', 'documents_submitted', 'under_review'],
+          approved: ['approved', 'verified'],
+          rejected: ['rejected'],
+        };
+        const statuses = statusGroups[statusFilter] || [statusFilter];
         const q = query(
           collection(db, this.COLLECTION),
-          where('status', '==', statusFilter)
+          where('status', 'in', statuses)
         );
         snapshot = await getDocs(q);
       } else {
@@ -733,10 +824,17 @@ export class VerificationService {
   ): Unsubscribe {
     let q;
     
+    const statusGroups: Record<string, string[]> = {
+      pending: ['pending', 'documents_submitted', 'under_review'],
+      approved: ['approved', 'verified'],
+      rejected: ['rejected'],
+    };
+
     if (statusFilter && statusFilter !== 'all') {
+      const statuses = statusGroups[statusFilter] || [statusFilter];
       q = query(
         collection(db, this.COLLECTION),
-        where('status', '==', statusFilter)
+        where('status', 'in', statuses)
       );
     } else {
       // Pas d'orderBy pour éviter les problèmes d'index Firestore

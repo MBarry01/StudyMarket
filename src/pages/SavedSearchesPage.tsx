@@ -60,6 +60,7 @@ import { SearchFilters } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { UNIVERSITY_FILTER_OPTIONS } from '@/constants/universities';
 
 // Types pour les recherches sauvegardées
 interface SavedSearch {
@@ -169,16 +170,6 @@ const transactionTypes = [
   { value: 'donation', label: 'Don' },
   { value: 'exchange', label: 'Échange' },
   { value: 'service', label: 'Service' }
-];
-
-// Universités
-const universities = [
-  { value: 'all', label: 'Toutes universités' },
-  { value: 'sorbonne', label: 'Sorbonne Université' },
-  { value: 'dauphine', label: 'Université Paris-Dauphine' },
-  { value: 'polytechnique', label: 'École Polytechnique' },
-  { value: 'ens', label: 'ENS Paris' },
-  { value: 'centrale', label: 'CentraleSupélec' }
 ];
 
 export const SavedSearchesPage: React.FC = () => {
@@ -628,7 +619,7 @@ export const SavedSearchesPage: React.FC = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {universities.map((university) => (
+                        {UNIVERSITY_FILTER_OPTIONS.map((university) => (
                           <SelectItem key={university.value} value={university.value}>
                             {university.label}
                           </SelectItem>

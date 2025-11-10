@@ -222,6 +222,16 @@ export const ProfilePage: React.FC = () => {
     }
   }, [currentUser]);
 
+  // Synchroniser les données locales lorsque le profil global change
+  useEffect(() => {
+    if (userProfile) {
+      setProfileData(prev => ({
+        ...(prev || {}),
+        ...userProfile,
+      }));
+    }
+  }, [userProfile]);
+
   const loadUserListings = async () => {
     if (!currentUser) return;
 

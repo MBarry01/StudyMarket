@@ -44,7 +44,7 @@ import { fr } from 'date-fns/locale';
 export const ListingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { currentListing, loading, fetchListingById } = useListingStore();
   const { fetchUserFavorites } = useFavoritesStore();
   
@@ -99,6 +99,23 @@ export const ListingDetailPage: React.FC = () => {
 
   const listing = currentListing;
   const isOwner = currentUser?.uid === listing.sellerId;
+  const sellerName = isOwner
+    ? userProfile?.displayName || listing.sellerName
+    : listing.sellerName;
+  const sellerUniversity = isOwner
+    ? userProfile?.university || 'Université non spécifiée'
+    : listing.sellerUniversity || 'Université non spécifiée';
+  const sellerAvatar = isOwner
+    ? userProfile?.photoURL || listing.sellerAvatar
+    : listing.sellerAvatar;
+  const sellerVerified =
+    isOwner ? userProfile?.isVerified || listing.sellerVerified : listing.sellerVerified;
+  const campusDisplay = isOwner
+    ? userProfile?.campus || listing.location.campus || null
+    : listing.location.campus || null;
+  const universityDisplay = isOwner
+    ? userProfile?.university || listing.location.university || null
+    : listing.location.university || null;
 
   const formatPrice = (price: number, currency?: string) => {
     if (listing.transactionType === 'donation') return 'Gratuit';
@@ -407,12 +424,12 @@ export const ListingDetailPage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={listing.sellerAvatar || undefined} />
+                        <AvatarImage src={sellerAvatar || undefined} />
                         <AvatarFallback>
-                          {listing.sellerName[0]?.toUpperCase()}
+                          {(sellerName || 'Utilisateur')[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {((listing.sellerVerificationStatus === 'verified' || listing.sellerVerificationStatus === 'Verified') || listing.sellerVerified) && (
+                      {((listing.sellerVerificationStatus === 'verified' || listing.sellerVerificationStatus === 'Verified') || sellerVerified) && (
                         <div className="absolute bottom-0 right-0 transform translate-x-1/4 -translate-y-1/4 z-10">
                           <BadgeCheck size={16} fill="#3b82f6" stroke="white" strokeWidth={2} />
                         </div>
@@ -420,10 +437,10 @@ export const ListingDetailPage: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{listing.sellerName}</h3>
+                        <h3 className="font-semibold">{sellerName}</h3>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {listing.sellerUniversity}
+                        {sellerUniversity}
                       </p>
                     </div>
                   </div>
@@ -543,24 +560,30 @@ export const ListingDetailPage: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <div className="font-medium">{listing.location.city}</div>
+                  <div className="font-medium">
+                    {isOwner && userProfile?.location
+                      ? userProfile.location
+                      : listing.location.city || 'Localisation non spécifiée'}
+                  </div>
                   <div className="text-sm text-muted-foreground">
-                    {listing.location.state}, {listing.location.country}
+                    {listing.location.state && listing.location.country
+                      ? `${listing.location.state}, ${listing.location.country}`
+                      : listing.location.country || ''}
                   </div>
                 </div>
-                {listing.location.campus && (
+                {campusDisplay && (
                   <div>
                     <div className="text-sm font-medium">Campus</div>
                     <div className="text-sm text-muted-foreground">
-                      {listing.location.campus}
+                      {campusDisplay}
                     </div>
                   </div>
                 )}
-                {listing.location.university && (
+                {universityDisplay && (
                   <div>
                     <div className="text-sm font-medium">Université</div>
                     <div className="text-sm text-muted-foreground">
-                      {listing.location.university}
+                      {universityDisplay}
                     </div>
                   </div>
                 )}
@@ -577,7 +600,13 @@ export const ListingDetailPage: React.FC = () => {
                 <MapViewer
                   latitude={listing.location.coordinates.lat}
                   longitude={listing.location.coordinates.lng}
-                  address={`${listing.location.city}, ${listing.location.state}`}
+                  address={
+                    isOwner && userProfile?.location
+                      ? userProfile.location
+                      : `${listing.location.city ?? ''}${
+                          listing.location.state ? `, ${listing.location.state}` : ''
+                        }`
+                  }
                   title="Point de rencontre"
                 />
               </div>

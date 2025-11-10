@@ -195,6 +195,39 @@ export const CreateListingPage: React.FC = () => {
     mode: 'onChange'
   });
 
+  // Load chatbot prefill data on mount
+  useEffect(() => {
+    const prefillData = localStorage.getItem('chatbot_prefill');
+    if (prefillData) {
+      try {
+        const prefill = JSON.parse(prefillData);
+        console.log('🤖 Chatbot prefill data:', prefill);
+        
+        if (prefill.category) {
+          setSelectedCategory(prefill.category);
+        }
+        
+        if (prefill.price && typeof prefill.price === 'number') {
+          form.setValue('price', prefill.price.toString());
+        }
+        
+        if (prefill.condition) {
+          form.setValue('condition', prefill.condition);
+        }
+        
+        if (prefill.title) {
+          form.setValue('title', prefill.title);
+        }
+        
+        // Clear prefill after use
+        localStorage.removeItem('chatbot_prefill');
+      } catch (error) {
+        console.error('Error parsing prefill data:', error);
+        localStorage.removeItem('chatbot_prefill');
+      }
+    }
+  }, [form]);
+
   // Mettre à jour la catégorie si l'URL change (navigation interne)
   useEffect(() => {
     const catParam = searchParams.get('category');
@@ -205,7 +238,7 @@ export const CreateListingPage: React.FC = () => {
     if (catParam === 'housing' && transactionType !== 'service') {
       setTransactionType('service');
     }
-  }, [searchParams, selectedCategory]);
+  }, [searchParams, selectedCategory, transactionType]);
 
   // Réinitialiser le formulaire quand le type change
   useEffect(() => {

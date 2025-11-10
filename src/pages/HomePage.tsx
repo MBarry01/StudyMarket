@@ -1,17 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ArrowRight,
   Shield,
   GraduationCap,
   Leaf,
-  Award
+  Award,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  sortListingsByPriority, 
+  getUserLocation, 
+  saveUserLocation, 
+  getSavedUserLocation,
+  fetchNearbyListings,
+  ListingWithDistance 
+} from '../lib/geolocation';
 import { ImBook, ImGift, ImHome, ImLocation, ImMobile, ImSpinner9, ImUsers, ImUserTie } from "react-icons/im";
 
 
@@ -162,10 +173,116 @@ const quickActions = [
 
 export const HomePage: React.FC = () => {
   const { featuredListings, fetchFeaturedListings } = useListingStore();
+  const { userProfile } = useAuth();
+  const [nearbyListings, setNearbyListings] = useState<ListingWithDistance[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLoadingNearby, setIsLoadingNearby] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const nearbyMap = useMemo(() => {
+    return nearbyListings.reduce<Record<string, ListingWithDistance>>((acc, listing) => {
+      acc[listing.id] = listing;
+      return acc;
+    }, {});
+  }, [nearbyListings]);
+
+  const prioritizedListings = useMemo<ListingWithDistance[]>(() => {
+    if (featuredListings.length === 0) {
+      return [];
+    }
+
+    if (!userProfile || nearbyListings.length === 0) {
+      return featuredListings.slice(0, 6).map((listing, index) => ({
+        ...listing,
+        distance: Infinity,
+        priority: 1000 + index,
+      }));
+    }
+
+    const combined: (ListingWithDistance)[] = [];
+    const seen = new Set<string>();
+
+    nearbyListings.forEach((listing) => {
+      combined.push(listing);
+      seen.add(listing.id);
+    });
+
+    featuredListings.forEach((listing) => {
+      if (!seen.has(listing.id)) {
+        combined.push({
+          ...listing,
+          distance: Infinity,
+          priority: 999,
+        } as ListingWithDistance);
+      }
+    });
+
+    return combined.slice(0, 6);
+  }, [featuredListings, nearbyListings, userProfile]);
 
   useEffect(() => {
     fetchFeaturedListings();
   }, [fetchFeaturedListings]);
+
+  // Charger la position de l'utilisateur et les annonces proches - OPTIMISÉ
+  useEffect(() => {
+    const loadNearbyListings = async () => {
+      if (!userProfile) return;
+
+      setIsLoadingNearby(true);
+      
+      // Récupérer la position sauvegardée ou demander la géolocalisation
+      const savedLocation = getSavedUserLocation();
+      let location = savedLocation;
+      
+      if (!location) {
+        location = await getUserLocation();
+        if (location) {
+          saveUserLocation(location);
+        }
+      }
+
+      if (location) {
+        setUserLocation(location);
+      }
+
+      // OPTIMISÉ : Charger seulement les listings nécessaires (max 20)
+      const listings = await fetchNearbyListings(userProfile, 20);
+      
+      // Trier par priorité
+      if (location && listings.length > 0) {
+        const sorted = sortListingsByPriority(listings, location, userProfile);
+        setNearbyListings(sorted.slice(0, 6)); // Limiter à 6 annonces
+      } else if (listings.length > 0) {
+        // Si pas de géolocalisation, prendre les premières
+        setNearbyListings(listings.slice(0, 6).map(l => ({ ...l, distance: Infinity, priority: 6 })));
+      }
+      
+      setIsLoadingNearby(false);
+    };
+
+    loadNearbyListings();
+  }, [userProfile]);
+
+  // Mémoriser le handler de refresh
+  const handleRefresh = useCallback(async () => {
+    if (!userProfile) return;
+    
+    setIsRefreshing(true);
+    const location = await getUserLocation();
+    if (location) {
+      setUserLocation(location);
+      saveUserLocation(location);
+      
+      // Recharger les listings
+      const listings = await fetchNearbyListings(userProfile, 20);
+      if (listings.length > 0) {
+        const sorted = sortListingsByPriority(listings, location, userProfile);
+        setNearbyListings(sorted.slice(0, 6));
+      }
+    }
+    setIsRefreshing(false);
+  }, [userProfile]);
 
   return (
     <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -263,27 +380,77 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Listings */}
-      {featuredListings.length > 0 && (
+      {/* Featured Listings with location-aware ordering */}
+      {prioritizedListings.length > 0 && (
         <section className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 bg-muted/30">
           <div className="container mx-auto">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between sm:items-center mb-6">
               <div className="text-center sm:text-left">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">Annonces récentes</h2>
-                 {/*<p className="text-muted-foreground text-sm sm:text-base">Les dernières offres de la communauté étudiante</p>*/}
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">
+                  Annonces récentes
+                </h2>
+                {userProfile && nearbyListings.length > 0 ? (
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Triées en priorité selon {userProfile.campus ? `ton campus ${userProfile.campus}` : 'ta localisation'}.
+                  </p>
+                ) : (
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Les dernières offres publiées par la communauté étudiante.
+                  </p>
+                )}
               </div>
-              <Button variant="outline" asChild className="w-full sm:w-auto">
-                <Link to="/listings">
-                  Voir tout
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
+              <div className="flex items-center justify-center sm:justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing || !userProfile}
+                  className="flex-shrink-0"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button variant="outline" asChild className="w-full sm:w-auto">
+                  <Link to="/listings">
+                    Voir tout
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {featuredListings.slice(0, 6).map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            {isLoadingNearby ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {prioritizedListings.map((listing) => {
+                  const locationMetadata = userProfile ? nearbyMap[listing.id] : undefined;
+                  const isSameCampus =
+                    userProfile?.campus && listing.location.campus === userProfile.campus;
+                  const isSameCity =
+                    listing.location.city === userProfile?.location?.split(',')[0]?.trim();
+                  const showBadge = Boolean(locationMetadata);
+
+                  return (
+                    <div key={listing.id} className="relative">
+                      <ListingCard listing={listing} />
+                      {showBadge && (isSameCampus || isSameCity || locationMetadata?.distance < 5) && (
+                        <Badge 
+                          className="absolute top-2 right-2 z-10"
+                          variant={isSameCampus ? 'default' : 'secondary'}
+                        >
+                          {isSameCampus
+                            ? 'Campus'
+                            : isSameCity
+                              ? 'Ville'
+                              : `${locationMetadata?.distance?.toFixed(1) ?? '—'} km`}
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       )}

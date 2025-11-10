@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -299,21 +300,6 @@ export const Header: React.FC = () => {
                     
                     <DropdownMenuSeparator />
                     
-                    {/* Messages et notifications */}
-                    <DropdownMenuItem asChild>
-                      <Link to="/messages" className="cursor-pointer relative">
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Messages
-                        {totalUnreadMessages > 0 && (
-                          <Badge className="ml-auto bg-red-500 text-white text-xs min-w-[16px] h-4 flex items-center justify-center px-1">
-                            {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
-                          </Badge>
-                        )}
-                      </Link>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuSeparator />
-                    
                     {/* Impact et statistiques */}
                     <DropdownMenuItem asChild>
                       <Link to="/impact" className="cursor-pointer">
@@ -481,6 +467,29 @@ export const Header: React.FC = () => {
           </div>
         </div>
       </div>
+      {currentUser && !userProfile?.isVerified && (
+        <div className="border-t border-border bg-background/95">
+          <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-2">
+            <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50/90 dark:bg-blue-950/60">
+              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <AlertTitle className="text-blue-900 dark:text-blue-100">Compte non vérifié</AlertTitle>
+                  <AlertDescription className="text-blue-800 dark:text-blue-200">
+                    Finalisez la vérification pour rassurer les autres étudiants et accéder aux fonctionnalités avancées.
+                  </AlertDescription>
+                </div>
+                <Link
+                  to="/verification"
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  Vérifier mon compte
+                </Link>
+              </div>
+            </Alert>
+          </div>
+        </div>
+      )}
     </header>
     </>
   );

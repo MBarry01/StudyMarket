@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
@@ -242,8 +243,10 @@ const guides = [
 
 export const HelpPage: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState('faq');
   const [contactForm, setContactForm] = useState({
     subject: '',
     category: '',
@@ -251,6 +254,14 @@ export const HelpPage: React.FC = () => {
     priority: 'normal'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check URL params for tab selection (from chatbot)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'contact') {
+      setActiveTab('contact');
+    }
+  }, [searchParams]);
 
   // Filter FAQ based on search and category
   const filteredFAQ = faqData.filter(category => {
@@ -355,7 +366,7 @@ export const HelpPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="faq" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 p-0 gap-0 items-center h-10">
           <TabsTrigger value="faq" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">
             <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />

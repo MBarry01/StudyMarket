@@ -41,6 +41,8 @@ jobs:
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY || 'placeholder' }}
           VITE_ADMIN_EMAILS: ${{ secrets.VITE_ADMIN_EMAILS || '' }}
           VITE_ADMIN_UIDS: ${{ secrets.VITE_ADMIN_UIDS || '' }}
+          VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY || '' }}
+          VITE_OPENAI_ENABLED: ${{ secrets.VITE_OPENAI_ENABLED || 'false' }}
         
       - name: Setup Pages
         uses: actions/configure-pages@v4

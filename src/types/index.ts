@@ -29,6 +29,10 @@ export interface User {
   
   // Settings
   location?: string;
+  locationCoordinates?: {
+    lat: number;
+    lng: number;
+  };
   notificationPreferences: {
     email: boolean;
     push: boolean;
@@ -330,6 +334,12 @@ export interface VerificationDocument {
 export interface VerificationMetadata {
   email_domain_ok: boolean;
   id_expiry_ok: boolean;
+  graduation_year_ok?: boolean;
+  ocr_match_summary?: {
+    nameMatched: boolean;
+    universityMatched: boolean;
+    graduationValid: boolean;
+  };
   ocr_text?: {
     institution_name?: string;
     student_id?: string;
@@ -358,6 +368,10 @@ export interface StudentVerification {
   reviewedAt?: Date;
   reviewedBy?: string;
   rejectReason?: string;
+  revocationReason?: string;
+  cancellationReason?: string;
+  cancelledAt?: Date;
+  cancelledBy?: string;
   expiresAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -367,7 +381,7 @@ export interface VerificationAuditEntry {
   id: string;
   verificationId: string;
   actor: string; // userId | adminId | 'system'
-  action: 'submitted' | 'approved' | 'rejected' | 'suspended' | 'auto_verified';
+  action: 'submitted' | 'approved' | 'rejected' | 'suspended' | 'auto_verified' | 'cancelled';
   details: any;
   timestamp: Date;
   ip?: string;

@@ -3,7 +3,7 @@
  * Moteur de traitement du langage naturel pour le chatbot StudyMarket
  */
 
-import { removeAccents } from './utils';
+import { aggressiveNormalize, levenshteinDistance } from './utils';
 
 // ==================== TYPES ====================
 
@@ -105,40 +105,54 @@ export interface NLPResult {
 
 const INTENT_PATTERNS = {
   [IntentType.CREATE_LISTING]: {
-    keywords: ['créer', 'publier', 'poster', 'mettre', 'vendre', 'ajouter', 'nouvelle annonce'],
+    keywords: ['creer', 'créer', 'cree', 'créé', 'creé', 'publier', 'publie', 'publication', 'poster', 'post', 'poste', 'mettre', 'met', 'mise', 'vendre', 'vente', 'vend', 'vends', 'ajouter', 'ajout', 'ajoute', 'nouvelle', 'nouveau', 'new'],
     phrases: [
-      /^(je|j')?\s*(veux|voudrais|aimerais|peux)\s*(créer|publier|poster|mettre)/i,
-      /^(créer|publier|poster|ajouter)\s*(une)?\s*(annonce|article)/i,
-      /^comment\s*(créer|publier|poster)/i
+      /(?:je|j)\s*(?:veux|voudrais|aimerais|peux|peut|souhaite)\s*(?:creer|créer|publier|poster|mettre|faire)/i,
+      /(?:creer|créer|publier|poster|ajouter|mettre)\s*(?:une|un)?\s*(?:annonce|anonce|article|articl)/i,
+      /comment\s*(?:creer|créer|publier|poster|faire|mettre)/i,
+      /(?:nouvelle|nouveau|new)\s*(?:annonce|anonce)/i,
+      /(?:faire|mettre)\s*(?:une)?\s*(?:vente|annonce)/i
     ],
-    negativeKeywords: ['recherch', 'trouv', 'voir', 'supprim'],
+    negativeKeywords: ['recherch', 'trouv', 'voir mes', 'supprim', 'toutes', 'tous les', 'toutes les', 'mes annonces', 'annonces', 'articles'],
     weight: 1.0
   },
   
   [IntentType.SEARCH_LISTING]: {
-    keywords: ['chercher', 'rechercher', 'trouver', 'voir', 'consulter', 'regarder', 'acheter'],
+    keywords: ['chercher', 'cherche', 'cherché', 'rechercher', 'recherche', 'rechércher', 'trouver', 'trouve', 'trouvé', 'voir', 'voit', 'regarde', 'regarder', 'consulter', 'consulte', 'acheter', 'achete', 'achat', 'achté', 'cherches', 'recherches', 'trouves', 'besoin', 'interesse', 'intéressé', 'disponible', 'disponibilité'],
     phrases: [
-      /^(je|j')?\s*(cherche|recherche|veux|voudrais|besoin|intéressé)/i,
-      /^(où|comment)\s*(trouver|acheter)/i,
-      /^(montre|affiche).*\s*(annonce|article|offre)/i
+      /(?:je|j)\s*(?:cherche|recherche|veux|voudrais|besoin|interesse|intéressé)/i,
+      /(?:ou|où)\s*(?:trouver|acheter|voir)/i,
+      /(?:montre|affiche|voir)\s*.*\s*(?:annonce|article|offre)/i,
+      /(?:as tu|a tu|y a t il)\s*(?:des?)?\s*(?:annonce|article)/i,
+      /(?:cherche|recherche|besoin)\s*(?:de|d|un|une)/i,
+      // Nouveaux patterns améliorés
+      /^(recherche|cherche|trouve)\s*(.*)/i,
+      /^(je veux|j'ai besoin)\s*(.*)/i,
+      /^(dis moi|montre moi)\s*(.*)/i,
+      /^(y a t il|est ce qu'il y a)\s*(.*)/i
     ],
-    negativeKeywords: ['créer', 'publier', 'vendre', 'supprim'],
-    weight: 1.0
+    negativeKeywords: ['creer', 'créer', 'publier', 'vendre', 'supprim', 'mes annonces', 'mes articles'],
+    weight: 0.9
   },
   
   [IntentType.VIEW_LISTINGS]: {
-    keywords: ['mes annonces', 'mes articles', 'mes offres', 'mes publications'],
+    keywords: ['mes annonces', 'mes articles', 'mes offres', 'mes publications', 'annonces', 'toutes les annonces', 'toutes annonces', 'toutes les publications'],
     phrases: [
       /^(voir|afficher|consulter|gérer)\s*(mes)?\s*(annonce|article|publication)/i,
-      /^(mes|liste de mes)\s*(annonce|article|offre)/i
+      /^(mes|liste de mes)\s*(annonce|article|offre)/i,
+      /^(toutes les|tous les)\s*(annonces|publications)/i,
+      // Nouveaux patterns améliorés
+      /^(mes\s+annonces|mes\s+publications)/i,
+      /^(voir\s+mes\s+ventes|mes\s+ventes)/i
     ],
-    weight: 1.0
+    negativeKeywords: ['chercher', 'rechercher', 'trouver', 'acheter'],
+    weight: 1.2
   },
   
   [IntentType.EDIT_LISTING]: {
     keywords: ['modifier', 'éditer', 'changer', 'mettre à jour', 'corriger'],
     phrases: [
-      /^(modifier|éditer|changer|corriger)\s*(mon|ma|cette|l')?\s*(annonce|article)/i,
+      /^(modifier|editer|changer|corriger)\s*(mon|ma|cette|l')?\s*(annonce|article)/i,
       /^(mettre à jour)\s*(mon|ma|cette)/i
     ],
     weight: 1.0
@@ -164,9 +178,9 @@ const INTENT_PATTERNS = {
   [IntentType.NEGOTIATE]: {
     keywords: ['négocier', 'négociation', 'proposer', 'offre', 'prix'],
     phrases: [
-      /^(on peut|peut-on|puis-je)\s*(négocier|discuter)/i,
+      /^(on peut|peut-on|puis-je)\s*(negocier|discuter)/i,
       /^(proposer|faire)\s*(une)?\s*offre/i,
-      /est-ce\s*(que)?\s*(le)?\s*prix\s*(est)?\s*(négociable|fixe)/i
+      /est-ce\s*(que)?\s*(le)?\s*prix\s*(est)?\s*(negociable|fixe)/i
     ],
     weight: 1.0
   },
@@ -184,8 +198,8 @@ const INTENT_PATTERNS = {
   [IntentType.SEND_MESSAGE]: {
     keywords: ['message', 'contacter', 'écrire', 'envoyer'],
     phrases: [
-      /^(contacter|écrire|envoyer\s*message)\s*(à|au|vendeur|acheteur)/i,
-      /^(je\s*veux|puis-je)\s*(contacter|écrire)/i
+      /^(contacter|ecrire|envoyer\s*message)\s*(à|au|vendeur|acheteur)/i,
+      /^(je\s*veux|puis-je)\s*(contacter|ecrire)/i
     ],
     weight: 1.0
   },
@@ -209,10 +223,12 @@ const INTENT_PATTERNS = {
   },
   
   [IntentType.VIEW_PROFILE]: {
-    keywords: ['profil', 'compte', 'mon compte'],
+    keywords: ['profil', 'profile', 'compte', 'mon compte', 'mes infos', 'mes informations'],
     phrases: [
-      /^(voir|afficher|consulter)\s*(mon)?\s*(profil|compte)/i,
-      /^mon\s*(profil|compte)/i
+      /^(voir|afficher|consulter)\s*(mon)?\s*(profil|compte|profile)/i,
+      /^mon\s*(profil|compte|profile)/i,
+      /^(mes\s*)?infos?/i,
+      /^profile$/i
     ],
     weight: 1.0
   },
@@ -226,19 +242,26 @@ const INTENT_PATTERNS = {
   },
   
   [IntentType.GET_HELP]: {
-    keywords: ['aide', 'help', 'comment', 'tutoriel', 'guide'],
+    keywords: ['aide', 'help', 'comment', 'tutoriel', 'guide', 'study market', 'studymarket', 'platforme', 'plateforme'],
     phrases: [
       /^(aide|help|besoin d'aide)/i,
       /^comment\s*(faire|ça marche|utiliser)/i,
-      /^(c'est quoi|qu'est-ce que)/i
+      /(c'est quoi|qu'est-ce que)\s*(study market|studymarket|cette platforme|cette plateforme|la platforme|la plateforme)/i,
+      /(explique|expliquer|comprendre)\s*(study market|studymarket|cette platforme|cette plateforme)/i,
+      /(c'est quoi|qu'est-ce que)\s*(study|market)/i,
+      /^que\s*(est|fait|permet|peux|peux tu)\s*(study market|studymarket|cette|la|toi|me)/i,
+      /^que\s*peux?(?:-tu)?\s*(tu|tu me)\s*dire\s*(de|sur|à propos)/
     ],
-    weight: 0.9
+    weight: 1.2 // Augmenté pour prioritizer l'aide
   },
   
   [IntentType.CONTACT_SUPPORT]: {
-    keywords: ['support', 'problème', 'bug', 'erreur', 'signaler'],
+    keywords: ['support', 'problème', 'bug', 'erreur', 'signaler', 'vous contacter', 'contacter admin', 'contacter équipe', 'contacter le support'],
     phrases: [
-      /^(contacter|joindre)\s*support/i,
+      /^(contacter|joindre)(\s*(le\s*)?)?support/i,
+      /^(contacter|joindre)\s*(admin|équipe|vous)/i,
+      /^(je\s*)?(veux|voudrais|souhaite|aimerais)\s*(vous\s*)?contacter/i,
+      /comment\s*(vous\s*)?contacter/i,
       /^(j'ai|il y a)\s*(un)?\s*(problème|bug|erreur)/i,
       /^(signaler|reporter)\s*(un)?\s*(problème|bug)/i
     ],
@@ -273,12 +296,13 @@ const INTENT_PATTERNS = {
 const ENTITY_PATTERNS = {
   [EntityType.CATEGORY]: {
     values: {
-      'books': ['livre', 'livres', 'manuel', 'manuels', 'bouquin', 'bd', 'roman'],
-      'electronics': ['électronique', 'téléphone', 'laptop', 'ordinateur', 'tablette', 'iphone', 'samsung', 'macbook'],
-      'clothing': ['vêtement', 'vêtements', 'veste', 'pantalon', 'pull', 'chemise', 'robe', 'chaussure'],
-      'furniture': ['fourniture', 'fournitures', 'stylo', 'cahier', 'classeur', 'calculatrice'],
-      'sports': ['sport', 'fitness', 'vélo', 'raquette', 'ballon', 'basket'],
-      'housing': ['meuble', 'meubles', 'déco', 'décoration', 'lampe', 'chaise', 'table']
+      'books': ['livre', 'livres', 'manuel', 'manuels', 'bouquin', 'bd', 'roman', 'romans', 'harry potter'],
+      'electronics': ['electronique', 'électronique', 'electroniqu', 'telephone', 'téléphone', 'phone', 'tel', 'laptop', 'ordinateur', 'ordi', 'pc', 'tablette', 'tablet', 'iphone', 'ipad', 'macbook', 'samsung', 'console', 'playstation', 'xbox', 'nintendo', 'chargeur', 'air pod', 'airpod', 'écouteurs'],
+      'clothing': ['vetement', 'vêtement', 'vêtements', 'vetements', 'veste', 'pantalon', 'pull', 'chemise', 'robe', 'jupe', 'chaussure', 'chaussures', 'habit', 'habits', 'fringue', 'fringues'],
+      'furniture': ['meuble', 'meubles', 'mobilier', 'mobiliers', 'deco', 'déco', 'décoration', 'decoration', 'lampe', 'chaise', 'table', 'bureau', 'lit', 'etagere', 'étagère', 'étagères'],
+      'sports': ['sport', 'sports', 'fitness', 'velo', 'vélo', 'raquette', 'ballon', 'basket', 'bicyclette'],
+      'housing': ['logement', 'logements', 'chambre', 'studio', 'appartement', 'appart', 'colocation', 'coloc', 'location', 'sous logement'],
+      'services': ['service', 'services', 'cours', 'aide', 'assistance', 'soutien']
     }
   },
   
@@ -308,10 +332,10 @@ const ENTITY_PATTERNS = {
   
   [EntityType.CONDITION]: {
     values: {
-      'new': ['neuf', 'neuve', 'nouveau', 'nouvelle', 'jamais utilisé', 'jamais servi'],
-      'like-new': ['comme neuf', 'excellent état', 'parfait état', 'quasi neuf'],
-      'good': ['bon état', 'bonne condition', 'correct'],
-      'used': ['usagé', 'utilisé', 'occasion', 'd\'occasion']
+      'new': ['neuf', 'neuve', 'nouveau', 'nouvelle', 'jamais utilise', 'jamais utilisé', 'jamais servi'],
+      'like-new': ['comme neuf', 'excellent etat', 'excellent état', 'parfait etat', 'parfait état', 'quasi neuf'],
+      'good': ['bon etat', 'bon état', 'bonne condition', 'correct'],
+      'used': ['usage', 'usagé', 'utilise', 'utilisé', 'occasion', 'd occasion', "d'occasion"]
     }
   },
   
@@ -350,8 +374,16 @@ const SPELL_CORRECTIONS: Record<string, string> = {
   'comman': 'comment',
   'publié': 'publier',
   'crée': 'créer',
+  'crer': 'créer',
+  'creer': 'créer',
   'vendre': 'vendre',
-  'achté': 'acheter'
+  'achté': 'acheter',
+  'électronique': 'electronique',
+  'éléctronique': 'electronique',
+  'mobilier': 'mobilier',
+  'mobillier': 'mobilier',
+  'logement': 'logement',
+  'logemment': 'logement'
 };
 
 // ==================== NLP ENGINE CLASS ====================
@@ -368,10 +400,14 @@ export class NLPEngine {
    * Analyse complète d'un message utilisateur
    */
   public analyze(message: string, context?: any): NLPResult {
-    // Preprocessing
-    const normalized = this.normalize(message);
-    const tokens = this.tokenize(normalized);
+    // Preprocessing avec normalisation agressive
     const corrected = this.spellCheck(message);
+    const normalized = aggressiveNormalize(corrected);
+    const tokens = this.tokenize(normalized);
+    
+    if (corrected !== message) {
+      console.log(`✨ Spell correction: "${message}" → "${corrected}"`);
+    }
     
     // Intent detection (multi-label)
     const intents = this.detectIntents(normalized, tokens, context);
@@ -406,13 +442,6 @@ export class NLPEngine {
   }
   
   /**
-   * Normalisation du texte
-   */
-  private normalize(text: string): string {
-    return removeAccents(text.toLowerCase().trim());
-  }
-  
-  /**
    * Tokenization intelligente
    */
   private tokenize(text: string): string[] {
@@ -440,44 +469,64 @@ export class NLPEngine {
   private detectIntents(normalized: string, tokens: string[], context?: any): Intent[] {
     const scores: Array<{ type: IntentType; score: number; metadata?: any }> = [];
     
+    console.log(`🔍 Detecting intents for normalized: "${normalized}", tokens:`, tokens);
+    
     for (const [intentType, pattern] of Object.entries(INTENT_PATTERNS)) {
       let score = 0;
       const metadata: any = {};
       
-      // 1. Keyword matching avec TF-IDF simplifié
-      const keywordMatches = pattern.keywords.filter(kw => 
-        normalized.includes(kw)
-      );
-      score += keywordMatches.length * 0.3;
+      // 1. Keyword matching avec TF-IDF simplifié (normaliser aussi les keywords)
+      const keywordMatches = pattern.keywords.filter(kw => {
+        const normalizedKeyword = aggressiveNormalize(kw);
+        // Exact match
+        if (normalized.includes(normalizedKeyword)) return true;
+        // Fuzzy match avec Levenshtein (seulement mots > 5 caractères, strict)
+        return tokens.some(t => {
+          if (t.length < 5 || normalizedKeyword.length < 5) return false;
+          const distance = levenshteinDistance(t, normalizedKeyword);
+          const maxDistance = normalizedKeyword.length <= 6 ? 1 : 2;
+          return distance <= maxDistance && distance / normalizedKeyword.length < 0.4;
+        });
+      });
+      score += keywordMatches.length * 0.4; // Augmenté de 0.35 à 0.4
       
       // 2. Phrase pattern matching (plus fort)
       for (const regex of pattern.phrases) {
         if (regex.test(normalized)) {
-          score += 0.5;
+          score += 0.6; // Augmenté de 0.5 à 0.6
+          metadata.patternMatch = true;
           break;
         }
       }
       
-      // 3. Negative keywords (pénalité)
-      if (pattern.negativeKeywords) {
-        const hasNegative = pattern.negativeKeywords.some(nk => 
-          normalized.includes(nk)
-        );
-        if (hasNegative) score *= 0.3;
+      // 3. Negative keywords (pénalité) - normaliser aussi
+      if ('negativeKeywords' in pattern && pattern.negativeKeywords) {
+        const hasNegative = pattern.negativeKeywords.some((nk: string) => {
+          const normalizedNK = aggressiveNormalize(nk);
+          return normalized.includes(normalizedNK);
+        });
+        if (hasNegative) score *= 0.6; // Réduit de 0.3 à 0.6 (moins pénalisant)
       }
       
       // 4. Context boost
       if (context) {
         if (context.currentPage && this.isRelevantToPage(intentType as IntentType, context.currentPage)) {
-          score *= 1.3;
+          score *= 1.5; // Augmenté de 1.3 à 1.5
           metadata.contextBoost = true;
+        }
+        
+        // Boost pour les réponses attendues
+        if (context.expectingResponse && this.isExpectedIntent(intentType as IntentType, context.expectedIntent)) {
+          score *= 2.0; // Double le score pour les réponses attendues
+          metadata.expectedResponse = true;
         }
       }
       
       // 5. Apply weight
       score *= pattern.weight;
       
-      if (score > 0.2) {
+      // Seuil de détection de base
+      if (score > 0.25) {
         scores.push({ 
           type: intentType as IntentType, 
           score: Math.min(score, 1.0),
@@ -489,9 +538,14 @@ export class NLPEngine {
     // Sort by score and keep top intents
     scores.sort((a, b) => b.score - a.score);
     
-    // Return top 3 intents or all above 0.5
-    const topIntents = scores
-      .filter(s => s.score > 0.3)
+    // Debug logging
+    if (scores.length > 0 && scores[0].score > 0) {
+      console.log(`🎯 Intent detection for "${normalized}":`, scores.slice(0, 3).map(s => `${s.type} (${s.score.toFixed(2)})`));
+    }
+    
+    // Return top intents above 0.25, but only if gap is significant
+    let topIntents = scores
+      .filter(s => s.score > 0.25)
       .slice(0, 3)
       .map(s => ({
         type: s.type,
@@ -499,11 +553,26 @@ export class NLPEngine {
         metadata: s.metadata
       }));
     
+    // Gap detection: if multiple intents close in score, keep only best one
+    if (topIntents.length > 1) {
+      const bestScore = topIntents[0].confidence;
+      const secondBestScore = topIntents[1].confidence;
+      const gap = bestScore - secondBestScore;
+      
+      if (gap < 0.15) {
+        // Scores too close - keep only the best
+        topIntents = [topIntents[0]];
+        console.log(`✂️ Keeping only best intent: ${topIntents[0].type} (gap: ${gap.toFixed(2)})`);
+      }
+    }
+    
     // Fallback to UNKNOWN if no intent detected
     if (topIntents.length === 0) {
+      console.log(`⚠️ No intent above 0.25 for "${normalized}", using UNKNOWN`);
       topIntents.push({
         type: IntentType.UNKNOWN,
-        confidence: 1.0
+        confidence: 0.1,
+        metadata: { fallback: true }
       });
     }
     
@@ -516,20 +585,52 @@ export class NLPEngine {
   private extractEntities(original: string, normalized: string, tokens: string[]): Entity[] {
     const entities: Entity[] = [];
     
-    // Category extraction
+    console.log(`🔍 Extracting entities from normalized: "${normalized}"`);
+    
+    // Category extraction with normalization (avec fuzzy matching)
     for (const [category, keywords] of Object.entries(ENTITY_PATTERNS[EntityType.CATEGORY].values)) {
       for (const keyword of keywords) {
-        const index = normalized.indexOf(keyword);
-        if (index !== -1) {
+        const normalizedKeyword = aggressiveNormalize(keyword);
+        
+        // Exact match
+        const exactIndex = normalized.indexOf(normalizedKeyword);
+        if (exactIndex !== -1) {
+          console.log(`✅ Category exact match: "${keyword}" → ${category}`);
           entities.push({
             type: EntityType.CATEGORY,
             value: keyword,
             normalized: category,
-            confidence: 0.9,
-            position: { start: index, end: index + keyword.length }
+            confidence: 0.95,
+            position: { start: exactIndex, end: exactIndex + normalizedKeyword.length }
           });
+          break; // Only one category per match
+        }
+        
+        // Fuzzy match sur les tokens (seulement pour mots > 5 caractères pour éviter faux positifs)
+        const fuzzyToken = tokens.find(t => {
+          if (t.length < 5 || normalizedKeyword.length < 5) return false; // Ignorer mots trop courts
+          const distance = levenshteinDistance(t, normalizedKeyword);
+          // Plus strict : max 1 distance pour mots courts, max 2 pour longs, mais avec ratio
+          const maxDistance = normalizedKeyword.length <= 6 ? 1 : 2;
+          return distance <= maxDistance && distance / normalizedKeyword.length < 0.4; // Max 40% de différence
+        });
+        
+        if (fuzzyToken) {
+          console.log(`✅ Category fuzzy match: "${fuzzyToken}" ≈ "${keyword}" → ${category}`);
+          entities.push({
+            type: EntityType.CATEGORY,
+            value: fuzzyToken,
+            normalized: category,
+            confidence: 0.7, // Confidence réduite pour fuzzy match
+            position: { start: 0, end: 0 } // Position approximative
+          });
+          break; // Only one category per match
         }
       }
+    }
+    
+    if (entities.length === 0) {
+      console.log(`❌ No category entities found for "${normalized}"`);
     }
     
     // Price extraction
@@ -550,6 +651,24 @@ export class NLPEngine {
       }
     }
     
+    // NUMBER extraction (for standalone numbers that might be prices in context)
+    const numberMatches = original.matchAll(/\b(\d+)\b/g);
+    for (const match of numberMatches) {
+      const value = match[1];
+      const num = parseInt(value);
+      // Only extract numbers that could be prices (10-10000)
+      if (num >= 10 && num <= 10000) {
+        console.log(`✅ Number extracted: "${value}" → ${num}`);
+        entities.push({
+          type: EntityType.NUMBER,
+          value,
+          normalized: num,
+          confidence: 0.6, // Lower confidence for numbers without context
+          position: { start: match.index!, end: match.index! + value.length }
+        });
+      }
+    }
+    
     // Location extraction
     for (const regex of ENTITY_PATTERNS[EntityType.LOCATION].regex) {
       const match = original.match(regex);
@@ -564,18 +683,20 @@ export class NLPEngine {
       }
     }
     
-    // Condition extraction
+    // Condition extraction with normalization
     for (const [condition, keywords] of Object.entries(ENTITY_PATTERNS[EntityType.CONDITION].values)) {
       for (const keyword of keywords) {
-        if (normalized.includes(keyword)) {
-          const index = normalized.indexOf(keyword);
+        const normalizedKeyword = aggressiveNormalize(keyword);
+        if (normalized.includes(normalizedKeyword)) {
+          const index = normalized.indexOf(normalizedKeyword);
           entities.push({
             type: EntityType.CONDITION,
             value: keyword,
             normalized: condition,
             confidence: 0.85,
-            position: { start: index, end: index + keyword.length }
+            position: { start: index, end: index + normalizedKeyword.length }
           });
+          break; // Only one condition per match
         }
       }
     }
@@ -596,10 +717,13 @@ export class NLPEngine {
       }
     }
     
-    // Reference detection
-    const hasReference = ENTITY_PATTERNS[EntityType.REFERENCE].keywords.some(kw => 
-      normalized.includes(kw)
-    );
+    // Reference detection with word boundaries
+    const hasReference = ENTITY_PATTERNS[EntityType.REFERENCE].keywords.some(kw => {
+      const normalizedKw = aggressiveNormalize(kw);
+      // Use word boundary to avoid matching substrings
+      const regex = new RegExp(`\\b${normalizedKw}\\b`, 'i');
+      return regex.test(normalized);
+    });
     if (hasReference) {
       entities.push({
         type: EntityType.REFERENCE,
@@ -722,6 +846,21 @@ export class NLPEngine {
     };
     
     return pageIntents[page]?.includes(intent) || false;
+  }
+  
+  /**
+   * Vérifie si l'intention est attendue dans le contexte
+   */
+  private isExpectedIntent(currentIntent: IntentType, expectedIntent?: IntentType): boolean {
+    if (!expectedIntent) return false;
+    
+    const expectedMap: Partial<Record<IntentType, IntentType[]>> = {
+      [IntentType.CREATE_LISTING]: [IntentType.CREATE_LISTING],
+      [IntentType.SEARCH_LISTING]: [IntentType.SEARCH_LISTING],
+      [IntentType.UNKNOWN]: [IntentType.CREATE_LISTING, IntentType.SEARCH_LISTING] // Pour les réponses aux questions
+    };
+    
+    return expectedMap[expectedIntent]?.includes(currentIntent) || false;
   }
 }
 

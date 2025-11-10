@@ -47,6 +47,7 @@ import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 import EditListingPage from './pages/EditListingPage';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { HousingListingsPage } from './pages/HousingListingsPage';
+import { MapPage } from './pages/MapPage';
 import ChatbotWidget from './components/ui/ChatbotWidget';
 import SouvenirBanner from './components/SouvenirBanner';
 import './App.css';
@@ -250,6 +251,14 @@ function App() {
                   <Route path="/edit-listing/:id" element={<EditListingPage />} />
                   <Route path="/jobs" element={<JobSearchPage />} />
                   <Route path="/housing" element={<HousingListingsPage />} />
+                  <Route
+                    path="/map"
+                    element={
+                      <ProtectedRoute>
+                        <MapPage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="*" element={<div style={{padding:'2rem',textAlign:'center'}}>Page non trouvée (404)</div>} />
                 </Routes>
               </ErrorBoundary>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,6 +51,7 @@ import { doc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatc
 import { db } from '../lib/firebase';
 import { ProfilePhotoUpload } from '../components/profile/ProfilePhotoUpload';
 import toast from 'react-hot-toast';
+import { UNIVERSITY_NAMES, getUniversityMetadata } from '@/constants/universities';
 
 // Schémas de validation
 const profileSchema = z.object({
@@ -82,30 +83,6 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 type SecurityFormData = z.infer<typeof securitySchema>;
 type EmailFormData = z.infer<typeof emailSchema>;
 
-const universities = [
-  'Sorbonne Université',
-  'Université Paris-Dauphine',
-  'École Polytechnique',
-  'ENS Paris',
-  'CentraleSupélec',
-  'MINES ParisTech',
-  'HEC Paris',
-  'ESSEC',
-  'ESCP',
-  'Université Paris 1 Panthéon-Sorbonne',
-  'Université Paris Cité',
-  'Sciences Po Paris',
-  'Université de Lyon',
-  'Université de Marseille',
-  'Université de Toulouse',
-  'Université de Bordeaux',
-  'Université de Lille',
-  'Université de Strasbourg',
-  'Université de Nantes',
-  'Université de Montpellier',
-  'Autre université'
-];
-
 const fieldsOfStudy = [
   'Informatique',
   'Ingénierie',
@@ -125,7 +102,7 @@ const fieldsOfStudy = [
 ];
 
 export const SettingsPage: React.FC = () => {
-  const { currentUser, userProfile, updateUserProfile, logout } = useAuth();
+  const { currentUser, userProfile, updateUserProfile, refreshUserProfile, logout } = useAuth();
   const navigate = useNavigate();
   
   // États pour les différentes sections
@@ -173,6 +150,11 @@ export const SettingsPage: React.FC = () => {
     },
   });
 
+  const selectedUniversity = profileForm.watch('university');
+  const lastAutoUniversityRef = useRef<string | null>(null);
+  const lastAutoCampusRef = useRef<string | null>(null);
+  const lastAutoLocationRef = useRef<string | null>(null);
+
   const securityForm = useForm<SecurityFormData>({
     resolver: zodResolver(securitySchema),
   });
@@ -205,13 +187,65 @@ export const SettingsPage: React.FC = () => {
         reviews: true,
         marketing: false,
       });
+
+      lastAutoUniversityRef.current = userProfile.university || null;
+      lastAutoCampusRef.current = userProfile.campus || null;
+      lastAutoLocationRef.current = userProfile.location || null;
     }
   }, [userProfile, profileForm]);
+
+  useEffect(() => {
+    if (!selectedUniversity) {
+      return;
+    }
+
+    const metadata = getUniversityMetadata(selectedUniversity);
+    if (!metadata) {
+      return;
+    }
+
+    const currentCampus = profileForm.getValues('campus')?.trim();
+    const currentLocation = profileForm.getValues('location')?.trim();
+    const universityChanged = lastAutoUniversityRef.current !== selectedUniversity;
+    const campusMatchesAuto =
+      !currentCampus ||
+      currentCampus === 'Campus principal' ||
+      currentCampus === lastAutoCampusRef.current;
+    const locationMatchesAuto =
+      !currentLocation ||
+      currentLocation === lastAutoLocationRef.current;
+
+    if (universityChanged || campusMatchesAuto) {
+      profileForm.setValue('campus', metadata.campus, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      lastAutoCampusRef.current = metadata.campus || null;
+    }
+
+    if (universityChanged || locationMatchesAuto) {
+      profileForm.setValue('location', metadata.location, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      lastAutoLocationRef.current = metadata.location || null;
+    }
+
+    lastAutoUniversityRef.current = selectedUniversity;
+  }, [selectedUniversity, profileForm]);
 
   // Sauvegarder le profil
   const handleSaveProfile = async (data: ProfileFormData) => {
     setIsLoading(true);
     try {
+      const metadata = getUniversityMetadata(data.university);
+
+      const coordinatesToSave =
+        metadata.coordinates ??
+        (data.location && data.location === userProfile.location
+          ? userProfile.locationCoordinates ?? undefined
+          : undefined);
+
       await updateUserProfile({
         displayName: data.displayName,
         bio: data.bio || undefined,
@@ -220,8 +254,26 @@ export const SettingsPage: React.FC = () => {
         fieldOfStudy: data.fieldOfStudy,
         graduationYear: data.graduationYear,
         campus: data.campus || undefined,
-        location: data.location || undefined,
+        location: data.location || metadata.location || undefined,
+        locationCoordinates: coordinatesToSave,
       });
+
+      await refreshUserProfile();
+
+      if (typeof window !== 'undefined') {
+        const campusChanged = userProfile.campus !== data.campus;
+        const locationChanged = userProfile.location !== data.location;
+        const coordinatesChanged =
+          (!!coordinatesToSave &&
+            (!userProfile.locationCoordinates ||
+              userProfile.locationCoordinates.lat !== coordinatesToSave?.lat ||
+              userProfile.locationCoordinates.lng !== coordinatesToSave?.lng)) ||
+          (!coordinatesToSave && userProfile.locationCoordinates);
+
+        if (campusChanged || locationChanged || coordinatesChanged) {
+          localStorage.removeItem('userLocation');
+        }
+      }
       toast.success('Profil mis à jour avec succès !');
     } catch (error) {
       console.error('Erreur lors de la mise à jour du profil:', error);
@@ -545,7 +597,7 @@ export const SettingsPage: React.FC = () => {
                         <SelectValue placeholder="Sélectionnez votre université" />
                       </SelectTrigger>
                       <SelectContent>
-                        {universities.map((uni) => (
+                        {UNIVERSITY_NAMES.map((uni) => (
                           <SelectItem key={uni} value={uni}>
                             {uni}
                           </SelectItem>
@@ -613,7 +665,11 @@ export const SettingsPage: React.FC = () => {
                     <Label htmlFor="campus">Campus</Label>
                     <Input
                       id="campus"
-                      {...profileForm.register('campus')}
+                      {...profileForm.register('campus', {
+                        onChange: () => {
+                          lastAutoCampusRef.current = null;
+                        },
+                      })}
                       placeholder="Campus principal"
                     />
                   </div>
@@ -623,7 +679,11 @@ export const SettingsPage: React.FC = () => {
                   <Label htmlFor="location">Localisation</Label>
                   <Input
                     id="location"
-                    {...profileForm.register('location')}
+                    {...profileForm.register('location', {
+                      onChange: () => {
+                        lastAutoLocationRef.current = null;
+                      },
+                    })}
                     placeholder="Paris, France"
                   />
                 </div>

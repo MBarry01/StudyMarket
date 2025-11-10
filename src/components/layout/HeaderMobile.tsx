@@ -1,13 +1,14 @@
 import React, { useState, useCallback, memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Search, User, Plus, Menu, Heart, MessageCircle, Home, Bell, Settings, Sun, Moon, BadgeCheck
+  Search, User, Plus, Menu, Heart, MessageCircle, Home, Bell, Settings, Sun, Moon, BadgeCheck, Shield
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SearchModal } from '@/components/ui/SearchModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMessageStore } from '../../stores/useMessageStore';
 import { useTheme } from 'next-themes';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface HeaderMobileProps {
   onOpenPublish: () => void;
@@ -125,6 +126,29 @@ export const HeaderMobile = memo<HeaderMobileProps>(({ onOpenPublish }) => {
             <Menu className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
+        {currentUser && !userProfile?.isVerified && (
+          <div className="mt-2 px-2">
+            <Alert className="border-cyan-400/50 bg-cyan-500/15 text-white/90 rounded-xl backdrop-blur">
+              <Shield className="h-4 w-4 text-cyan-300" />
+              <div className="flex flex-col gap-2">
+                <AlertTitle className="text-white text-sm">Compte non vérifié</AlertTitle>
+                <AlertDescription className="text-white/80 text-xs">
+                  Ajoutez vos documents pour obtenir le badge vérifié et inspirer confiance aux autres étudiants.
+                </AlertDescription>
+                <button
+                  onClick={() => {
+                    navigate('/verification');
+                    setMenuOpen(false);
+                  }}
+                  className="inline-flex items-center gap-1 self-start rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
+                >
+                  <BadgeCheck className="w-3 h-3" />
+                  Vérifier mon compte
+                </button>
+              </div>
+            </Alert>
+          </div>
+        )}
       </header>
 
       {/* ===== MENU DÉROULANT ULTRA-MINIMALISTE ===== */}

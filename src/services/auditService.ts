@@ -4,7 +4,7 @@ import { VerificationAuditEntry } from '../types';
 
 export interface AuditLogData {
   userId: string;
-  action: 'approve' | 'reject' | 'revoke' | 'mark_under_review' | 'renew';
+  action: 'approve' | 'reject' | 'revoke' | 'cancel' | 'mark_under_review' | 'renew';
   targetType: 'verification_request' | 'user' | 'document';
   targetId: string;
   metadata?: {
@@ -174,6 +174,28 @@ export class AuditService {
       metadata: {
         reason,
         newStatus: 'suspended',
+        ...metadata,
+      },
+    });
+  }
+
+  /**
+   * Logger l'annulation d'une demande
+   */
+  static async logCancellation(
+    requestId: string,
+    adminId: string,
+    reason?: string,
+    metadata?: { previousStatus?: string }
+  ): Promise<void> {
+    await this.log({
+      userId: adminId,
+      action: 'cancel',
+      targetType: 'verification_request',
+      targetId: requestId,
+      metadata: {
+        reason,
+        newStatus: 'unverified',
         ...metadata,
       },
     });
