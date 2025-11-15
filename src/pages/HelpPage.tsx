@@ -343,15 +343,15 @@ export const HelpPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {contactOptions.map((option, index) => (
           <Card key={index} className={`transition-all hover:shadow-lg ${!option.available ? 'opacity-60' : 'hover:-translate-y-1'}`}>
-            <CardContent className="pt-6 text-center">
+            <CardContent className="pt-6 text-center flex flex-col items-center">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
                 option.available ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
               }`}>
                 <option.icon className="w-6 h-6" />
               </div>
-              <h3 className="font-semibold mb-2">{option.title}</h3>
-              <p className="text-sm text-muted-foreground mb-3">{option.description}</p>
-              <div className="text-xs text-muted-foreground mb-3">{option.hours}</div>
+              <h3 className="font-semibold mb-2 text-center">{option.title}</h3>
+              <p className="text-sm text-muted-foreground mb-3 text-center">{option.description}</p>
+              <div className="text-xs text-muted-foreground mb-3 text-center">{option.hours}</div>
               <Button 
                 variant={option.available ? "default" : "secondary"} 
                 size="sm" 

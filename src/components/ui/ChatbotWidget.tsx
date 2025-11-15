@@ -40,6 +40,69 @@ interface ContactForm {
 
 type ViewMode = 'menu' | 'chat' | 'contact' | 'home';
 
+// Fonction pour rendre le markdown en JSX (sans bibliothèque externe)
+const renderMarkdown = (text: string): React.ReactNode => {
+  if (!text) return null;
+  
+  // Split par lignes pour gérer les sauts de ligne
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  
+  lines.forEach((line, lineIndex) => {
+    if (line.trim() === '') {
+      elements.push(<br key={`br-${lineIndex}`} />);
+      return;
+    }
+    
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    
+    // Pattern pour **texte** (gras) - non-greedy
+    const boldPattern = /\*\*([^*]+?)\*\*/g;
+    let match;
+    let matchCount = 0;
+    
+    while ((match = boldPattern.exec(line)) !== null) {
+      matchCount++;
+      // Texte avant le match
+      if (match.index > lastIndex) {
+        const beforeText = line.substring(lastIndex, match.index);
+        if (beforeText) {
+          parts.push(beforeText);
+        }
+      }
+      // Texte en gras (sans les **)
+      parts.push(
+        <strong key={`bold-${lineIndex}-${match.index}`} className="font-semibold">
+          {match[1]}
+        </strong>
+      );
+      lastIndex = boldPattern.lastIndex;
+    }
+    
+    // Texte restant après le dernier match
+    if (lastIndex < line.length) {
+      parts.push(line.substring(lastIndex));
+    }
+    
+    // Si aucun markdown trouvé ET aucun texte ajouté, retourner le texte tel quel
+    if (matchCount === 0 && parts.length === 0) {
+      parts.push(line);
+    }
+    
+    // Ne créer un élément que si on a du contenu
+    if (parts.length > 0) {
+      elements.push(
+        <span key={`line-${lineIndex}`} className="block mb-1 last:mb-0">
+          {parts}
+        </span>
+      );
+    }
+  });
+  
+  return <>{elements}</>;
+};
+
 // Configuration
 const MAX_MESSAGES = 100;
 const MAX_FIRESTORE_MESSAGES = 50; // Limit Firestore history to prevent 1MB limit
@@ -176,10 +239,17 @@ const useMessagePersistence = (currentUser: any) => {
       
       if (chatSnap.exists()) {
         const data = chatSnap.data();
-        const firestoreMessages = data.messages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
+        // Dédupliquer les messages par ID pour éviter les doublons
+        const messageMap = new Map<string, Message>();
+        data.messages.forEach((msg: any) => {
+          if (!messageMap.has(msg.id)) {
+            messageMap.set(msg.id, {
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            });
+          }
+        });
+        const firestoreMessages = Array.from(messageMap.values());
         
         saveToCache(firestoreMessages);
         return firestoreMessages;
@@ -200,6 +270,7 @@ const useMessagePersistence = (currentUser: any) => {
 };
 
 const ChatbotWidget: React.FC = () => {
+  // Assurer la police cohérente avec la charte
   const { currentUser, userProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -374,10 +445,13 @@ const ChatbotWidget: React.FC = () => {
         hasData: !!result.actionResult?.data
       });
       
+      // Use suggestions from action result if available (for workflow steps)
+      const finalSuggestions = result.actionResult?.data?.suggestions || result.botResponse.suggestions;
+      
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: result.botResponse.text,
-        suggestions: result.botResponse.suggestions,
+        suggestions: finalSuggestions,
         action: result.actionResult?.data,
         sender: 'bot',
         timestamp: new Date(),
@@ -395,18 +469,37 @@ const ChatbotWidget: React.FC = () => {
       } else {
         console.log('⚠️ No action result data, skipping navigation');
       }
-    } catch (error) {
-      console.error('Chatbot error:', error);
-      // Fallback to simple message
+    } catch (error: any) {
+      console.error('❌ Chatbot error:', error);
+      
+      // Gestion d'erreur améliorée avec messages contextuels
+      let errorMessage = "Désolé, une erreur s'est produite. Peux-tu réessayer ? 😔";
+      
+      if (error?.message?.includes('timeout')) {
+        errorMessage = "La requête a pris trop de temps. Réessayons ! ⏱️";
+      } else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+        errorMessage = "Problème de connexion. Vérifie ton internet et réessaye ! 🌐";
+      } else if (error?.message?.includes('rate limit')) {
+        errorMessage = "Trop de requêtes ! Attends quelques secondes et réessaye. ⏳";
+      }
+      
+      // Fallback to simple message avec suggestions
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Désolé, une erreur s'est produite. Peux-tu réessayer ? 😔",
+        text: errorMessage,
+        suggestions: ['Réessayer', 'Contacter le support', 'Retour au menu'],
         sender: 'bot',
         timestamp: new Date(),
       };
       const finalMessages = [...newMessages, botResponse].slice(-MAX_MESSAGES);
       setMessages(finalMessages);
       setIsTyping(false);
+      
+      // Sauvegarder même en cas d'erreur
+      saveToCache(finalMessages);
+      saveToFirestore(finalMessages).catch(err => {
+        console.warn('Failed to save error message to Firestore:', err);
+      });
     }
   }, [inputValue, isTyping, messages, saveToCache, saveToFirestore, currentUser, userName, handleBotAction, location.pathname, listingStore, messageStore, orderStore, favoritesStore]);
 
@@ -690,7 +783,9 @@ const ChatbotWidget: React.FC = () => {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl rounded-bl-md'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-line leading-relaxed text-left">{message.text}</p>
+                  <div className="text-sm leading-relaxed text-left font-sans">
+                    {renderMarkdown(message.text)}
+                  </div>
                 </div>
                 
                 {!isUser && message.suggestions && message.suggestions.length > 0 && (
@@ -942,7 +1037,7 @@ const ChatbotWidget: React.FC = () => {
           )}
           
           <Card 
-            className={`fixed z-[50] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden transition-all duration-300 ease-out
+            className={`fixed z-[50] shadow-2xl border-0 bg-white dark:bg-gray-900 overflow-hidden transition-all duration-300 ease-out font-sans
             ${isClosing && !isMinimized ? 'animate-[slideDown_0.4s_ease-out]' : !isClosing && !isMinimized ? 'animate-[slideUp_0.4s_ease-out]' : ''}
             ${isMinimized 
               ? 'bottom-[5.75rem] left-3 right-3 w-[calc(100vw-1.5rem)] h-14 rounded-2xl md:bottom-6 md:right-6 md:left-auto md:w-[380px]' 

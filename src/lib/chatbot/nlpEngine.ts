@@ -96,6 +96,7 @@ export interface NLPResult {
   tokens: string[];
   language: 'fr' | 'en';
   correctedText?: string;
+  originalMessage?: string; // Original user message for context recovery
   overallConfidence: number;
   isAmbiguous: boolean;
   ambiguityReasons?: string[];
@@ -105,16 +106,18 @@ export interface NLPResult {
 
 const INTENT_PATTERNS = {
   [IntentType.CREATE_LISTING]: {
-    keywords: ['creer', 'créer', 'cree', 'créé', 'creé', 'publier', 'publie', 'publication', 'poster', 'post', 'poste', 'mettre', 'met', 'mise', 'vendre', 'vente', 'vend', 'vends', 'ajouter', 'ajout', 'ajoute', 'nouvelle', 'nouveau', 'new'],
+    keywords: ['creer', 'créer', 'cree', 'créé', 'creé', 'publier', 'publie', 'publication', 'poster', 'post', 'poste', 'mettre', 'met', 'mise', 'vendre', 'vente', 'vend', 'vends', 'ajouter', 'ajout', 'ajoute', 'nouvelle', 'nouveau', 'new', 'création', 'creation'],
     phrases: [
       /(?:je|j)\s*(?:veux|voudrais|aimerais|peux|peut|souhaite)\s*(?:creer|créer|publier|poster|mettre|faire)/i,
-      /(?:creer|créer|publier|poster|ajouter|mettre)\s*(?:une|un)?\s*(?:annonce|anonce|article|articl)/i,
+      /(?:creer|créer|publier|poster|ajouter|mettre|création|creation)\s*(?:une|un)?\s*(?:annonce|anonce|article|articl)/i,
       /comment\s*(?:creer|créer|publier|poster|faire|mettre)/i,
       /(?:nouvelle|nouveau|new)\s*(?:annonce|anonce)/i,
-      /(?:faire|mettre)\s*(?:une)?\s*(?:vente|annonce)/i
+      /(?:faire|mettre)\s*(?:une)?\s*(?:vente|annonce)/i,
+      /(?:création|creation)\s*(?:d'|d'|de\s*)?(?:une|un)?\s*(?:annonce|anonce)/i,
+      /(?:création|creation)\s*(?:d'|d'|de\s*)?(?:une|un)?\s*(?:annonce|anonce)\s*(?:pour|de|d'|d')\s*(?:livre|ordinateur|vetement|vêtement|velo|vélo|fourniture)/i
     ],
     negativeKeywords: ['recherch', 'trouv', 'voir mes', 'supprim', 'toutes', 'tous les', 'toutes les', 'mes annonces', 'annonces', 'articles'],
-    weight: 1.0
+    weight: 1.2 // Augmenté pour meilleure détection
   },
   
   [IntentType.SEARCH_LISTING]: {
@@ -435,6 +438,7 @@ export class NLPEngine {
       tokens,
       language,
       correctedText: corrected !== message ? corrected : undefined,
+      originalMessage: message, // Store original message for context recovery
       overallConfidence,
       isAmbiguous,
       ambiguityReasons: reasons
@@ -731,6 +735,77 @@ export class NLPEngine {
         confidence: 0.7,
         position: { start: 0, end: 0 }
       });
+    }
+    
+    // Product name extraction (for create_listing context)
+    // Extract product name from common patterns
+    const productPatterns = [
+      /(?:vendre|donner|vendre|créer.*annonce|publier).*?(?:un|une|des|mon|ma|mes)?\s*([a-zàâäéèêëïîôùûüÿç\s]{3,50})/i,
+      /(?:article|produit|objet).*?([a-zàâäéèêëïîôùûüÿç\s]{3,50})/i,
+      /(?:c'est|ce sont|il s'agit).*?([a-zàâäéèêëïîôùûüÿç\s]{3,50})/i
+    ];
+    
+    // Only extract if we don't have a category or if the text is long enough
+    const hasCategoryEntity = entities.some(e => e.type === EntityType.CATEGORY);
+    const hasPriceEntity = entities.some(e => e.type === EntityType.PRICE);
+    const textLength = original.trim().length;
+    
+    // If no category/price found and text is descriptive, try to extract product name
+    if (!hasCategoryEntity && !hasPriceEntity && textLength > 5) {
+      for (const pattern of productPatterns) {
+        const match = original.match(pattern);
+        if (match && match[1]) {
+          const productName = match[1].trim();
+          // Filter out common stop words and short words
+          const stopWords = ['un', 'une', 'des', 'le', 'la', 'les', 'mon', 'ma', 'mes', 'de', 'du', 'pour', 'avec'];
+          const words = productName.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w.toLowerCase()));
+          
+          if (words.length > 0) {
+            const cleanProductName = words.join(' ');
+            if (cleanProductName.length >= 3 && cleanProductName.length <= 50) {
+              console.log(`✅ Product name extracted (pattern): "${cleanProductName}"`);
+              entities.push({
+                type: EntityType.PRODUCT_NAME,
+                value: cleanProductName,
+                normalized: cleanProductName.toLowerCase(),
+                confidence: 0.7,
+                position: { start: match.index || 0, end: (match.index || 0) + match[0].length }
+              });
+              break; // Only one product name
+            }
+          }
+        }
+      }
+    }
+    
+    // Enhanced fallback: if message is short/medium and doesn't match other patterns, treat as product name
+    // This handles cases like "Un livre de maths niveau L1" or "📚 Un livre de cours"
+    if (entities.length === 0 || (!hasCategoryEntity && !hasPriceEntity)) {
+      const potentialProductName = original.trim();
+      
+      // Remove emojis but keep the text
+      const cleanText = potentialProductName.replace(/\p{Emoji}/gu, '').trim();
+      
+      // Exclude common greetings, commands, and very short messages
+      const excludePatterns = ['salut', 'bonjour', 'hello', 'hey', 'hy', 'créer', 'vendre', 'donner', 'annonce', 'ok', 'oui', 'non'];
+      const isExcluded = excludePatterns.some(pattern => cleanText.toLowerCase() === pattern || cleanText.toLowerCase().startsWith(pattern + ' '));
+      
+      // If text is 3-80 chars, not excluded, and doesn't look like a command, treat as product name
+      if (!isExcluded && cleanText.length >= 3 && cleanText.length <= 80 && tokens.length <= 10) {
+        // Check if it looks like a product description (has nouns/adjectives, not just verbs)
+        const hasProductIndicators = /(?:livre|ordinateur|vêtement|vetement|vélo|velo|fourniture|meuble|chaise|table|phone|téléphone|telephone|pc|laptop|macbook|iphone|ipad)/i.test(cleanText);
+        
+        if (hasProductIndicators || cleanText.split(/\s+/).length >= 2) {
+          console.log(`✅ Product name fallback: "${cleanText}"`);
+          entities.push({
+            type: EntityType.PRODUCT_NAME,
+            value: cleanText,
+            normalized: cleanText.toLowerCase(),
+            confidence: 0.6, // Medium confidence for fallback
+            position: { start: 0, end: cleanText.length }
+          });
+        }
+      }
     }
     
     return entities;

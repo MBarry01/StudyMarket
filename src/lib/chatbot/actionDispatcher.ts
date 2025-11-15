@@ -1,10 +1,19 @@
 /**
  * ⚡ Action Dispatcher Expert - Exécution d'Actions
  * Dispatch des actions basées sur les intentions détectées
+ * 🚀 Optimisé avec architecture FSM et extraction intelligente
  */
 
 import { IntentType, EntityType, NLPResult } from './nlpEngine';
 import { ContextEnrichment } from './contextManager';
+import { 
+  ListingConfig, 
+  EntityExtractor, 
+  WorkflowManager,
+  TransactionType,
+  FieldConfig,
+  WorkflowState
+} from './listingWorkflow';
 
 // ==================== TYPES ====================
 
@@ -127,36 +136,435 @@ export class ActionDispatcher {
 
   // ==================== ACTION HANDLERS ====================
 
-  private async handleCreateListing(entities: Record<string, any>, context: ContextEnrichment): Promise<ActionResult> {
-    const category = entities.category;
-    const price = entities.price;
-    const condition = entities.condition;
-    const productName = entities.productName;
+  /**
+   * Get contextual category suggestions based on product name
+   */
+  private getContextualCategorySuggestions(productName: string): string[] {
+    const name = productName.toLowerCase();
     
-    // Check missing information
-    if (context.missingInformation.length > 0) {
-      return {
-        success: false,
-        message: `D'accord ! Pour créer ton annonce, j'ai besoin de quelques infos. ${
-          context.missingInformation.includes('category')
-            ? 'Quelle catégorie ?'
-            : context.missingInformation.includes('price')
-            ? 'Quel prix ?'
-            : 'Parle-moi de ton article.'
-        }`,
-        nextStep: 'collect_missing_info'
-      };
+    if (name.includes('livre') || name.includes('manuel') || name.includes('cours') || name.includes('bouquin') || name.includes('bd')) {
+      return ['📚 Livres & Cours', '💻 Électronique', '👕 Vêtements', '📝 Fournitures'];
+    }
+    if (name.includes('ordi') || name.includes('pc') || name.includes('laptop') || name.includes('phone') || name.includes('téléphone') || name.includes('tablette') || name.includes('console')) {
+      return ['💻 Électronique', '📚 Livres & Cours', '🔧 Services'];
+    }
+    if (name.includes('vêtement') || name.includes('vetement') || name.includes('pull') || name.includes('pantalon') || name.includes('chemise') || name.includes('chaussure')) {
+      return ['👕 Vêtements', '📚 Livres & Cours', '🪑 Mobilier'];
+    }
+    if (name.includes('vélo') || name.includes('velo') || name.includes('mobilier') || name.includes('meuble') || name.includes('chaise') || name.includes('table')) {
+      return ['🪑 Mobilier', '💻 Électronique', '👕 Vêtements'];
+    }
+    if (name.includes('logement') || name.includes('appartement') || name.includes('chambre') || name.includes('studio')) {
+      return ['🏠 Logement', '🔧 Services'];
     }
     
-    // All info present - redirect to creation page with pre-filled data
+    // Default suggestions
+    return ['📚 Livres & Cours', '💻 Électronique', '👕 Vêtements', '🪑 Mobilier', '🏠 Logement', '🔧 Services'];
+  }
+
+  /**
+   * Detect transaction type based on context and entities
+   */
+  private detectTransactionType(entities: Record<string, any>, productName?: string): 'sell' | 'gift' | 'swap' | 'service' {
+    // If explicitly confirmed, use that
+    if (entities.transactionTypeConfirmed) {
+      return entities.transactionTypeConfirmed;
+    }
+    
+    // Check explicit mentions in entities
+    if (entities.isGift || entities.transactionType === 'gift') {
+      return 'gift';
+    }
+    if (entities.isSwap || entities.transactionType === 'swap') {
+      return 'swap';
+    }
+    if (entities.isService || entities.transactionType === 'service') {
+      return 'service';
+    }
+    
+    const name = (productName || '').toLowerCase();
+    const price = entities.price;
+    const category = entities.category;
+    
+    // Explicit mentions in product name
+    if (name.includes('don') || name.includes('gratuit') || price === 0) {
+      return 'gift';
+    }
+    if (name.includes('échange') || name.includes('troc') || name.includes('swap') || entities.desiredItems) {
+      return 'swap';
+    }
+    if (name.includes('service') || name.includes('aide') || name.includes('cours') || category === 'services' || entities.hourlyRate) {
+      return 'service';
+    }
+    if (category === 'housing' || name.includes('logement') || name.includes('chambre') || name.includes('appartement')) {
+      return 'service'; // Housing uses service type
+    }
+    
+    // Default to sell
+    return 'sell';
+  }
+
+  /**
+   * Get required fields for transaction type (matching CreateListingPage schema)
+   * Note: transactionType is NOT in this list - it's handled separately as workflow step 0
+   */
+  private getRequiredFieldsForType(transactionType: 'sell' | 'gift' | 'swap' | 'service', category?: string): string[] {
+    const baseFields = ['productName', 'category']; // Removed description and meetingLocation as they're optional
+    
+    if (category === 'housing') {
+      return [...baseFields, 'roomType', 'monthlyRent', 'startDate', 'endDate'];
+    }
+    
+    switch (transactionType) {
+      case 'sell':
+        return [...baseFields, 'price', 'condition', 'paymentMethods'];
+      case 'gift':
+        return [...baseFields, 'donationReason'];
+      case 'swap':
+        return [...baseFields, 'desiredItems', 'estimatedValue'];
+      case 'service':
+        return [...baseFields, 'hourlyRate', 'duration', 'skills'];
+      default:
+        return baseFields;
+    }
+  }
+
+  private async handleCreateListing(entities: Record<string, any>, context: ContextEnrichment): Promise<ActionResult> {
+    // 🚀 OPTIMIZED WORKFLOW - Using FSM architecture
+    
+    // 1. INITIALISATION & VALIDATION
+    // Get activeWorkflow from context (may be in contextManager)
+    const activeWorkflow = (context as any).activeWorkflow || null;
+    const workflow = WorkflowManager.validateState(activeWorkflow);
+    
+    // Protection contre boucles infinies
+    if (workflow.step > WorkflowManager['MAX_STEPS']) {
+      return {
+        success: false,
+        message: '⚠️ Trop d\'étapes. Veux-tu recommencer ou continuer sur la page de création ?',
+        data: {
+          suggestions: ['🔄 Recommencer', '📝 Ouvrir la page de création'],
+          workflow: null
+        }
+      };
+    }
+
+    // 2. EXTRACTION & MERGE - Extraction intelligente depuis texte libre
+    const freeText = this.extractFreeText(entities, workflow.data);
+    const extracted = EntityExtractor.extract(freeText);
+    const merged = WorkflowManager.mergeData(workflow.data, entities, extracted);
+    
+    console.log('🔍 Extraction intelligente:', {
+      freeText: freeText.substring(0, 50),
+      extracted,
+      confidence: extracted.confidence
+    });
+
+    // 3. DÉTERMINER TYPE DE TRANSACTION
+    let transactionType: TransactionType = merged.transactionTypeConfirmed || 
+                                          merged.transactionType || 
+                                          this.detectTransactionType(merged, merged.productName);
+    
+    if (!merged.transactionTypeConfirmed) {
+      // Si type inféré avec haute confiance, demander confirmation
+      if (extracted.confidence > 0.7 && extracted.transactionType && !entities.transactionType) {
+        return this.confirmInference(workflow, merged, extracted.transactionType);
+      }
+      
+      // Si pas de type explicite, demander en premier
+      if (!entities.transactionType && !merged.transactionType) {
+        return this.askTransactionType(workflow, merged);
+      }
+      
+      merged.transactionType = transactionType;
+      merged.transactionTypeConfirmed = true;
+    }
+    
+    transactionType = merged.transactionType as TransactionType;
+
+    // 4. CALCULER CHAMPS MANQUANTS avec validation
+    const requiredFields = ListingConfig.REQUIRED_FIELDS[transactionType] || [];
+    const missing = this.calculateMissing(requiredFields, merged);
+
+    // 5. VALIDATION DU DERNIER CHAMP SI NÉCESSAIRE
+    if (workflow.lastField && entities[workflow.lastField]) {
+      const field = requiredFields.find(f => f.name === workflow.lastField);
+      if (field && !WorkflowManager.validateInput(field, entities[workflow.lastField])) {
+        const updated = WorkflowManager.incrementCorrection(workflow, workflow.lastField);
+        return this.askFieldWithError(field, workflow.step + 1, requiredFields.length, {
+          ...updated,
+          data: merged,
+          missing
+        });
+      }
+    }
+
+    // 6. DEMANDER CHAMP SUIVANT
+    if (missing.length > 0) {
+      const nextField = WorkflowManager.getNextField(missing, transactionType, workflow);
+      
+      if (!nextField) {
+        // Tous les champs ont dépassé MAX_CORRECTIONS
+        return this.suggestManualCreation(merged, transactionType);
+      }
+
+      return this.askField(nextField, workflow.step + 1, requiredFields.length, {
+        ...workflow,
+        step: workflow.step + 1,
+        data: merged,
+        missing,
+        lastField: nextField.name
+      });
+    }
+
+    // 7. FINALISATION - Tout est prêt
+    return this.finalizeAndNavigate(merged, transactionType, context);
+  }
+
+  // ========== HELPERS OPTIMISÉS ==========
+
+  private extractFreeText(entities: Record<string, any>, data: Record<string, any>): string {
+    return [
+      entities.freeText,
+      entities.text,
+      entities.message,
+      entities.productName,
+      data.productName,
+      data.title
+    ].find(t => t && typeof t === 'string' && t.length > 0) || '';
+  }
+
+  private calculateMissing(fields: FieldConfig[], data: Record<string, any>): string[] {
+    return fields
+      .filter(f => !f.optional)
+      .filter(f => {
+        const value = data[f.name];
+        if (f.name === 'price' || f.name === 'hourlyRate' || f.name === 'estimatedValue') {
+          return ListingConfig.parsePrice(value) === null;
+        }
+        return value === undefined || value === null || value === '';
+      })
+      .map(f => f.name);
+  }
+
+  private askTransactionType(workflow: WorkflowState, data: Record<string, any>): ActionResult {
+    const updatedWorkflow: WorkflowState = {
+      ...workflow,
+      step: 1,
+      data,
+      missing: ['transactionType'],
+      corrections: {}
+    };
+    
+    return {
+      success: false,
+      message: '🎯 **Étape 1/4** • Quel type d\'annonce créer ? 📋\n\n💡 **Choisis le type qui correspond le mieux :**\n• 💰 **Vente** - Tu veux vendre un article\n• 💝 **Don** - Tu veux donner un article gratuitement\n• 🔄 **Échange** - Tu veux échanger contre autre chose\n• 🔧 **Service** - Tu proposes un service (cours, aide, etc.)',
+      nextStep: 'collect_transaction_type',
+      data: {
+        workflow: {
+          type: 'create_listing',
+          step: updatedWorkflow.step,
+          transactionType: null,
+          collected: updatedWorkflow.data,
+          missing: updatedWorkflow.missing
+        },
+        suggestions: ['💰 Vendre', '💝 Donner', '🔄 Échanger', '🔧 Service']
+      }
+    };
+  }
+
+  private confirmInference(
+    workflow: WorkflowState,
+    data: Record<string, any>,
+    inferred: TransactionType
+  ): ActionResult {
+    const labels: Record<TransactionType, string> = {
+      sell: 'vendre',
+      gift: 'donner',
+      swap: 'échanger',
+      service: 'proposer un service'
+    };
+    
+    const updatedWorkflow: WorkflowState = {
+      ...workflow,
+      data: { ...data, transactionTypePending: inferred }
+    };
+    
+    return {
+      success: false,
+      message: `✨ J'ai détecté que tu veux **${labels[inferred]}**. C'est ça ?`,
+      data: {
+        workflow: {
+          type: 'create_listing',
+          step: updatedWorkflow.step,
+          transactionType: inferred,
+          collected: updatedWorkflow.data,
+          missing: updatedWorkflow.missing
+        },
+        suggestions: ['✅ Oui', '❌ Non, autre chose']
+      },
+      nextStep: 'confirm_transaction_type'
+    };
+  }
+
+  private askField(
+    field: FieldConfig,
+    step: number,
+    total: number,
+    workflow: WorkflowState
+  ): ActionResult {
+    const transactionType = workflow.data.transactionType as TransactionType || 'sell';
+    const recap = this.buildRecap(workflow.data, transactionType);
+    const recapText = recap.length > 0 ? `\n\n**Récapitulatif :**\n${recap.join('\n')}\n` : '';
+    
+    return {
+      success: false,
+      message: `**Étape ${step}/${total}** • ${field.question}${recapText}`,
+      nextStep: 'collect_field',
+      data: {
+        workflow: {
+          type: 'create_listing',
+          step: workflow.step,
+          transactionType: transactionType,
+          collected: workflow.data,
+          missing: workflow.missing
+        },
+        suggestions: field.suggestions,
+        askField: field.name
+      }
+    };
+  }
+
+  private askFieldWithError(
+    field: FieldConfig,
+    step: number,
+    total: number,
+    workflow: WorkflowState
+  ): ActionResult {
+    const transactionType = workflow.data.transactionType as TransactionType || 'sell';
+    
+    return {
+      success: false,
+      message: `❌ Format invalide. **Étape ${step}/${total}** • ${field.question}`,
+      nextStep: 'collect_field',
+      data: {
+        workflow: {
+          type: 'create_listing',
+          step: workflow.step,
+          transactionType: transactionType,
+          collected: workflow.data,
+          missing: workflow.missing,
+          corrections: workflow.corrections
+        },
+        suggestions: [...field.suggestions, '⏭️ Passer'],
+        askField: field.name,
+        error: true
+      }
+    };
+  }
+
+  private suggestManualCreation(data: Record<string, any>, transactionType: TransactionType): ActionResult {
+    return {
+      success: false,
+      message: '🤔 J\'ai du mal à compléter certains champs. Veux-tu continuer manuellement ?',
+      data: {
+        suggestions: ['📝 Ouvrir création manuelle', '🔄 Recommencer'],
+        partialData: data,
+        transactionType
+      }
+    };
+  }
+
+  private buildRecap(data: Record<string, any>, transactionType: TransactionType): string[] {
+    const recap: string[] = [];
+    if (data.productName || data.title) recap.push(`✅ Article : ${data.productName || data.title}`);
+    if (data.category) recap.push(`✅ Catégorie : ${data.category}`);
+    if (transactionType === 'sell' && data.price) recap.push(`✅ Prix : ${data.price}€`);
+    if (transactionType === 'sell' && data.condition) recap.push(`✅ État : ${data.condition}`);
+    if (transactionType === 'gift' && data.donationReason) recap.push(`✅ Raison du don`);
+    if (transactionType === 'swap' && data.desiredItems) recap.push(`✅ Objets recherchés`);
+    if (transactionType === 'service' && data.hourlyRate) recap.push(`✅ Tarif : ${data.hourlyRate}€/h`);
+    return recap;
+  }
+
+  private finalizeAndNavigate(
+    data: Record<string, any>,
+    type: TransactionType,
+    context: ContextEnrichment
+  ): ActionResult {
+    const prefill: any = {
+      title: data.productName || data.title,
+      category: data.category || 'other',
+      description: data.description || `${data.productName || data.title}${data.category ? ` (${data.category})` : ''}`,
+      transactionType: type // Ajouter le type pour le formulaire
+    };
+
+    // Type-specific fields - TOUS les champs nécessaires
+    if (type === 'sell') {
+      const parsedPrice = ListingConfig.parsePrice(data.price);
+      if (parsedPrice !== null) {
+        prefill.price = parsedPrice;
+      }
+      prefill.condition = data.condition || 'good';
+      // Payment methods: array ou string
+      if (data.paymentMethods) {
+        prefill.paymentMethods = Array.isArray(data.paymentMethods) 
+          ? data.paymentMethods 
+          : [data.paymentMethods];
+      } else {
+        prefill.paymentMethods = [];
+      }
+    } else if (type === 'gift') {
+      prefill.price = 0;
+      if (data.donationReason) {
+        prefill.donationReason = data.donationReason;
+      }
+    } else if (type === 'service') {
+      const parsedHourlyRate = ListingConfig.parsePrice(data.hourlyRate);
+      if (parsedHourlyRate !== null) {
+        prefill.hourlyRate = parsedHourlyRate;
+      } else {
+        prefill.hourlyRate = 0;
+      }
+      prefill.duration = data.duration || 1;
+      if (data.skills) {
+        prefill.skills = data.skills;
+      }
+    } else if (type === 'swap') {
+      if (data.desiredItems) {
+        prefill.desiredItems = Array.isArray(data.desiredItems) 
+          ? data.desiredItems 
+          : [data.desiredItems];
+      }
+      const parsedEstimatedValue = ListingConfig.parsePrice(data.estimatedValue);
+      if (parsedEstimatedValue !== null) {
+        prefill.estimatedValue = parsedEstimatedValue;
+      }
+    }
+
+    // Profile-based prefill
+    const userProfile = (context as any).userProfile;
+    if (userProfile?.preferredPaymentMethods && type === 'sell') {
+      prefill.paymentMethods = userProfile.preferredPaymentMethods;
+    }
+
+    // Normaliser la catégorie pour l'URL
+    const categoryForUrl = prefill.category || 'other';
+    const createUrl = `/create?type=${type}${categoryForUrl !== 'other' ? `&category=${categoryForUrl}` : ''}`;
+
+    console.log('📦 Final prefill data:', {
+      ...prefill,
+      url: createUrl
+    });
+
     return {
       success: true,
+      message: '✅ Parfait ! J\'ouvre la page avec tout pré-rempli. Tu n\'as plus qu\'à ajouter des photos. 📸',
       data: {
         action: 'navigate',
-        path: '/create',
-        prefill: { category, price, condition, title: productName }
+        path: createUrl,
+        prefill
       },
-      message: `Parfait ! Je t'emmène sur la page de création avec tes infos déjà remplies. Il ne te restera plus qu'à ajouter photos et description ! ✨`,
       nextStep: 'navigate'
     };
   }

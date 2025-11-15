@@ -26,6 +26,11 @@ export const ENV_CONFIG = {
   // OpenAI GPT (Optionnel - pour améliorer le chatbot)
   OPENAI_API_KEY: import.meta.env.VITE_OPENAI_API_KEY || '',
   OPENAI_ENABLED: import.meta.env.VITE_OPENAI_ENABLED === 'true',
+  
+  // DeepSeek AI (Optionnel - alternative à OpenAI, plus robuste)
+  DEEPSEEK_API_KEY: import.meta.env.VITE_DEEPSEEK_API_KEY || '',
+  DEEPSEEK_ENABLED: import.meta.env.VITE_DEEPSEEK_ENABLED === 'true',
+  DEEPSEEK_MODEL: import.meta.env.VITE_DEEPSEEK_MODEL || 'deepseek-chat',
 };
 
 // Validation des variables requises

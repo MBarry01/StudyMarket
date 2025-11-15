@@ -19,6 +19,11 @@ import { PaymentsPage } from './pages/PaymentsPage';
 import { HelpPage } from './pages/HelpPage';
 import { SafetyPage } from './pages/SafetyPage';
 import { MessagesPage } from './pages/MessagesPage';
+import { HowItWorksPage } from './pages/HowItWorksPage';
+import { CommunityGuidelinesPage } from './pages/CommunityGuidelinesPage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { CookiesPage } from './pages/CookiesPage';
 import { AuthPage } from './pages/AuthPage';
 import EmailVerificationHandler from './pages/EmailVerificationHandler';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -85,7 +90,7 @@ class ErrorBoundary extends React.Component<
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <AuthProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
@@ -102,6 +107,11 @@ function App() {
                   <Route path="/verify-email" element={<EmailVerificationHandler />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/safety" element={<SafetyPage />} />
+                  <Route path="/how-it-works" element={<HowItWorksPage />} />
+                  <Route path="/community-guidelines" element={<CommunityGuidelinesPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/cookies" element={<CookiesPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/checkout/success" element={<CheckoutSuccessPage />} />

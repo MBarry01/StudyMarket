@@ -113,7 +113,9 @@ export class ChatbotOrchestrator {
       
       if (this.shouldExecuteAction(nlpResult, enrichedContext)) {
         const primaryIntent = nlpResult.intents[0];
-        const entities = this.extractEntitiesMap(nlpResult, enrichedContext.currentIntent);
+        // Get context before extracting entities to pass workflow info
+        const currentContextForExtraction = contextManager.getContext(config.sessionId);
+        const entities = this.extractEntitiesMap(nlpResult, enrichedContext.currentIntent, currentContextForExtraction);
         
         // Merge workflow data with entities if workflow exists
         const currentContext = contextManager.getContext(config.sessionId);
@@ -121,12 +123,63 @@ export class ChatbotOrchestrator {
           ? { ...currentContext.activeWorkflow.data, ...entities }
           : entities;
         
+        // Update workflow BEFORE dispatching action (so handleCreateListing sees updated data)
+        // Always update if we have CREATE_LISTING intent, even with empty entities (to maintain workflow)
+        if (enrichedContext.currentIntent === 'create_listing') {
+          if (!currentContext.activeWorkflow) {
+            console.log('🔄 Starting CREATE_LISTING workflow (before action)');
+            contextManager.updateWorkflow(config.sessionId, {
+              type: 'create_listing',
+              step: 1,
+              data: { ...entities }
+            });
+          } else {
+            const mergedData = { ...currentContext.activeWorkflow.data, ...entities };
+            const newStep = this.calculateWorkflowStep('create_listing', mergedData);
+            console.log('🔄 Updating CREATE_LISTING workflow (before action):', {
+              step: `${currentContext.activeWorkflow.step} → ${newStep}`,
+              entities: Object.keys(entities),
+              collected: Object.keys(mergedData),
+              hasProductName: !!mergedData.productName || !!mergedData.title,
+              hasCategory: !!mergedData.category,
+              hasPrice: !!mergedData.price
+            });
+            contextManager.updateWorkflow(config.sessionId, {
+              type: 'create_listing',
+              step: newStep,
+              data: mergedData
+            });
+            
+            // Update currentContext to reflect the change immediately
+            currentContext.activeWorkflow = {
+              ...currentContext.activeWorkflow,
+              step: newStep,
+              data: mergedData
+            };
+            
+            // Update mergedEntities to include the latest workflow data
+            Object.assign(mergedEntities, mergedData);
+          }
+        }
+        
+        // Re-fetch context after workflow update to ensure we have latest data
+        const updatedContext = contextManager.getContext(config.sessionId);
+        if (updatedContext.activeWorkflow) {
+          // Merge again with updated workflow data
+          Object.assign(mergedEntities, updatedContext.activeWorkflow.data);
+        }
+        
         console.log('🔨 Dispatching action:', {
           intent: primaryIntent?.type,
           enrichedIntent: enrichedContext.currentIntent,
           entities: Object.keys(mergedEntities),
-          fromWorkflow: !!currentContext.activeWorkflow?.data
+          fromWorkflow: !!updatedContext.activeWorkflow?.data,
+          workflowStep: updatedContext.activeWorkflow?.step,
+          workflowData: Object.keys(updatedContext.activeWorkflow?.data || {})
         });
+        
+        // Update enrichedContext with latest workflow info
+        enrichedContext.activeWorkflow = updatedContext.activeWorkflow;
         
         actionResult = await actionDispatcher.dispatch({
           intent: enrichedContext.currentIntent, // Use enriched intent, not original
@@ -183,7 +236,25 @@ export class ChatbotOrchestrator {
       const currentContext = contextManager.getContext(config.sessionId);
       const entities = this.extractEntitiesMap(nlpResult, enrichedContext.currentIntent);
       
-      if (enrichedContext.currentIntent === 'create_listing' && enrichedContext.missingInformation.length > 0) {
+      // Update workflow from action result if available (more accurate step tracking)
+      // 🚀 OPTIMIZED: Use workflow state from optimized action dispatcher
+      if (actionResult?.data?.workflow) {
+        const workflowData = actionResult.data.workflow;
+        console.log('🔄 Updating workflow from action result (optimized):', {
+          type: workflowData.type,
+          step: workflowData.step,
+          transactionType: workflowData.transactionType,
+          collected: Object.keys(workflowData.collected || {}),
+          missing: workflowData.missing || []
+        });
+        // Use collected data directly (already merged in optimized workflow)
+        contextManager.updateWorkflow(config.sessionId, {
+          type: workflowData.type,
+          step: workflowData.step,
+          data: workflowData.collected || workflowData.data || {}
+        });
+      } else if (enrichedContext.currentIntent === 'create_listing') {
+        // Always update workflow for CREATE_LISTING, even if no missing info (to track progress)
         if (!currentContext.activeWorkflow) {
           console.log('🔄 Starting CREATE_LISTING workflow');
           contextManager.updateWorkflow(config.sessionId, {
@@ -192,12 +263,22 @@ export class ChatbotOrchestrator {
             data: { ...entities }
           });
         } else {
-          // Merge entities into existing workflow
-          console.log('🔄 Updating CREATE_LISTING workflow with entities:', Object.keys(entities));
+          // Merge entities into existing workflow and update step
+          const mergedData = { ...currentContext.activeWorkflow.data, ...entities };
+          const newStep = this.calculateWorkflowStep('create_listing', mergedData);
+          console.log('🔄 Updating CREATE_LISTING workflow:', {
+            step: `${currentContext.activeWorkflow.step} → ${newStep}`,
+            entities: Object.keys(entities),
+            collected: Object.keys(mergedData),
+            hasProductName: !!mergedData.productName || !!mergedData.title,
+            hasCategory: !!mergedData.category,
+            hasPrice: !!mergedData.price,
+            hasCondition: !!mergedData.condition
+          });
           contextManager.updateWorkflow(config.sessionId, {
             type: 'create_listing',
-            step: currentContext.activeWorkflow.step,
-            data: { ...currentContext.activeWorkflow.data, ...entities }
+            step: newStep,
+            data: mergedData
           });
         }
       } else if (enrichedContext.currentIntent === 'search_listing' && enrichedContext.missingInformation.length > 0) {
@@ -319,6 +400,20 @@ export class ChatbotOrchestrator {
   }
 
   /**
+   * Calculate workflow step based on collected data
+   */
+  private calculateWorkflowStep(type: string, data: Record<string, any>): number {
+    if (type === 'create_listing') {
+      if (!data.productName && !data.title) return 1;
+      if (!data.category) return 2;
+      if (!data.price) return 3;
+      if (!data.condition) return 4;
+      return 5; // All required info collected
+    }
+    return 1;
+  }
+
+  /**
    * Update active workflow
    */
   public updateWorkflow(
@@ -370,18 +465,131 @@ export class ChatbotOrchestrator {
   /**
    * Extract entities into a map
    */
-  private extractEntitiesMap(nlpResult: NLPResult, intent?: IntentType): Record<string, any> {
+  private extractEntitiesMap(nlpResult: NLPResult, intent?: IntentType, context?: UserContext): Record<string, any> {
     const map: Record<string, any> = {};
+    const currentIntent = intent || nlpResult.intents[0]?.type;
+    const originalMessage = nlpResult.originalMessage || '';
+    const normalizedMessage = originalMessage.toLowerCase();
+    
+    // Extract transaction type indicators
+    if (currentIntent === 'create_listing') {
+      // Explicit transaction type selection from suggestions
+      if (normalizedMessage.includes('vendre') || normalizedMessage.includes('vente') || normalizedMessage.includes('💰')) {
+        map['transactionType'] = 'sell';
+        map['transactionTypeConfirmed'] = 'sell';
+      } else if (normalizedMessage.includes('donner') || normalizedMessage.includes('don') || normalizedMessage.includes('gratuit') || normalizedMessage.includes('offrir') || normalizedMessage.includes('💝')) {
+        map['isGift'] = true;
+        map['transactionType'] = 'gift';
+        map['transactionTypeConfirmed'] = 'gift';
+      } else if (normalizedMessage.includes('échanger') || normalizedMessage.includes('échange') || normalizedMessage.includes('troc') || normalizedMessage.includes('swap') || normalizedMessage.includes('🔄')) {
+        map['isSwap'] = true;
+        map['transactionType'] = 'swap';
+        map['transactionTypeConfirmed'] = 'swap';
+      } else if (normalizedMessage.includes('service') || normalizedMessage.includes('proposer un service') || normalizedMessage.includes('cours') || normalizedMessage.includes('aide') || normalizedMessage.includes('tutorat') || normalizedMessage.includes('🔧')) {
+        map['isService'] = true;
+        map['transactionType'] = 'service';
+        map['transactionTypeConfirmed'] = 'service';
+      } else {
+        // Legacy detection for backward compatibility
+        if (normalizedMessage.includes('don') || normalizedMessage.includes('gratuit') || normalizedMessage.includes('offrir')) {
+          map['isGift'] = true;
+        }
+        if (normalizedMessage.includes('échange') || normalizedMessage.includes('troc') || normalizedMessage.includes('swap')) {
+          map['isSwap'] = true;
+        }
+        if (normalizedMessage.includes('service') || normalizedMessage.includes('cours') || normalizedMessage.includes('aide') || normalizedMessage.includes('tutorat')) {
+          map['isService'] = true;
+        }
+      }
+      
+      // Extract hourly rate (e.g., "15€/h", "20 euros par heure", "10€/h", "Gratuit")
+      // Pattern amélioré pour détecter même sans espace: "10€/h" ou "10€ /h" ou "10 euros par heure"
+      // Priorité: détecter d'abord les tarifs horaires avant les prix simples
+      const hourlyRatePattern = /(\d{1,6}(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)?\s*(?:\/|par)\s*(?:h|heure|heures)/i;
+      const hourlyRateMatch = originalMessage.match(hourlyRatePattern);
+      if (hourlyRateMatch) {
+        map['hourlyRate'] = parseFloat(hourlyRateMatch[1].replace(',', '.'));
+        map['transactionType'] = 'service';
+        map['transactionTypeConfirmed'] = 'service';
+        console.log(`💰 Extracted hourlyRate: ${map['hourlyRate']}€/h`);
+      } else if (normalizedMessage === 'gratuit' || (normalizedMessage.includes('gratuit') && currentIntent === 'create_listing')) {
+        // "Gratuit" - déterminer selon le contexte du workflow
+        if (context?.activeWorkflow?.type === 'create_listing') {
+          const workflowData = context.activeWorkflow.data;
+          // Si on demande hourlyRate ou si le type est service, c'est un service gratuit
+          if (workflowData?.transactionType === 'service' || workflowData?.askField === 'hourlyRate') {
+            map['hourlyRate'] = 0;
+            map['transactionType'] = 'service';
+            console.log(`💰 Extracted hourlyRate: 0€/h (gratuit)`);
+          } else {
+            // Sinon, c'est probablement un don
+            map['price'] = 0;
+            map['transactionType'] = 'gift';
+            console.log(`💰 Extracted price: 0€ (gratuit/don)`);
+          }
+        } else if (normalizedMessage === 'gratuit' && currentIntent === 'create_listing') {
+          // Par défaut, "gratuit" = don
+          map['price'] = 0;
+          map['transactionType'] = 'gift';
+          console.log(`💰 Extracted price: 0€ (gratuit/don)`);
+        }
+      }
+      
+      // Extract duration (e.g., "2h", "5 heures")
+      const durationMatch = originalMessage.match(/(\d+)\s*(?:h|heure|heures)(?!\s*(?:\/|par))/i);
+      if (durationMatch && !hourlyRateMatch) { // Only if not already extracted as hourly rate
+        map['duration'] = parseInt(durationMatch[1]);
+        console.log(`⏱️ Extracted duration: ${map['duration']}h`);
+      }
+      
+      // Extract price from suggestions like "10€", "25€", "50€", "100€"
+      // Pattern pour prix simple (sans /h) - seulement si pas déjà un tarif horaire
+      if (!map['hourlyRate'] && !map['price']) {
+        // Pattern qui exclut les tarifs horaires
+        const simplePricePattern = /(\d{1,6}(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur)(?!\s*(?:\/|par)\s*(?:h|heure|heures))/i;
+        const simplePriceMatch = originalMessage.match(simplePricePattern);
+        if (simplePriceMatch) {
+          map['price'] = parseFloat(simplePriceMatch[1].replace(',', '.'));
+          console.log(`💰 Extracted price: ${map['price']}€`);
+        }
+      }
+      
+      // Extract donation reason patterns
+      if (normalizedMessage.includes('n\'ai plus besoin') || normalizedMessage.includes('déménagement') || normalizedMessage.includes('bon geste')) {
+        const reasonMatch = originalMessage.match(/(?:parce que|car|car je|je n'ai plus besoin|déménagement|bon geste)[^.]*/i);
+        if (reasonMatch) {
+          map['donationReason'] = reasonMatch[0].trim();
+        }
+      }
+    }
     
     nlpResult.entities.forEach(entity => {
-      const key = entity.type.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-      
       // Convert NUMBER to PRICE if in create_listing context (number likely refers to price)
-      const currentIntent = intent || nlpResult.intents[0]?.type;
       if (entity.type === 'number' && currentIntent === 'create_listing') {
-        console.log(`💰 Converting NUMBER to PRICE: ${entity.value} (context: ${currentIntent})`);
-        map['price'] = entity.normalized !== undefined ? entity.normalized : entity.value;
-      } else {
+        // Check if it's already an hourly rate or duration
+        if (!map['hourlyRate'] && !map['duration'] && !map['price']) {
+          // Si on est dans un workflow service et qu'on demande hourlyRate, c'est un tarif horaire
+          // Sinon, c'est un prix
+          const numValue = entity.normalized !== undefined ? entity.normalized : parseFloat(entity.value);
+          if (!isNaN(numValue)) {
+            // Vérifier le contexte: si on demande hourlyRate, utiliser hourlyRate
+            // Sinon, utiliser price
+            // On laisse le workflow décider selon le champ demandé
+            map['price'] = numValue;
+            console.log(`💰 Converting NUMBER to PRICE: ${numValue} (context: ${currentIntent})`);
+          }
+        }
+      } 
+      // Map PRODUCT_NAME to both productName and title (for compatibility)
+      else if (entity.type === 'product_name') {
+        const value = entity.normalized !== undefined ? entity.normalized : entity.value;
+        map['productName'] = value;
+        map['title'] = value; // Also map to title for compatibility
+        console.log(`📦 Mapped PRODUCT_NAME: "${value}" → productName & title`);
+      }
+      // Standard conversion: snake_case to camelCase
+      else {
+        const key = entity.type.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
         map[key] = entity.normalized !== undefined ? entity.normalized : entity.value;
       }
     });

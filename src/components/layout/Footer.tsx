@@ -11,12 +11,12 @@ export const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="bg-muted/50 border-t border-border mt-auto">
+    <footer className="bg-muted/50 border-t border-border mt-auto font-sans">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
               {/* Company Info */}
               <div className="space-y-4 text-left">
-                <div className="flex items-center justify-start space-x-2">
+                <Link to="/" className="flex items-center justify-start space-x-2 hover:opacity-80 transition-opacity">
               <GradientIcon icon={GraduationCap} gradientId="gradient-footer" size={32} />
               <div>
                 <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
                   Étudiants certifiés
                 </div>
               </div>
-            </div>
+            </Link>
                 <p className="text-muted-foreground text-sm">
               La première plateforme d'échange entre étudiants vérifiés. Achetez, vendez, donnez et échangez en toute sécurité au sein de votre communauté universitaire.
             </p>

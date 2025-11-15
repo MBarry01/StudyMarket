@@ -75,9 +75,9 @@ const THANKS_RESPONSES = [
 
 const CLARIFICATION_PROMPTS = {
   [IntentType.CREATE_LISTING]: [
-    "Pour créer ton annonce, j'ai besoin de savoir :",
-    "Super ! Dis-m'en plus sur ce que tu veux vendre :",
-    "Ok ! Quelques infos pour créer ton annonce :"
+    "Je vais t'aider à créer ton annonce étape par étape ! 🎯",
+    "Super ! Créons ton annonce ensemble ! 📝",
+    "Parfait ! Je vais te guider pour créer ton annonce. 🚀"
   ],
   [IntentType.SEARCH_LISTING]: [
     "Précise ta recherche :",
@@ -159,24 +159,56 @@ export class ResponseGenerator {
     // Try normal generation first
     let response = this.generate(options);
     
-    // If LLM is enabled and confidence is low, try LLM fallback
-    if (llmService.shouldUseLLM(nlpResult.overallConfidence, context.currentIntent)) {
-      console.log('🤖 Attempting LLM fallback for low confidence');
+    // If LLM is enabled and (confidence is low OR we're in a workflow), try LLM fallback
+    const isInWorkflow = userContext?.activeWorkflow !== undefined;
+    const isCreateListingWorkflow = isInWorkflow && userContext.activeWorkflow.type === 'create_listing';
+    
+    // FORCE LLM usage for CREATE_LISTING workflow to make it intelligent and dynamic
+    if (isCreateListingWorkflow || llmService.shouldUseLLM(nlpResult.overallConfidence, context.currentIntent, userContext, userMessage)) {
+      console.log('🤖 Attempting LLM fallback', { 
+        reason: isCreateListingWorkflow ? 'CREATE_LISTING workflow (forced for intelligence)' : isInWorkflow ? 'workflow assistance' : 'low confidence' 
+      });
+      
+      // Build enhanced context for workflow
+      const workflowContext = isInWorkflow ? {
+        workflowType: userContext.activeWorkflow.type,
+        workflowStep: userContext.activeWorkflow.step,
+        collectedData: userContext.activeWorkflow.data,
+        missingInfo: context.missingInformation,
+        // Add action result context for better understanding
+        actionResultMessage: actionResult?.message,
+        nextStep: actionResult?.nextStep
+      } : {};
+      
       const llmResponse = await llmService.generateResponse(userMessage || '', {
         intent: context.currentIntent,
         entities: nlpResult.entities,
         conversationHistory: userContext?.conversationHistory,
-        platformContext: { currentPage: context.conversationState }
+        platformContext: { 
+          currentPage: context.conversationState,
+          ...workflowContext
+        }
       });
       
-      // Use LLM response if available
+      // Use LLM response if available, but merge with action result if exists
       if (llmResponse) {
-        console.log('✨ Using LLM response');
+        console.log('✨ Using LLM response for intelligent workflow');
+        
+        // If we have an action result with workflow data, use it for suggestions
+        const finalSuggestions = actionResult?.data?.suggestions || response.suggestions;
+        
+        // For CREATE_LISTING workflow, prefer LLM response over action result message
+        // But keep action result data for workflow tracking
+        const finalMessage = isCreateListingWorkflow && llmResponse.response 
+          ? llmResponse.response 
+          : actionResult?.message || llmResponse.response;
+        
         return {
-          text: llmResponse.response,
-          suggestions: response.suggestions,
+          text: finalMessage,
+          suggestions: finalSuggestions,
           tone: response.tone,
-          requiresAction: false
+          requiresAction: actionResult?.success === false,
+          components: response.components
         };
       }
     }

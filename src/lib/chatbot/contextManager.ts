@@ -209,15 +209,17 @@ export class ContextManager {
         console.log(`🔍 Checking active workflow: type=${context.activeWorkflow.type}`);
         const workflowAge = Date.now() - context.activeWorkflow.startedAt.getTime();
         
-        if (workflowAge < 30000) { // 30 seconds timeout
-          // If workflow active and entities found, recover
-          if ((context.activeWorkflow.type === 'create_listing' && (hasCategory || hasPrice || nlpResult.entities.length === 0)) ||
-              (context.activeWorkflow.type === 'search' && (hasCategory || nlpResult.entities.length === 0))) {
-            primaryIntent = context.activeWorkflow.type === 'create_listing' ? IntentType.CREATE_LISTING : IntentType.SEARCH_LISTING;
+        if (workflowAge < 300000) { // 5 minutes timeout (augmenté pour permettre la continuité)
+          // If workflow active, ALWAYS recover the intent (even with no entities)
+          // This ensures continuity in the workflow
+          if (context.activeWorkflow.type === 'create_listing') {
+            primaryIntent = IntentType.CREATE_LISTING;
             wasRecovered = true;
-            console.log(`✅ Workflow recovery: UNKNOWN → ${primaryIntent} (workflow: ${context.activeWorkflow.type})`);
-          } else {
-            console.log(`❌ Workflow type ${context.activeWorkflow.type} doesn't match entities`);
+            console.log(`✅ Workflow recovery: UNKNOWN → CREATE_LISTING (workflow active, age: ${Math.round(workflowAge / 1000)}s)`);
+          } else if (context.activeWorkflow.type === 'search') {
+            primaryIntent = IntentType.SEARCH_LISTING;
+            wasRecovered = true;
+            console.log(`✅ Workflow recovery: UNKNOWN → SEARCH_LISTING (workflow active, age: ${Math.round(workflowAge / 1000)}s)`);
           }
         } else {
           console.log(`⏱️ Workflow expired (${Math.round(workflowAge / 1000)}s old)`);
@@ -226,27 +228,43 @@ export class ContextManager {
         console.log(`❌ No active workflow`);
       }
       
-      // SECOND: Search backwards through history (max 2 turns, 30s timeout)
+      // SECOND: Search backwards through history (max 3 turns, 60s timeout) - amélioré
       if (!wasRecovered && context.conversationHistory.length > 0) {
         let foundIntent = false;
         const now = Date.now();
         
-        // Look back up to 2 turns to find a valid intent
-        for (let i = context.conversationHistory.length - 1; i >= 0 && i >= context.conversationHistory.length - 2 && !foundIntent; i--) {
+        // Look back up to 3 turns to find a valid intent
+        for (let i = context.conversationHistory.length - 1; i >= 0 && i >= context.conversationHistory.length - 3 && !foundIntent; i--) {
           const turn = context.conversationHistory[i];
           const turnAge = now - turn.timestamp.getTime();
           
-          if (turnAge > 30000) { // 30 seconds timeout
+          if (turnAge > 60000) { // 60 seconds timeout (augmenté)
             console.log(`⏱️ Turn ${i} too old (${Math.round(turnAge / 1000)}s), skipping`);
             break;
           }
           
           const turnIntent = turn.nlpResult.intents[0]?.type;
+          const turnBotResponse = turn.botResponse?.toLowerCase() || '';
+          const hasCreateOffer = turnBotResponse.includes('créer') || turnBotResponse.includes('creer') || turnBotResponse.includes('annonce');
           
-          console.log(`🔍 Checking turn ${i}: intent=${turnIntent}`);
+          console.log(`🔍 Checking turn ${i}: intent=${turnIntent}, hasCreateOffer=${hasCreateOffer}`);
+          
+          // If bot just offered to create listing and user says "oui" or similar, recover CREATE_LISTING
+          // Check the current message (from nlpResult) for confirmation words
+          const currentMessageNormalized = nlpResult.originalMessage?.toLowerCase() || '';
+          const confirmationWords = ['oui', 'ok', 'd\'accord', 'yes', 'okay', 'parfait', 'allons-y', 'c\'est parti'];
+          const isConfirmation = confirmationWords.some(word => currentMessageNormalized.includes(word));
+          
+          if (hasCreateOffer && isConfirmation) {
+            primaryIntent = IntentType.CREATE_LISTING;
+            wasRecovered = true;
+            foundIntent = true;
+            console.log(`✅ Context recovery: UNKNOWN → CREATE_LISTING (user confirmed creation offer from turn ${i})`);
+            break;
+          }
           
           // If we have entities matching the workflow, recover the intent
-          if ((turnIntent === IntentType.CREATE_LISTING && (hasCategory || hasPrice)) ||
+          if ((turnIntent === IntentType.CREATE_LISTING && (hasCategory || hasPrice || hasCreateOffer)) ||
               (turnIntent === IntentType.SEARCH_LISTING && hasCategory)) {
             primaryIntent = turnIntent;
             wasRecovered = true;
@@ -257,7 +275,7 @@ export class ContextManager {
         }
         
         if (!foundIntent && !wasRecovered) {
-          console.log(`❌ Context recovery failed: no matching intent in last 2 turns`);
+          console.log(`❌ Context recovery failed: no matching intent in last 3 turns`);
         }
       } else if (!wasRecovered) {
         console.log(`❌ No conversation history available`);
@@ -494,17 +512,38 @@ export class ContextManager {
     const hasCategory = nlpResult.entities.some(e => e.type === EntityType.CATEGORY);
     const hasPrice = nlpResult.entities.some(e => e.type === EntityType.PRICE);
     
-    // Check if workflow already has these entities
+    // Check if workflow already has these entities (MORE IMPORTANT - workflow data is persistent)
     const workflowHasCategory = context.activeWorkflow?.data?.category !== undefined;
     const workflowHasPrice = context.activeWorkflow?.data?.price !== undefined;
+    const workflowHasProductName = context.activeWorkflow?.data?.productName || 
+                                   context.activeWorkflow?.data?.title;
     
     switch (intent) {
       case IntentType.CREATE_LISTING:
+        // Check for product name (title) - check BOTH current entities AND workflow
+        const hasProductName = nlpResult.entities.some(e => 
+          e.type === EntityType.PRODUCT_NAME || 
+          e.type === EntityType.TITLE ||
+          (e.type === EntityType.TEXT && e.value && e.value.length > 3)
+        );
+        
+        // If workflow has productName, don't mark it as missing (even if current message doesn't have it)
+        if (!hasProductName && !workflowHasProductName) {
+          missing.push('productName');
+        }
+        // Same logic for other fields - workflow data takes precedence
         if (!hasCategory && !workflowHasCategory) {
           missing.push('category');
         }
         if (!hasPrice && !workflowHasPrice) {
           missing.push('price');
+        }
+        // Condition is optional but nice to have
+        const hasCondition = nlpResult.entities.some(e => e.type === EntityType.CONDITION);
+        const workflowHasCondition = context.activeWorkflow?.data?.condition;
+        if (!hasCondition && !workflowHasCondition && missing.length === 0) {
+          // Only ask for condition if we have the basics
+          missing.push('condition');
         }
         break;
       

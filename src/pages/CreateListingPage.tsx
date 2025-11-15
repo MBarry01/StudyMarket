@@ -201,13 +201,25 @@ export const CreateListingPage: React.FC = () => {
     if (prefillData) {
       try {
         const prefill = JSON.parse(prefillData);
-        console.log('🤖 Chatbot prefill data:', prefill);
+        console.log('🤖 Chatbot prefill data (complete):', prefill);
         
+        // Category (prioritaire)
         if (prefill.category) {
           setSelectedCategory(prefill.category);
         }
         
-        if (prefill.price && typeof prefill.price === 'number') {
+        // Title/Product name
+        if (prefill.title) {
+          form.setValue('title', prefill.title);
+        }
+        
+        // Description
+        if (prefill.description) {
+          form.setValue('description', prefill.description);
+        }
+        
+        // Type-specific fields
+        if (prefill.price !== undefined && typeof prefill.price === 'number') {
           form.setValue('price', prefill.price.toString());
         }
         
@@ -215,9 +227,64 @@ export const CreateListingPage: React.FC = () => {
           form.setValue('condition', prefill.condition);
         }
         
-        if (prefill.title) {
-          form.setValue('title', prefill.title);
+        // Payment methods (for sell)
+        if (prefill.paymentMethods && Array.isArray(prefill.paymentMethods)) {
+          setSelectedPaymentMethods(prefill.paymentMethods);
+          form.setValue('paymentMethods', prefill.paymentMethods as any);
         }
+        
+        // Donation reason (for gift)
+        if (prefill.donationReason) {
+          form.setValue('donationReason', prefill.donationReason);
+        }
+        
+        // Desired items (for swap)
+        if (prefill.desiredItems) {
+          if (Array.isArray(prefill.desiredItems)) {
+            setDesiredItems(prefill.desiredItems.length > 0 ? prefill.desiredItems : ['']);
+            form.setValue('desiredItems', prefill.desiredItems as any);
+          } else if (typeof prefill.desiredItems === 'string') {
+            setDesiredItems([prefill.desiredItems]);
+            form.setValue('desiredItems', [prefill.desiredItems] as any);
+          }
+        }
+        
+        // Estimated value (for swap)
+        if (prefill.estimatedValue !== undefined && typeof prefill.estimatedValue === 'number') {
+          form.setValue('estimatedValue', prefill.estimatedValue.toString());
+        }
+        
+        // Hourly rate (for service)
+        if (prefill.hourlyRate !== undefined && typeof prefill.hourlyRate === 'number') {
+          form.setValue('hourlyRate', prefill.hourlyRate.toString());
+        }
+        
+        // Duration (for service)
+        if (prefill.duration !== undefined && typeof prefill.duration === 'number') {
+          setDuration([prefill.duration]);
+          form.setValue('duration', prefill.duration);
+        }
+        
+        // Skills (for service)
+        if (prefill.skills) {
+          form.setValue('skills', prefill.skills);
+        }
+        
+        // Transaction type from URL or prefill
+        const typeParam = searchParams.get('type');
+        if (typeParam && ['sell', 'gift', 'swap', 'service'].includes(typeParam)) {
+          setTransactionType(typeParam as TransactionType);
+        } else if (prefill.transactionType) {
+          setTransactionType(prefill.transactionType as TransactionType);
+        }
+        
+        console.log('✅ Prefill applied:', {
+          category: prefill.category,
+          title: prefill.title,
+          price: prefill.price,
+          hourlyRate: prefill.hourlyRate,
+          transactionType: typeParam || prefill.transactionType
+        });
         
         // Clear prefill after use
         localStorage.removeItem('chatbot_prefill');
@@ -226,7 +293,7 @@ export const CreateListingPage: React.FC = () => {
         localStorage.removeItem('chatbot_prefill');
       }
     }
-  }, [form]);
+  }, [form, searchParams]);
 
   // Mettre à jour la catégorie si l'URL change (navigation interne)
   useEffect(() => {
