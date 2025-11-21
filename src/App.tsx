@@ -55,6 +55,7 @@ import { HousingListingsPage } from './pages/HousingListingsPage';
 import { MapPage } from './pages/MapPage';
 import ChatbotWidget from './components/ui/ChatbotWidget';
 import SouvenirBanner from './components/SouvenirBanner';
+import { InstallBanner } from './components/layout/InstallBanner';
 import './App.css';
 import React from 'react';
 
@@ -274,6 +275,7 @@ function App() {
               </ErrorBoundary>
             </main>
             <Footer />
+            <InstallBanner />
             <ChatbotWidget />
           </div>
           <Toaster
