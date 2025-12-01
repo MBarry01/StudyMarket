@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { 
+import {
   ArrowRight,
   Shield,
   GraduationCap,
@@ -15,13 +15,13 @@ import { Badge } from '@/components/ui/badge';
 import { useListingStore } from '../stores/useListingStore';
 import { ListingCard } from '../components/listing/ListingCard';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  sortListingsByPriority, 
-  getUserLocation, 
-  saveUserLocation, 
+import {
+  sortListingsByPriority,
+  getUserLocation,
+  saveUserLocation,
   getSavedUserLocation,
   fetchNearbyListings,
-  ListingWithDistance 
+  ListingWithDistance
 } from '../lib/geolocation';
 import { ImBook, ImGift, ImHome, ImLocation, ImMobile, ImSpinner9, ImUsers, ImUserTie } from "react-icons/im";
 
@@ -38,87 +38,87 @@ const categoryIcons: { [key: string]: string } = {
 };
 
 const TrendingUpIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <img 
-    src={`${import.meta.env.BASE_URL}assets/Icon/Gradient/launch.svg`} 
-    alt="Trending Up" 
-    className={className} 
+  <img
+    src={`${import.meta.env.BASE_URL}assets/Icon/Gradient/launch.svg`}
+    alt="Trending Up"
+    className={className}
   />
 );
 const GiveUpIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <img 
-    src={`${import.meta.env.BASE_URL}assets/Icon/Gradient/handshake.svg`} 
-    alt="Give Up" 
-    className={className} 
+  <img
+    src={`${import.meta.env.BASE_URL}assets/Icon/Gradient/handshake.svg`}
+    alt="Give Up"
+    className={className}
   />
 );
 const ExchangeIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <img 
-    src={`${import.meta.env.BASE_URL}assets/Icon/Gradient/refresh.svg`} 
-    alt="Exchange" 
-    className={className} 
+  <img
+    src={`${import.meta.env.BASE_URL}assets/Icon/Gradient/refresh.svg`}
+    alt="Exchange"
+    className={className}
   />
 );
 const ChatIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <img 
+  <img
     src={`${import.meta.env.BASE_URL}assets/Icon/Bleu/chat.svg`}
-    alt="Chat" 
-    className={className} 
+    alt="Chat"
+    className={className}
   />
 );
 const studentCategories = [
-  { 
-    id: 'electronics', 
-    name: 'Électronique', 
-    icon: ImMobile, 
+  {
+    id: 'electronics',
+    name: 'Électronique',
+    icon: ImMobile,
     color: 'text-blue-600',
     description: 'Ordinateurs, téléphones, accessoires tech'
   },
-  { 
-    id: 'books', 
-    name: 'Livres & Cours', 
-    icon: ImBook, 
+  {
+    id: 'books',
+    name: 'Livres & Cours',
+    icon: ImBook,
     color: 'text-blue-600',
     description: 'Manuels, livres, notes de cours'
   },
-  { 
-    id: 'furniture', 
-    name: 'Mobilier', 
-    icon: ImHome, 
+  {
+    id: 'furniture',
+    name: 'Mobilier',
+    icon: ImHome,
     color: 'text-blue-600',
     description: 'Meubles, déco, électroménager'
   },
-  { 
-    id: 'housing', 
-    name: 'Logement', 
-    icon: ImLocation, 
+  {
+    id: 'housing',
+    name: 'Logement',
+    icon: ImLocation,
     color: 'text-blue-600',
     description: 'Colocations, studios, chambres'
   },
-  { 
-    id: 'services', 
-    name: 'Services', 
-    icon: ImUsers, 
+  {
+    id: 'services',
+    name: 'Services',
+    icon: ImUsers,
     color: 'text-blue-600',
     description: 'Cours particuliers, aide, babysitting'
   },
-  { 
-    id: 'jobs', 
-    name: 'Jobs & Stages', 
-    icon: ImUserTie, 
+  {
+    id: 'jobs',
+    name: 'Jobs & Stages',
+    icon: ImUserTie,
     color: 'text-blue-600',
     description: 'Petits boulots, stages, missions'
   },
-  { 
-    id: 'donations', 
-    name: 'Dons', 
-    icon: ImGift, 
+  {
+    id: 'donations',
+    name: 'Dons',
+    icon: ImGift,
     color: 'text-blue-600',
     description: 'Objets gratuits, entraide'
   },
-  { 
-    id: 'exchange', 
-    name: 'Troc', 
-    icon: ImSpinner9, 
+  {
+    id: 'exchange',
+    name: 'Troc',
+    icon: ImSpinner9,
     color: 'text-blue-600',
     description: 'Échanges de services et objets'
   },
@@ -175,7 +175,6 @@ export const HomePage: React.FC = () => {
   const { featuredListings, fetchFeaturedListings } = useListingStore();
   const { userProfile } = useAuth();
   const [nearbyListings, setNearbyListings] = useState<ListingWithDistance[]>([]);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoadingNearby, setIsLoadingNearby] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -230,11 +229,11 @@ export const HomePage: React.FC = () => {
       if (!userProfile) return;
 
       setIsLoadingNearby(true);
-      
+
       // Récupérer la position sauvegardée ou demander la géolocalisation
       const savedLocation = getSavedUserLocation();
       let location = savedLocation;
-      
+
       if (!location) {
         location = await getUserLocation();
         if (location) {
@@ -243,12 +242,12 @@ export const HomePage: React.FC = () => {
       }
 
       if (location) {
-        setUserLocation(location);
+        // Location is used for sorting below
       }
 
       // OPTIMISÉ : Charger seulement les listings nécessaires (max 20)
       const listings = await fetchNearbyListings(userProfile, 20);
-      
+
       // Trier par priorité
       if (location && listings.length > 0) {
         const sorted = sortListingsByPriority(listings, location, userProfile);
@@ -257,7 +256,7 @@ export const HomePage: React.FC = () => {
         // Si pas de géolocalisation, prendre les premières
         setNearbyListings(listings.slice(0, 6).map(l => ({ ...l, distance: Infinity, priority: 6 })));
       }
-      
+
       setIsLoadingNearby(false);
     };
 
@@ -267,13 +266,12 @@ export const HomePage: React.FC = () => {
   // Mémoriser le handler de refresh
   const handleRefresh = useCallback(async () => {
     if (!userProfile) return;
-    
+
     setIsRefreshing(true);
     const location = await getUserLocation();
     if (location) {
-      setUserLocation(location);
       saveUserLocation(location);
-      
+
       // Recharger les listings
       const listings = await fetchNearbyListings(userProfile, 20);
       if (listings.length > 0) {
@@ -286,12 +284,12 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-950">
-  <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4"></div>
-     
-      
+
+
+
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-lg sm:rounded-xl overflow-hidden mb-8">
-  <div className="w-full py-6 sm:py-8 lg:py-12 px-3 sm:px-6 lg:px-8"></div>
+
         <div className="container mx-auto text-center max-w-4xl">
           <div className="flex items-center justify-center mb-3 sm:mb-4 lg:mb-6">
             <Badge className="bg-green-100 text-green-800 border-green-200 px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 text-xs sm:text-sm">
@@ -300,15 +298,15 @@ export const HomePage: React.FC = () => {
               <span className="sm:hidden">Étudiants vérifiés</span>
             </Badge>
           </div>
-          
+
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-2 text-center">
             La marketplace des étudiants
           </h1>
           <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 sm:mb-6 lg:mb-8 max-w-2xl mx-auto px-2 text-center">
-            Achetez, vendez, donnez et échangez entre étudiants certifiés de votre région. 
+            Achetez, vendez, donnez et échangez entre étudiants certifiés de votre région.
             Sécurisé, écologique et pensé pour la vie étudiante.
           </p>
-          
+
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8">
@@ -434,8 +432,8 @@ export const HomePage: React.FC = () => {
                   return (
                     <div key={listing.id} className="relative">
                       <ListingCard listing={listing} />
-                      {showBadge && (isSameCampus || isSameCity || locationMetadata?.distance < 5) && (
-                        <Badge 
+                      {showBadge && (isSameCampus || isSameCity || (locationMetadata?.distance !== undefined && locationMetadata.distance < 5)) && (
+                        <Badge
                           className="absolute top-2 right-2 z-10"
                           variant={isSameCampus ? 'default' : 'secondary'}
                         >
@@ -491,7 +489,7 @@ export const HomePage: React.FC = () => {
               Votre impact écologique compte
             </h2>
             <p className="text-sm sm:text-base lg:text-xl text-muted-foreground mb-6 sm:mb-8 px-2 text-center">
-              Chaque achat d'occasion évite la production d'un objet neuf. Suivez votre impact environnemental 
+              Chaque achat d'occasion évite la production d'un objet neuf. Suivez votre impact environnemental
               et découvrez combien de CO₂ vous économisez grâce à vos échanges étudiants.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-0">
@@ -508,7 +506,7 @@ export const HomePage: React.FC = () => {
                 <div className="text-xs sm:text-sm text-muted-foreground text-center">Étudiants engagés</div>
               </div>
             </div>
-            <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white w-full sm:w-auto mx-auto text-center p-0 mt-4">
+            <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white w-full sm:w-auto mx-auto text-center p-0 mt-4" asChild>
               <Link to="/impact" className="cursor-pointer py-2 px-6">
                 Découvrir mon impact
               </Link>
@@ -525,7 +523,7 @@ export const HomePage: React.FC = () => {
             Rejoignez la communauté étudiante
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto px-2 text-center">
-            Plus de 10 000 étudiants font déjà confiance à StudyMarket pour leurs achats, ventes et échanges. 
+            Plus de 10 000 étudiants font déjà confiance à StudyMarket pour leurs achats, ventes et échanges.
             Rejoignez une communauté sûre, vérifiée et solidaire.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">

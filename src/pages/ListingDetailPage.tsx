@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Flag, 
-  MapPin, 
-  Clock, 
-  Eye, 
-  Star, 
-  Shield, 
+import {
+  ArrowLeft,
+  Flag,
+  MapPin,
+  Clock,
+  Eye,
+  Shield,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -28,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { useListingStore } from '../stores/useListingStore';
@@ -47,7 +46,7 @@ export const ListingDetailPage: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const { currentListing, loading, fetchListingById } = useListingStore();
   const { fetchUserFavorites } = useFavoritesStore();
-  
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
@@ -121,7 +120,7 @@ export const ListingDetailPage: React.FC = () => {
     if (listing.transactionType === 'donation') return 'Gratuit';
     if (listing.transactionType === 'exchange') return 'Échange';
     if (listing.transactionType === 'service') return `${price.toFixed(2)}€/h`;
-    
+
     const currencyCode = currency || 'EUR';
     try {
       return new Intl.NumberFormat('fr-FR', {
@@ -177,7 +176,7 @@ export const ListingDetailPage: React.FC = () => {
 
   const nextImage = () => {
     if (listing.images && listing.images.length > 1) {
-      setCurrentImageIndex((prev) => 
+      setCurrentImageIndex((prev) =>
         prev === listing.images.length - 1 ? 0 : prev + 1
       );
     }
@@ -185,7 +184,7 @@ export const ListingDetailPage: React.FC = () => {
 
   const prevImage = () => {
     if (listing.images && listing.images.length > 1) {
-      setCurrentImageIndex((prev) => 
+      setCurrentImageIndex((prev) =>
         prev === 0 ? listing.images.length - 1 : prev - 1
       );
     }
@@ -194,7 +193,7 @@ export const ListingDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Breadcrumb */}
-      <Breadcrumb 
+      <Breadcrumb
         items={[
           { label: 'Accueil', to: '/' },
           { label: 'Annonces', to: '/listings' },
@@ -206,8 +205,8 @@ export const ListingDetailPage: React.FC = () => {
 
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Back Button */}
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={() => navigate(-1)}
           className="mb-4 sm:mb-6 -ml-2 sm:-ml-4"
         >
@@ -228,7 +227,7 @@ export const ListingDetailPage: React.FC = () => {
                       alt={listing.title}
                       className="w-full h-full object-cover"
                     />
-                    
+
                     {/* Image Navigation */}
                     {listing.images.length > 1 && (
                       <>
@@ -246,7 +245,7 @@ export const ListingDetailPage: React.FC = () => {
                         >
                           <ChevronRight className="w-6 h-6" />
                         </div>
-                        
+
                         {/* Image Counter */}
                         <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
                           {currentImageIndex + 1} / {listing.images.length}
@@ -291,11 +290,10 @@ export const ListingDetailPage: React.FC = () => {
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        index === currentImageIndex 
-                          ? 'border-primary' 
-                          : 'border-transparent hover:border-muted-foreground'
-                      }`}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex
+                        ? 'border-primary'
+                        : 'border-transparent hover:border-muted-foreground'
+                        }`}
                     >
                       <img
                         src={image}
@@ -366,24 +364,24 @@ export const ListingDetailPage: React.FC = () => {
                     {!isOwner ? (
                       <>
                         <ContactButton listing={listing} className="w-full" />
-                        
+
                         {/* Bouton de paiement rapide (vente uniquement, pas logement) */}
                         {listing.transactionType === 'sale' && listing.category !== 'housing' && (
-                          <QuickPaymentButton 
-                            listing={listing} 
+                          <QuickPaymentButton
+                            listing={listing}
                             className="w-full"
                           />
                         )}
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <FavoriteButton 
-                              listing={listing} 
+                            <FavoriteButton
+                              listing={listing}
                               size="lg"
                               showText={false}
                             />
-                            <ShareButton 
-                              listing={listing} 
+                            <ShareButton
+                              listing={listing}
                               size="lg"
                               showText={false}
                             />
@@ -398,12 +396,12 @@ export const ListingDetailPage: React.FC = () => {
                       </>
                     ) : (
                       <div className="space-y-2">
-                        <Link to={`/edit-listing/${listing.id}`}>
-                        <Button variant="outline" className="w-full">
-                          <User className="w-4 h-4 mr-2" />
-                          Modifier l'annonce
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link to={`/edit-listing/${listing.id}`}>
+                            <User className="w-4 h-4 mr-2" />
+                            Modifier l'annonce
+                          </Link>
                         </Button>
-                        </Link>
                         <p className="text-sm text-muted-foreground text-center">
                           C'est votre annonce
                         </p>
@@ -429,7 +427,7 @@ export const ListingDetailPage: React.FC = () => {
                           {(sellerName || 'Utilisateur')[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {((listing.sellerVerificationStatus === 'verified' || listing.sellerVerificationStatus === 'Verified') || sellerVerified) && (
+                      {((listing.sellerVerificationStatus === 'verified') || sellerVerified) && (
                         <div className="absolute bottom-0 right-0 transform translate-x-1/4 -translate-y-1/4 z-10">
                           <BadgeCheck size={16} fill="#3b82f6" stroke="white" strokeWidth={2} />
                         </div>
@@ -505,9 +503,9 @@ export const ListingDetailPage: React.FC = () => {
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
                         <span>
-                          {formatDistanceToNow(listing.createdAt, { 
-                            addSuffix: true, 
-                            locale: fr 
+                          {formatDistanceToNow(listing.createdAt, {
+                            addSuffix: true,
+                            locale: fr
                           })}
                         </span>
                       </div>
@@ -591,11 +589,11 @@ export const ListingDetailPage: React.FC = () => {
             </Card>
 
             {/* Map View */}
-            {listing.location.coordinates && 
-             !isNaN(listing.location.coordinates.lat) && 
-             !isNaN(listing.location.coordinates.lng) &&
-             listing.location.coordinates.lat !== 0 && 
-             listing.location.coordinates.lng !== 0 ? (
+            {listing.location.coordinates &&
+              !isNaN(listing.location.coordinates.lat) &&
+              !isNaN(listing.location.coordinates.lng) &&
+              listing.location.coordinates.lat !== 0 &&
+              listing.location.coordinates.lng !== 0 ? (
               <div>
                 <MapViewer
                   latitude={listing.location.coordinates.lat}
@@ -603,9 +601,8 @@ export const ListingDetailPage: React.FC = () => {
                   address={
                     isOwner && userProfile?.location
                       ? userProfile.location
-                      : `${listing.location.city ?? ''}${
-                          listing.location.state ? `, ${listing.location.state}` : ''
-                        }`
+                      : `${listing.location.city ?? ''}${listing.location.state ? `, ${listing.location.state}` : ''
+                      }`
                   }
                   title="Point de rencontre"
                 />

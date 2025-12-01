@@ -5,11 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Leaf, 
-  TrendingUp, 
-  Award, 
+import {
+  Leaf,
+  TrendingUp,
+  Award,
   Recycle,
   TreePine,
   Droplets,
@@ -19,36 +18,25 @@ import {
   Globe,
   Calendar,
   BarChart3,
-  Target,
   Share2,
   Download,
-  Info,
-  Sparkles,
-  Heart,
-  Users,
-  Gift,
-  RefreshCw,
-  Package,
   Smartphone,
   BookOpen,
   Home,
-  Shirt
+  Shirt,
+  HelpCircle
 } from 'lucide-react';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  updateDoc,
-  addDoc,
-  orderBy,
-  limit
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Listing } from '../types';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Types pour l'impact environnemental
 interface EnvironmentalData {
@@ -63,16 +51,20 @@ interface EnvironmentalData {
     transactions: number;
     waterSaved: number;
     energySaved: number;
+    wasteAvoided: number;
   }[];
   badges: string[];
   rank: string;
-  percentile: number;
+  levelProgress: number; // Pourcentage vers le prochain niveau
 }
 
 interface CategoryImpact {
   category: string;
   icon: React.ComponentType<any>;
   color: string;
+  darkColor: string;
+  bgColor: string;
+  darkBgColor: string;
   co2PerItem: number;
   waterPerItem: number;
   energyPerItem: number;
@@ -80,85 +72,89 @@ interface CategoryImpact {
   description: string;
 }
 
-// Données d'impact par catégorie (basées sur des études réelles)
+// Données d'impact par catégorie (basées sur des études réelles + catégorie 'other' conservatrice)
 const CATEGORY_IMPACTS: Record<string, CategoryImpact> = {
   electronics: {
     category: 'Électronique',
     icon: Smartphone,
     color: 'text-blue-600',
-    co2PerItem: 85, // kg CO2 par appareil électronique
-    waterPerItem: 1200, // litres d'eau
-    energyPerItem: 450, // kWh
-    wastePerItem: 2.5, // kg de déchets évités
+    darkColor: 'text-blue-400',
+    bgColor: 'bg-blue-100',
+    darkBgColor: 'bg-blue-900/30',
+    co2PerItem: 85,
+    waterPerItem: 1200,
+    energyPerItem: 450,
+    wastePerItem: 2.5,
     description: 'Smartphones, ordinateurs, accessoires tech'
   },
   books: {
     category: 'Livres & Cours',
     icon: BookOpen,
     color: 'text-green-600',
-    co2PerItem: 8.5, // kg CO2 par livre
-    waterPerItem: 85, // litres d'eau
-    energyPerItem: 12, // kWh
-    wastePerItem: 0.8, // kg de déchets évités
+    darkColor: 'text-green-400',
+    bgColor: 'bg-green-100',
+    darkBgColor: 'bg-green-900/30',
+    co2PerItem: 8.5,
+    waterPerItem: 85,
+    energyPerItem: 12,
+    wastePerItem: 0.8,
     description: 'Manuels, livres, notes de cours'
   },
   furniture: {
     category: 'Mobilier',
     icon: Home,
     color: 'text-purple-600',
-    co2PerItem: 45, // kg CO2 par meuble
-    waterPerItem: 350, // litres d'eau
-    energyPerItem: 180, // kWh
-    wastePerItem: 15, // kg de déchets évités
+    darkColor: 'text-purple-400',
+    bgColor: 'bg-purple-100',
+    darkBgColor: 'bg-purple-900/30',
+    co2PerItem: 45,
+    waterPerItem: 350,
+    energyPerItem: 180,
+    wastePerItem: 15,
     description: 'Meubles, déco, électroménager'
   },
   clothing: {
     category: 'Vêtements',
     icon: Shirt,
     color: 'text-pink-600',
-    co2PerItem: 22, // kg CO2 par vêtement
-    waterPerItem: 2700, // litres d'eau (très élevé pour le textile)
-    energyPerItem: 35, // kWh
-    wastePerItem: 0.5, // kg de déchets évités
+    darkColor: 'text-pink-400',
+    bgColor: 'bg-pink-100',
+    darkBgColor: 'bg-pink-900/30',
+    co2PerItem: 22,
+    waterPerItem: 2700,
+    energyPerItem: 35,
+    wastePerItem: 0.5,
     description: 'Vêtements, chaussures, accessoires'
+  },
+  other: {
+    category: 'Autre',
+    icon: HelpCircle,
+    color: 'text-gray-600',
+    darkColor: 'text-gray-400',
+    bgColor: 'bg-gray-100',
+    darkBgColor: 'bg-gray-800',
+    co2PerItem: 5, // Valeur conservatrice
+    waterPerItem: 50,
+    energyPerItem: 5,
+    wastePerItem: 0.2,
+    description: 'Objets divers'
   }
 };
-
-// Badges écologiques
-const ECO_BADGES = [
-  { id: 'first_transaction', name: 'Premier Pas', icon: '🌱', threshold: 1, description: 'Première transaction écologique' },
-  { id: 'co2_saver_10', name: 'Éco-Warrior', icon: '🌍', threshold: 10, description: '10 kg CO₂ économisés' },
-  { id: 'co2_saver_50', name: 'Planète Protecteur', icon: '🛡️', threshold: 50, description: '50 kg CO₂ économisés' },
-  { id: 'co2_saver_100', name: 'Héros Climatique', icon: '🦸', threshold: 100, description: '100 kg CO₂ économisés' },
-  { id: 'water_saver', name: 'Gardien de l\'Eau', icon: '💧', threshold: 1000, description: '1000L d\'eau économisés' },
-  { id: 'recycling_master', name: 'Maître du Recyclage', icon: '♻️', threshold: 20, description: '20 transactions de seconde main' },
-  { id: 'donation_hero', name: 'Ange du Don', icon: '😇', threshold: 5, description: '5 dons gratuits' },
-  { id: 'monthly_champion', name: 'Champion Mensuel', icon: '🏆', threshold: 10, description: '10 transactions en un mois' }
-];
 
 // Helper function to safely convert dates
 const safeToDate = (date: any): Date => {
   if (!date) return new Date();
-  
   if (date instanceof Date) return date;
-  
   if (date && typeof date.toDate === 'function') {
-    try {
-      return date.toDate();
-    } catch (error) {
-      return new Date();
-    }
+    try { return date.toDate(); } catch { return new Date(); }
   }
-  
   if (typeof date === 'string' || typeof date === 'number') {
     const parsedDate = new Date(date);
     return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
   }
-  
   if (date && typeof date === 'object' && date.seconds) {
     return new Date(date.seconds * 1000);
   }
-  
   return new Date();
 };
 
@@ -173,11 +169,19 @@ export const EnvironmentalImpactPage: React.FC = () => {
     monthlyImpact: [],
     badges: [],
     rank: 'Débutant',
-    percentile: 0
+    levelProgress: 0
   });
   const [userTransactions, setUserTransactions] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'year' | 'all'>('all');
+  const [selectedMetric, setSelectedMetric] = useState<'co2' | 'water' | 'energy' | 'waste'>('co2');
+
+  const METRICS = {
+    co2: { label: 'CO₂ Économisé', key: 'co2Saved', color: '#16a34a', unit: 'kg', icon: Leaf },
+    water: { label: 'Eau Préservée', key: 'waterSaved', color: '#2563eb', unit: 'L', icon: Droplets },
+    energy: { label: 'Énergie Économisée', key: 'energySaved', color: '#ca8a04', unit: 'kWh', icon: Zap },
+    waste: { label: 'Déchets Évités', key: 'wasteAvoided', color: '#9333ea', unit: 'kg', icon: Recycle }
+  };
 
   useEffect(() => {
     if (currentUser) {
@@ -190,15 +194,14 @@ export const EnvironmentalImpactPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Charger toutes les transactions de l'utilisateur
       const transactionsQuery = query(
         collection(db, 'listings'),
         where('sellerId', '==', currentUser.uid)
       );
-      
+
       const transactionsSnapshot = await getDocs(transactionsQuery);
       const transactions: Listing[] = [];
-      
+
       transactionsSnapshot.forEach((doc) => {
         const data = doc.data();
         transactions.push({
@@ -210,12 +213,8 @@ export const EnvironmentalImpactPage: React.FC = () => {
       });
 
       setUserTransactions(transactions);
-
-      // Calculer l'impact environnemental
       const impact = calculateEnvironmentalImpact(transactions, selectedPeriod);
       setEnvironmentalData(impact);
-
-      // Mettre à jour le profil utilisateur avec les nouvelles données
       await updateUserEnvironmentalData(impact);
 
     } catch (error) {
@@ -229,7 +228,6 @@ export const EnvironmentalImpactPage: React.FC = () => {
     const now = new Date();
     let filteredTransactions = transactions;
 
-    // Filtrer par période
     if (period === 'month') {
       const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       filteredTransactions = transactions.filter(t => safeToDate(t.createdAt) >= oneMonthAgo);
@@ -238,7 +236,6 @@ export const EnvironmentalImpactPage: React.FC = () => {
       filteredTransactions = transactions.filter(t => safeToDate(t.createdAt) >= oneYearAgo);
     }
 
-    // Calculer l'impact total
     let totalCo2Saved = 0;
     let totalWaterSaved = 0;
     let totalEnergySaved = 0;
@@ -246,17 +243,15 @@ export const EnvironmentalImpactPage: React.FC = () => {
     const transactionsByCategory: Record<string, number> = {};
 
     filteredTransactions.forEach(transaction => {
-      const categoryImpact = CATEGORY_IMPACTS[transaction.category] || CATEGORY_IMPACTS.electronics;
-      
-      // Multiplier par la quantité (par défaut 1)
+      // Utilisation de 'other' comme fallback plus sûr
+      const categoryImpact = CATEGORY_IMPACTS[transaction.category] || CATEGORY_IMPACTS.other;
+
       const quantity = 1;
-      
-      // Facteur de réduction selon le type de transaction
       let impactFactor = 1;
       if (transaction.transactionType === 'donation') {
-        impactFactor = 1.2; // Les dons ont un impact plus important
+        impactFactor = 1.2;
       } else if (transaction.transactionType === 'exchange') {
-        impactFactor = 0.8; // Les échanges ont un impact moindre
+        impactFactor = 0.8;
       }
 
       totalCo2Saved += categoryImpact.co2PerItem * quantity * impactFactor;
@@ -267,14 +262,9 @@ export const EnvironmentalImpactPage: React.FC = () => {
       transactionsByCategory[transaction.category] = (transactionsByCategory[transaction.category] || 0) + 1;
     });
 
-    // Calculer l'impact mensuel (derniers 12 mois)
     const monthlyImpact = calculateMonthlyImpact(transactions);
-
-    // Calculer les badges
     const badges = calculateBadges(transactions, totalCo2Saved, totalWaterSaved);
-
-    // Calculer le rang et percentile
-    const { rank, percentile } = calculateRankAndPercentile(totalCo2Saved, transactions.length);
+    const { rank, levelProgress } = calculateRankAndProgress(totalCo2Saved);
 
     return {
       totalCo2Saved: Math.round(totalCo2Saved * 10) / 10,
@@ -285,28 +275,26 @@ export const EnvironmentalImpactPage: React.FC = () => {
       monthlyImpact,
       badges,
       rank,
-      percentile
+      levelProgress
     };
   };
 
   const calculateMonthlyImpact = (transactions: Listing[]) => {
-    const monthlyData: Record<string, { co2Saved: number; transactions: number; waterSaved: number; energySaved: number }> = {};
-    
-    // Initialiser les 12 derniers mois
-    for (let i = 11; i >= 0; i--) {
+    const monthlyData: Record<string, { co2Saved: number; transactions: number; waterSaved: number; energySaved: number; wasteAvoided: number }> = {};
+
+    for (let i = 5; i >= 0; i--) { // 6 derniers mois pour le graphique
       const date = new Date();
       date.setMonth(date.getMonth() - i);
-      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
-      monthlyData[monthKey] = { co2Saved: 0, transactions: 0, waterSaved: 0, energySaved: 0 };
+      const monthKey = date.toISOString().slice(0, 7);
+      monthlyData[monthKey] = { co2Saved: 0, transactions: 0, waterSaved: 0, energySaved: 0, wasteAvoided: 0 };
     }
 
-    // Calculer l'impact pour chaque transaction
     transactions.forEach(transaction => {
       const transactionDate = safeToDate(transaction.createdAt);
       const monthKey = transactionDate.toISOString().slice(0, 7);
       if (monthlyData[monthKey]) {
-        const categoryImpact = CATEGORY_IMPACTS[transaction.category] || CATEGORY_IMPACTS.electronics;
-        
+        const categoryImpact = CATEGORY_IMPACTS[transaction.category] || CATEGORY_IMPACTS.other;
+
         let impactFactor = 1;
         if (transaction.transactionType === 'donation') impactFactor = 1.2;
         else if (transaction.transactionType === 'exchange') impactFactor = 0.8;
@@ -314,81 +302,65 @@ export const EnvironmentalImpactPage: React.FC = () => {
         monthlyData[monthKey].co2Saved += categoryImpact.co2PerItem * impactFactor;
         monthlyData[monthKey].waterSaved += categoryImpact.waterPerItem * impactFactor;
         monthlyData[monthKey].energySaved += categoryImpact.energyPerItem * impactFactor;
+        monthlyData[monthKey].wasteAvoided += categoryImpact.wastePerItem * impactFactor;
         monthlyData[monthKey].transactions += 1;
       }
     });
 
     return Object.entries(monthlyData).map(([month, data]) => ({
       month,
+      displayMonth: new Date(month + '-01').toLocaleDateString('fr-FR', { month: 'short' }),
       co2Saved: Math.round(data.co2Saved * 10) / 10,
       transactions: data.transactions,
       waterSaved: Math.round(data.waterSaved),
-      energySaved: Math.round(data.energySaved * 10) / 10
+      energySaved: Math.round(data.energySaved * 10) / 10,
+      wasteAvoided: Math.round(data.wasteAvoided * 10) / 10
     }));
   };
 
   const calculateBadges = (transactions: Listing[], totalCo2: number, totalWater: number): string[] => {
     const badges: string[] = [];
-    
-    // Badge première transaction
     if (transactions.length >= 1) badges.push('first_transaction');
-    
-    // Badges CO2
     if (totalCo2 >= 10) badges.push('co2_saver_10');
     if (totalCo2 >= 50) badges.push('co2_saver_50');
     if (totalCo2 >= 100) badges.push('co2_saver_100');
-    
-    // Badge eau
     if (totalWater >= 1000) badges.push('water_saver');
-    
-    // Badge recyclage
     if (transactions.length >= 20) badges.push('recycling_master');
-    
-    // Badge dons
     const donations = transactions.filter(t => t.transactionType === 'donation');
     if (donations.length >= 5) badges.push('donation_hero');
-    
-    // Badge champion mensuel
-    const thisMonth = new Date().toISOString().slice(0, 7);
-    const thisMonthTransactions = transactions.filter(t => 
-      safeToDate(t.createdAt).toISOString().slice(0, 7) === thisMonth
-    );
-    if (thisMonthTransactions.length >= 10) badges.push('monthly_champion');
-    
     return badges;
   };
 
-  const calculateRankAndPercentile = (totalCo2: number, transactionCount: number) => {
-    // Système de rang basé sur le CO2 économisé
-    let rank = 'Débutant';
-    let percentile = 0;
+  const calculateRankAndProgress = (totalCo2: number) => {
+    const levels = [
+      { name: 'Débutant', threshold: 0 },
+      { name: 'Apprenti Vert', threshold: 5 },
+      { name: 'Protecteur', threshold: 10 },
+      { name: 'Éco-Warrior', threshold: 25 },
+      { name: 'Expert Vert', threshold: 50 },
+      { name: 'Maître Environnemental', threshold: 100 },
+      { name: 'Légende Écologique', threshold: 200 }
+    ];
 
-    if (totalCo2 >= 200) {
-      rank = 'Légende Écologique';
-      percentile = 95;
-    } else if (totalCo2 >= 100) {
-      rank = 'Maître Environnemental';
-      percentile = 85;
-    } else if (totalCo2 >= 50) {
-      rank = 'Expert Vert';
-      percentile = 70;
-    } else if (totalCo2 >= 25) {
-      rank = 'Éco-Warrior';
-      percentile = 50;
-    } else if (totalCo2 >= 10) {
-      rank = 'Protecteur';
-      percentile = 30;
-    } else if (totalCo2 >= 5) {
-      rank = 'Apprenti Vert';
-      percentile = 15;
+    let currentLevel = levels[0];
+    let nextLevel = levels[1];
+
+    for (let i = 0; i < levels.length; i++) {
+      if (totalCo2 >= levels[i].threshold) {
+        currentLevel = levels[i];
+        nextLevel = levels[i + 1] || { name: 'Max', threshold: totalCo2 * 1.5 };
+      }
     }
 
-    return { rank, percentile };
+    const progress = Math.min(100, Math.max(0,
+      ((totalCo2 - currentLevel.threshold) / (nextLevel.threshold - currentLevel.threshold)) * 100
+    ));
+
+    return { rank: currentLevel.name, levelProgress: progress };
   };
 
   const updateUserEnvironmentalData = async (impact: EnvironmentalData) => {
     if (!currentUser) return;
-
     try {
       const userRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userRef, {
@@ -398,60 +370,46 @@ export const EnvironmentalImpactPage: React.FC = () => {
         lastEnvironmentalUpdate: new Date()
       });
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des données environnementales:', error);
+      console.error('Erreur maj données env:', error);
     }
   };
 
   const shareImpact = async () => {
-    const shareText = `🌍 Mon impact écologique sur StudyMarket :\n\n` +
-      `🌱 ${environmentalData.totalCo2Saved} kg CO₂ économisés\n` +
-      `💧 ${environmentalData.totalWaterSaved} L d'eau préservés\n` +
-      `⚡ ${environmentalData.totalEnergySaved} kWh d'énergie économisés\n` +
-      `🏆 Rang : ${environmentalData.rank}\n\n` +
-      `Rejoignez la communauté étudiante éco-responsable ! 🎓`;
-
+    const shareText = `🌍 Mon impact sur StudyMarket : ${environmentalData.totalCo2Saved} kg CO₂ économisés ! Rejoignez le mouvement !`;
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Mon Impact Écologique - StudyMarket',
-          text: shareText,
-          url: window.location.origin
-        });
-      } catch (error) {
-        navigator.clipboard.writeText(shareText);
-      }
+      try { await navigator.share({ title: 'Mon Impact', text: shareText, url: window.location.origin }); }
+      catch { navigator.clipboard.writeText(shareText); }
     } else {
       navigator.clipboard.writeText(shareText);
     }
   };
 
   const exportData = () => {
-    const exportData = {
+    const dataStr = JSON.stringify({
       user: userProfile?.displayName,
       date: new Date().toISOString(),
-      impact: environmentalData,
-      transactions: userTransactions.length,
-      period: selectedPeriod
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      impact: environmentalData
+    }, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `impact-ecologique-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `impact-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   if (!currentUser) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <Leaf className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Connectez-vous pour voir votre impact</h2>
-            <p className="text-muted-foreground">
-              Découvrez combien vous contribuez à la protection de l'environnement
+      <div className="container mx-auto px-4 py-12 flex justify-center">
+        <Card className="w-full max-w-md text-center shadow-lg border-none bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-gray-900">
+          <CardContent className="pt-10 pb-10">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <Leaf className="w-10 h-10 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold mb-3 text-green-800 dark:text-green-400">Connectez-vous</h2>
+            <p className="text-green-700 dark:text-green-500 mb-6">
+              Découvrez l'impact positif de vos échanges sur la planète.
             </p>
           </CardContent>
         </Card>
@@ -459,480 +417,242 @@ export const EnvironmentalImpactPage: React.FC = () => {
     );
   }
 
+  const MetricIcon = METRICS[selectedMetric].icon;
+
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* En-tête avec titre et actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Leaf className="w-8 h-8 text-green-600" />
+          <h1 className="text-3xl font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100">
+            <span className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl"><Leaf className="w-8 h-8 text-green-600 dark:text-green-400" /></span>
             Mon Impact Écologique
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Découvrez votre contribution à la protection de l'environnement
+          <p className="text-muted-foreground mt-2 ml-1">
+            Visualisez votre contribution concrète à un avenir durable.
           </p>
         </div>
-        
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={shareImpact} className="flex items-center gap-2">
-            <Share2 className="w-4 h-4" />
-            Partager
+        <div className="flex gap-3 w-full md:w-auto">
+          <Button variant="outline" onClick={shareImpact} className="flex-1 md:flex-none gap-2 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-400 border-green-200 dark:border-green-900">
+            <Share2 className="w-4 h-4" /> Partager
           </Button>
-          <Button variant="outline" onClick={exportData} className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Exporter
+          <Button variant="outline" onClick={exportData} className="flex-1 md:flex-none gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-400 border-blue-200 dark:border-blue-900">
+            <Download className="w-4 h-4" /> Exporter
           </Button>
         </div>
       </div>
 
-      {/* Sélecteur de période */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <span className="font-medium">Période d'analyse :</span>
-            </div>
-            <div className="flex gap-2">
-              {[
-                { key: 'month', label: 'Ce mois' },
-                { key: 'year', label: 'Cette année' },
-                { key: 'all', label: 'Tout' }
-              ].map(period => (
-                <Button
-                  key={period.key}
-                  variant={selectedPeriod === period.key ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedPeriod(period.key as any)}
-                >
-                  {period.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Période */}
+      <div className="flex justify-end">
+        <div className="inline-flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+          {[
+            { key: 'month', label: 'Ce mois' },
+            { key: 'year', label: 'Cette année' },
+            { key: 'all', label: 'Tout' }
+          ].map(period => (
+            <button
+              key={period.key}
+              onClick={() => setSelectedPeriod(period.key as any)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${selectedPeriod === period.key
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+            >
+              {period.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="pt-6">
-                <div className="h-16 bg-muted rounded" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
         </div>
       ) : (
         <>
-          {/* Cartes de statistiques principales */}
+          {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-green-700">
-                      {environmentalData.totalCo2Saved}
-                    </p>
-                    <p className="text-sm text-green-600">kg CO₂ économisés</p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Leaf className="w-6 h-6 text-green-600" />
-                  </div>
+            <Card
+              onClick={() => setSelectedMetric('co2')}
+              className={`border-none shadow-md bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800 overflow-hidden relative group hover:shadow-lg transition-all cursor-pointer ${selectedMetric === 'co2' ? 'ring-2 ring-green-500 ring-offset-2 dark:ring-offset-gray-900' : 'opacity-80 hover:opacity-100'}`}
+            >
+              <div className="absolute right-0 top-0 w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-bl-full -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform" />
+              <CardContent className="pt-6 relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400"><Leaf className="w-6 h-6" /></div>
+                  <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50">CO₂</Badge>
                 </div>
-                <div className="mt-2 text-xs text-green-600">
-                  ≈ {Math.round(environmentalData.totalCo2Saved / 2.3)} km en voiture évités
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-200 bg-blue-50/50">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-blue-700">
-                      {environmentalData.totalWaterSaved.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-blue-600">L d'eau préservés</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Droplets className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-blue-600">
-                  ≈ {Math.round(environmentalData.totalWaterSaved / 150)} douches économisées
+                <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{environmentalData.totalCo2Saved} <span className="text-lg font-normal text-gray-500 dark:text-gray-400">kg</span></div>
+                <p className="text-sm text-green-700 dark:text-green-400 font-medium">Émissions évitées</p>
+                <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Car className="w-3 h-3" /> ≈ {Math.round(environmentalData.totalCo2Saved / 0.12)} km en voiture
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-yellow-200 bg-yellow-50/50">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-700">
-                      {environmentalData.totalEnergySaved}
-                    </p>
-                    <p className="text-sm text-yellow-600">kWh économisés</p>
-                  </div>
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <Zap className="w-6 h-6 text-yellow-600" />
-                  </div>
+            <Card
+              onClick={() => setSelectedMetric('water')}
+              className={`border-none shadow-md bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800 overflow-hidden relative group hover:shadow-lg transition-all cursor-pointer ${selectedMetric === 'water' ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900' : 'opacity-80 hover:opacity-100'}`}
+            >
+              <div className="absolute right-0 top-0 w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-bl-full -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform" />
+              <CardContent className="pt-6 relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400"><Droplets className="w-6 h-6" /></div>
+                  <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50">Eau</Badge>
                 </div>
-                <div className="mt-2 text-xs text-yellow-600">
-                  ≈ {Math.round(environmentalData.totalEnergySaved / 3.5)} jours d'électricité
+                <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{environmentalData.totalWaterSaved.toLocaleString()} <span className="text-lg font-normal text-gray-500 dark:text-gray-400">L</span></div>
+                <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">Eau préservée</p>
+                <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Droplets className="w-3 h-3" /> ≈ {Math.round(environmentalData.totalWaterSaved / 150)} douches
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-purple-200 bg-purple-50/50">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-purple-700">
-                      {environmentalData.totalWasteAvoided}
-                    </p>
-                    <p className="text-sm text-purple-600">kg déchets évités</p>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Recycle className="w-6 h-6 text-purple-600" />
-                  </div>
+            <Card
+              onClick={() => setSelectedMetric('energy')}
+              className={`border-none shadow-md bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900/20 dark:to-gray-800 overflow-hidden relative group hover:shadow-lg transition-all cursor-pointer ${selectedMetric === 'energy' ? 'ring-2 ring-yellow-500 ring-offset-2 dark:ring-offset-gray-900' : 'opacity-80 hover:opacity-100'}`}
+            >
+              <div className="absolute right-0 top-0 w-24 h-24 bg-yellow-100 dark:bg-yellow-900/30 rounded-bl-full -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform" />
+              <CardContent className="pt-6 relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-yellow-600 dark:text-yellow-400"><Zap className="w-6 h-6" /></div>
+                  <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50">Énergie</Badge>
                 </div>
-                <div className="mt-2 text-xs text-purple-600">
-                  ≈ {Math.round(environmentalData.totalWasteAvoided / 0.5)} sacs poubelle évités
+                <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{environmentalData.totalEnergySaved} <span className="text-lg font-normal text-gray-500 dark:text-gray-400">kWh</span></div>
+                <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">Énergie économisée</p>
+                <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Smartphone className="w-3 h-3" /> ≈ {Math.round(environmentalData.totalEnergySaved / 0.012)} charges
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              onClick={() => setSelectedMetric('waste')}
+              className={`border-none shadow-md bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-800 overflow-hidden relative group hover:shadow-lg transition-all cursor-pointer ${selectedMetric === 'waste' ? 'ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900' : 'opacity-80 hover:opacity-100'}`}
+            >
+              <div className="absolute right-0 top-0 w-24 h-24 bg-purple-100 dark:bg-purple-900/30 rounded-bl-full -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform" />
+              <CardContent className="pt-6 relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400"><Recycle className="w-6 h-6" /></div>
+                  <Badge variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50">Déchets</Badge>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{environmentalData.totalWasteAvoided} <span className="text-lg font-normal text-gray-500 dark:text-gray-400">kg</span></div>
+                <p className="text-sm text-purple-700 dark:text-purple-400 font-medium">Déchets évités</p>
+                <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Factory className="w-3 h-3" /> ≈ {Math.round(environmentalData.totalWasteAvoided / 0.5)} sacs poubelle
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Rang et progression */}
-          <Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Graphique */}
+            <Card className="lg:col-span-2 border-none shadow-md bg-white dark:bg-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl text-gray-900 dark:text-gray-100">
+                  <MetricIcon className="w-5 h-5" style={{ color: METRICS[selectedMetric].color }} />
+                  {METRICS[selectedMetric].label}
+                </CardTitle>
+                <CardDescription className="text-gray-500 dark:text-gray-400">
+                  Évolution sur les 6 derniers mois
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={environmentalData.monthlyImpact}>
+                      <defs>
+                        <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={METRICS[selectedMetric].color} stopOpacity={0.2} />
+                          <stop offset="95%" stopColor={METRICS[selectedMetric].color} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" strokeOpacity={0.2} />
+                      <XAxis dataKey="displayMonth" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--card)', color: 'var(--foreground)' }}
+                        formatter={(value: number) => [`${value} ${METRICS[selectedMetric].unit}`, METRICS[selectedMetric].label]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey={METRICS[selectedMetric].key}
+                        stroke={METRICS[selectedMetric].color}
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorMetric)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Rang & Progression */}
+            <Card className="border-none shadow-md bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl text-gray-900 dark:text-gray-100">
+                  <Award className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                  Votre Niveau
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center pt-2">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-green-100 to-emerald-200 dark:from-green-900/40 dark:to-emerald-800/40 flex items-center justify-center mb-6 shadow-inner relative">
+                  <div className="absolute inset-0 rounded-full border-4 border-white dark:border-gray-700 opacity-50"></div>
+                  <Leaf className="w-14 h-14 text-green-700 dark:text-green-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">{environmentalData.rank}</h3>
+                <p className="text-sm text-muted-foreground mb-6 text-center px-4">
+                  Continuez vos efforts pour atteindre le prochain niveau !
+                </p>
+
+                <div className="w-full space-y-2">
+                  <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <span>Progression</span>
+                    <span>{Math.round(environmentalData.levelProgress)}%</span>
+                  </div>
+                  <Progress value={environmentalData.levelProgress} className="h-3 bg-gray-200 dark:bg-gray-700" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Détail par catégorie */}
+          <Card className="border-none shadow-md bg-white dark:bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-yellow-600" />
-                Votre Rang Écologique
-              </CardTitle>
+              <CardTitle className="text-xl text-gray-900 dark:text-gray-100">Détail par catégorie</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-2xl font-bold text-primary">{environmentalData.rank}</h3>
-                  <p className="text-muted-foreground">
-                    Vous êtes dans le top {100 - environmentalData.percentile}% des utilisateurs
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl">🏆</div>
-                  <p className="text-sm text-muted-foreground">Rang actuel</p>
-                </div>
-              </div>
-              <Progress value={environmentalData.percentile} className="h-3" />
-              <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                <span>Débutant</span>
-                <span>Légende Écologique</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(environmentalData.transactionsByCategory).map(([category, count]) => {
+                  const data = CATEGORY_IMPACTS[category] || CATEGORY_IMPACTS.other;
+                  const Icon = data.icon;
+                  return (
+                    <div key={category} className="flex items-center p-4 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-green-100 dark:hover:border-green-900 hover:bg-green-50/30 dark:hover:bg-green-900/20 transition-colors">
+                      <div className={`p-3 rounded-lg ${data.bgColor} dark:${data.darkBgColor} ${data.color} dark:${data.darkColor} mr-4`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">{data.category}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{count} transaction{count > 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="ml-auto text-right">
+                        <span className="block font-bold text-green-600 dark:text-green-400">
+                          {Math.round(count * data.co2PerItem * 10) / 10} kg
+                        </span>
+                        <span className="text-xs text-gray-400">CO₂</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {Object.keys(environmentalData.transactionsByCategory).length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                    Aucune donnée disponible pour cette période.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-
-          {/* Onglets détaillés */}
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4 p-0 gap-0 items-center h-10">
-              <TabsTrigger value="overview" className="flex items-center gap-1 text-xs sm:text-sm rounded-l-lg rounded-r-none h-10">Vue d'ensemble</TabsTrigger>
-              <TabsTrigger value="categories" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">Par catégorie</TabsTrigger>
-              <TabsTrigger value="badges" className="flex items-center gap-1 text-xs sm:text-sm rounded-none h-10">Badges</TabsTrigger>
-              <TabsTrigger value="methodology" className="flex items-center gap-1 text-xs sm:text-sm rounded-r-lg rounded-l-none h-10">Méthodologie</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6">
-              {/* Graphique mensuel */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    Évolution Mensuelle
-                  </CardTitle>
-                  <CardDescription>
-                    Votre impact environnemental au cours des 12 derniers mois
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {environmentalData.monthlyImpact.slice(-6).map((month, index) => (
-                      <div key={month.month} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 bg-green-500 rounded-full" />
-                          <span className="font-medium">
-                            {new Date(month.month + '-01').toLocaleDateString('fr-FR', { 
-                              month: 'long', 
-                              year: 'numeric' 
-                            })}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm">
-                          <div className="text-center">
-                            <div className="font-semibold text-green-600">{month.co2Saved} kg</div>
-                            <div className="text-muted-foreground">CO₂</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-blue-600">{month.waterSaved} L</div>
-                            <div className="text-muted-foreground">Eau</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-primary">{month.transactions}</div>
-                            <div className="text-muted-foreground">Transactions</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Comparaisons équivalentes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="w-5 h-5" />
-                    Équivalences Concrètes
-                  </CardTitle>
-                  <CardDescription>
-                    Votre impact traduit en équivalences du quotidien
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
-                      <Car className="w-8 h-8 text-green-600" />
-                      <div>
-                        <div className="font-semibold">
-                          {Math.round(environmentalData.totalCo2Saved / 2.3)} km
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          de trajet en voiture évités
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-                      <TreePine className="w-8 h-8 text-blue-600" />
-                      <div>
-                        <div className="font-semibold">
-                          {Math.round(environmentalData.totalCo2Saved / 22)} arbres
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          plantés (équivalent CO₂)
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg">
-                      <Factory className="w-8 h-8 text-yellow-600" />
-                      <div>
-                        <div className="font-semibold">
-                          {Math.round(environmentalData.totalEnergySaved / 24)} jours
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          de consommation électrique
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
-                      <Droplets className="w-8 h-8 text-purple-600" />
-                      <div>
-                        <div className="font-semibold">
-                          {Math.round(environmentalData.totalWaterSaved / 150)} douches
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          de 10 minutes économisées
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="categories" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    Impact par Catégorie
-                  </CardTitle>
-                  <CardDescription>
-                    Détail de votre impact selon les types d'objets échangés
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(environmentalData.transactionsByCategory).map(([category, count]) => {
-                      const categoryData = CATEGORY_IMPACTS[category] || CATEGORY_IMPACTS.electronics;
-                      const CategoryIcon = categoryData.icon;
-                      const totalCo2 = count * categoryData.co2PerItem;
-                      
-                      return (
-                        <div key={category} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center`}>
-                              <CategoryIcon className={`w-5 h-5 ${categoryData.color}`} />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{categoryData.category}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {count} transaction{count > 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-semibold text-green-600">
-                              {Math.round(totalCo2 * 10) / 10} kg CO₂
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {Math.round(count * categoryData.waterPerItem)} L eau
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="badges" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    Badges Écologiques
-                  </CardTitle>
-                  <CardDescription>
-                    Vos récompenses pour votre engagement environnemental
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {ECO_BADGES.map(badge => {
-                      const isEarned = environmentalData.badges.includes(badge.id);
-                      return (
-                        <div
-                          key={badge.id}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            isEarned 
-                              ? 'border-green-200 bg-green-50' 
-                              : 'border-gray-200 bg-gray-50 opacity-60'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div className="text-3xl mb-2">{badge.icon}</div>
-                            <h3 className={`font-semibold ${isEarned ? 'text-green-800' : 'text-gray-600'}`}>
-                              {badge.name}
-                            </h3>
-                            <p className={`text-sm ${isEarned ? 'text-green-600' : 'text-gray-500'}`}>
-                              {badge.description}
-                            </p>
-                            {isEarned && (
-                              <Badge className="mt-2 bg-green-100 text-green-800">
-                                Obtenu !
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="methodology" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Info className="w-5 h-5" />
-                    Méthodologie de Calcul
-                  </CardTitle>
-                  <CardDescription>
-                    Comment nous calculons votre impact environnemental
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Nos calculs sont basés sur des études scientifiques et des données de l'ADEME (Agence de l'Environnement et de la Maîtrise de l'Énergie).
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Principe de Base</h3>
-                    <p className="text-muted-foreground">
-                      Chaque objet acheté d'occasion évite la production d'un objet neuf. Nous calculons l'impact 
-                      environnemental évité en nous basant sur l'empreinte carbone, hydrique et énergétique de la 
-                      production de chaque catégorie d'objets.
-                    </p>
-
-                    <h3 className="text-lg font-semibold">Facteurs de Calcul par Catégorie</h3>
-                    <div className="space-y-3">
-                      {Object.entries(CATEGORY_IMPACTS).map(([key, category]) => {
-                        const CategoryIcon = category.icon;
-                        return (
-                          <div key={key} className="p-3 border rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
-                              <CategoryIcon className={`w-4 h-4 ${category.color}`} />
-                              <span className="font-medium">{category.category}</span>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">CO₂:</span>
-                                <span className="ml-1 font-medium">{category.co2PerItem} kg</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Eau:</span>
-                                <span className="ml-1 font-medium">{category.waterPerItem} L</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Énergie:</span>
-                                <span className="ml-1 font-medium">{category.energyPerItem} kWh</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Déchets:</span>
-                                <span className="ml-1 font-medium">{category.wastePerItem} kg</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <h3 className="text-lg font-semibold">Facteurs de Pondération</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Gift className="w-4 h-4 text-green-600" />
-                        <span><strong>Dons gratuits :</strong> +20% d'impact (encourage le partage)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-purple-600" />
-                        <span><strong>Échanges/Troc :</strong> -20% d'impact (pas de transaction monétaire)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-blue-600" />
-                        <span><strong>Ventes :</strong> Impact standard (100%)</span>
-                      </div>
-                    </div>
-
-                    <h3 className="text-lg font-semibold">Sources et Références</h3>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• ADEME - Base Carbone® pour les facteurs d'émission</li>
-                      <li>• Water Footprint Network pour l'empreinte hydrique</li>
-                      <li>• IEA (International Energy Agency) pour l'énergie</li>
-                      <li>• Ellen MacArthur Foundation pour l'économie circulaire</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
         </>
       )}
     </div>

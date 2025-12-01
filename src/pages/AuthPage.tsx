@@ -17,7 +17,6 @@ import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, reload, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, db, emailConfig } from "../lib/firebase";
 import { UNIVERSITY_NAMES, getUniversityMetadata } from '@/constants/universities';
-// import { EmailVerificationModal } from "@/components/ui/EmailVerificationModal";
 
 const signInSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -129,19 +128,19 @@ export const AuthPage: React.FC = () => {
   const { currentUser, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Initialiser isSignUp en fonction du paramètre URL
   const params = new URLSearchParams(location.search);
   const shouldSignUp = params.get('signup') === 'true';
-  
+
   const [isSignUp, setIsSignUp] = useState(shouldSignUp);
-  
+
   // Vérifier le paramètre URL pour déterminer si on est en mode signup
   useEffect(() => {
     const newParams = new URLSearchParams(location.search);
     setIsSignUp(newParams.get('signup') === 'true');
   }, [location.search]);
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -201,7 +200,7 @@ export const AuthPage: React.FC = () => {
 
       try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        
+
         if (!userDoc.exists()) {
           // Utilisateur sans profil - vérifier s'il vient de Google
           if (currentUser.providerData.some(provider => provider.providerId === 'google.com')) {
@@ -212,7 +211,7 @@ export const AuthPage: React.FC = () => {
               auth.signOut();
               return;
             }
-            
+
             // Stocker les données Google et demander de compléter le profil
             setGoogleUserData({
               email: currentUser.email,
@@ -223,7 +222,7 @@ export const AuthPage: React.FC = () => {
             setShowCompleteProfile(true);
             return;
           }
-          
+
           // Si pas de profil et pas Google, c'est une erreur
           console.error('User profile not found and not from Google');
           setShowCompleteProfile(false);
@@ -246,7 +245,7 @@ export const AuthPage: React.FC = () => {
           // Vérifier si l'utilisateur a un email vérifié ou vient de Google
           const isEmailVerified = currentUser.emailVerified ||
             currentUser.providerData.some(provider => provider.providerId === 'google.com');
-          
+
           if (!isEmailVerified && !userData.emailVerified) {
             // Email non vérifié - renvoyer vers l'écran de vérification
             setUserEmail(currentUser.email || '');
@@ -270,7 +269,7 @@ export const AuthPage: React.FC = () => {
   // Polling supplémentaire pour l'écran de confirmation d'email
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    
+
     if (emailSent && currentUser && !currentUser.emailVerified) {
       interval = setInterval(async () => {
         try {
@@ -279,7 +278,7 @@ export const AuthPage: React.FC = () => {
             setEmailSent(false);
             setUserEmail('');
             setVerificationError('');
-            
+
             // Rediriger vers le site principal
             window.location.reload();
           }
@@ -368,7 +367,7 @@ export const AuthPage: React.FC = () => {
                 setLoading(false);
               }
             })} className="space-y-4">
-              
+
               <div className="space-y-2">
                 <Label htmlFor="university">Université</Label>
                 <Select onValueChange={(value) => completeProfileForm.setValue('university', value)} value={completeProfileForm.watch('university')}>
@@ -462,9 +461,9 @@ export const AuthPage: React.FC = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800" 
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                 disabled={loading}
               >
                 {loading ? (
@@ -506,8 +505,8 @@ export const AuthPage: React.FC = () => {
               Vérifiez votre email
             </CardTitle>
             <CardDescription>
-              Un lien d'activation a été envoyé à <strong>{userEmail}</strong>.<br/>
-              Cliquez sur le lien pour activer votre compte.<br/>
+              Un lien d'activation a été envoyé à <strong>{userEmail}</strong>.<br />
+              Cliquez sur le lien pour activer votre compte.<br />
               <span className="text-xs text-muted-foreground">(Vous pouvez fermer cette page et revenir après avoir validé l'email)</span>
             </CardDescription>
           </CardHeader>
@@ -603,7 +602,7 @@ export const AuthPage: React.FC = () => {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       const errorCode = (error as { code?: string })?.code;
-      
+
       if (errorCode === 'auth/invalid-credential') {
         setVerificationError('Email ou mot de passe incorrect');
       } else if (errorCode === 'auth/user-not-found') {
@@ -624,23 +623,23 @@ export const AuthPage: React.FC = () => {
   const handleSignUp = async (data: SignUpFormData) => {
     setLoading(true);
     setVerificationError('');
-    
+
     try {
       // 1. Création du compte Firebase
       const { firstName, lastName } = data;
       const displayName = `${firstName} ${lastName}`;
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
-      
+
       // 2. Préparation des données utilisateur
-      const universityToSave = data.university === 'Autre université' 
-        ? (data.otherUniversity || data.university) 
+      const universityToSave = data.university === 'Autre université'
+        ? (data.otherUniversity || data.university)
         : data.university;
-      
-      const fieldOfStudyToSave = data.fieldOfStudy === 'Autre' 
-        ? (data.otherFieldOfStudy || data.fieldOfStudy) 
+
+      const fieldOfStudyToSave = data.fieldOfStudy === 'Autre'
+        ? (data.otherFieldOfStudy || data.fieldOfStudy)
         : data.fieldOfStudy;
-      
+
       // Debug : Afficher les données avant sauvegarde
       console.log('📝 Données d\'inscription:', {
         firstName,
@@ -655,12 +654,12 @@ export const AuthPage: React.FC = () => {
         fieldOfStudyToSave,
         graduationYear: data.graduationYear
       });
-      
+
       const universityMetadata = getUniversityMetadata(universityToSave);
 
       const userDataToSave = {
-        firstName, 
-        lastName, 
+        firstName,
+        lastName,
         displayName,
         university: universityToSave,
         otherUniversity: data.university === 'Autre université' ? data.otherUniversity : null,
@@ -681,24 +680,24 @@ export const AuthPage: React.FC = () => {
         isStudent: true,
         provider: 'email'
       };
-      
+
       console.log('💾 Données à sauvegarder dans Firestore:', userDataToSave);
-      
+
       // 3. ✅ SAUVEGARDER IMMÉDIATEMENT DANS FIRESTORE (plus de localStorage!)
       await setDoc(doc(db, 'users', user.uid), userDataToSave);
-      
+
       console.log('✅ Données sauvegardées avec succès pour UID:', user.uid);
-      
+
       // 4. Mise à jour du profil Firebase Auth
       await updateProfile(user, { displayName: displayName });
-      
+
       // 5. Envoi de l'email de vérification
       await sendEmailVerification(user, emailConfig.actionCodeSettings);
-      
+
       // 6. Affichage de l'écran de vérification
       setUserEmail(data.email);
       setEmailSent(true);
-      
+
     } catch (error: unknown) {
       // Gestion des erreurs
       const errorCode = (error as { code?: string })?.code;
@@ -726,7 +725,7 @@ export const AuthPage: React.FC = () => {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       const errorCode = (error as { code?: string })?.code;
-      
+
       if (errorCode === 'auth/popup-closed-by-user') {
         setVerificationError('Connexion annulée');
       } else if (errorCode === 'auth/popup-blocked') {
@@ -754,18 +753,18 @@ export const AuthPage: React.FC = () => {
             </div>
           </div>
           <CardTitle className="text-xl sm:text-2xl lg:text-3xl">
-            {isSignUp 
+            {isSignUp
               ? 'Rejoindre StudyMarket'
               : 'Connectez-vous à votre compte étudiant'
             }
           </CardTitle>
           <CardDescription className="text-sm sm:text-base">
-            {isSignUp 
+            {isSignUp
               ? 'Créez votre compte étudiant vérifié et rejoignez la communauté'
               : 'Connectez-vous à votre compte étudiant'
             }
           </CardDescription>
-          
+
           {isSignUp && (
             <div className="flex items-center justify-center gap-2 mt-2 sm:mt-4">
               <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs sm:text-sm">
@@ -844,7 +843,7 @@ export const AuthPage: React.FC = () => {
                   <Input id="lastName" {...signUpForm.register('lastName')} autoComplete="family-name" className="text-sm" />
                   {signUpForm.formState.errors.lastName && (
                     <span className="text-red-500 text-xs">{signUpForm.formState.errors.lastName.message}</span>
-                )}
+                  )}
                 </div>
               </div>
             )}
@@ -1047,7 +1046,7 @@ export const AuthPage: React.FC = () => {
 
           {isSignUp && (
             <div className="text-center text-xs text-muted-foreground">
-              En créant un compte, vous acceptez nos conditions d'utilisation. 
+              En créant un compte, vous acceptez nos conditions d'utilisation.
               Seules les adresses email universitaires sont acceptées.
             </div>
           )}

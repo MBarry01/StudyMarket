@@ -14,9 +14,9 @@ export const Footer: React.FC = () => {
     <footer className="bg-muted/50 border-t border-border mt-auto font-sans">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-              {/* Company Info */}
-              <div className="space-y-4 text-left">
-                <Link to="/" className="flex items-center justify-start space-x-2 hover:opacity-80 transition-opacity">
+          {/* Company Info */}
+          <div className="space-y-4 text-left">
+            <Link to="/" className="flex items-center justify-start space-x-2 hover:opacity-80 transition-opacity">
               <GradientIcon icon={GraduationCap} gradientId="gradient-footer" size={32} />
               <div>
                 <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -27,10 +27,10 @@ export const Footer: React.FC = () => {
                 </div>
               </div>
             </Link>
-                <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-sm">
               La première plateforme d'échange entre étudiants vérifiés. Achetez, vendez, donnez et échangez en toute sécurité au sein de votre communauté universitaire.
             </p>
-                <div className="flex space-x-4 justify-start">
+            <div className="flex space-x-4 justify-start">
               <a href="https://facebook.com/studymarket" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
@@ -45,7 +45,7 @@ export const Footer: React.FC = () => {
 
           {/* Quick Links */}
           <div className="space-y-3 md:space-y-4 text-center md:text-left">
-            <button 
+            <button
               onClick={() => toggleSection('navigation')}
               className="flex items-center justify-between w-full md:cursor-default font-semibold md:justify-start"
             >
@@ -83,7 +83,7 @@ export const Footer: React.FC = () => {
 
           {/* Student Categories */}
           <div className="space-y-3 md:space-y-4 text-center md:text-left">
-            <button 
+            <button
               onClick={() => toggleSection('categories')}
               className="flex items-center justify-between w-full md:cursor-default font-semibold md:justify-start"
             >
@@ -112,7 +112,7 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/listings?category=jobs" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/jobs" className="text-muted-foreground hover:text-primary transition-colors">
                   Jobs & Stages
                 </Link>
               </li>
@@ -121,7 +121,7 @@ export const Footer: React.FC = () => {
 
           {/* Trust & Safety */}
           <div className="space-y-3 md:space-y-4 text-center md:text-left">
-            <button 
+            <button
               onClick={() => toggleSection('safety')}
               className="flex items-center justify-between w-full md:cursor-default font-semibold md:justify-start"
             >
@@ -130,18 +130,18 @@ export const Footer: React.FC = () => {
             </button>
             <div className={`${openSection === 'safety' ? 'block' : 'hidden'} md:block`}>
               <div className="space-y-3 text-sm mb-3 md:text-left">
-                <div className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground">
+                <Link to="/verification" className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground hover:text-primary transition-colors">
                   <Shield className="w-4 h-4 text-green-600" />
                   <span>Étudiants 100% vérifiés</span>
-                </div>
-                <div className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground">
+                </Link>
+                <Link to="/impact" className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground hover:text-primary transition-colors">
                   <Leaf className="w-4 h-4 text-green-600" />
                   <span>Impact écologique mesuré</span>
-                </div>
-                <div className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground">
+                </Link>
+                <a href="mailto:support@studymarket.fr" className="flex items-center justify-center md:justify-start space-x-2 text-muted-foreground hover:text-primary transition-colors">
                   <Mail className="w-4 h-4" />
                   <span>support@studymarket.fr</span>
-                </div>
+                </a>
               </div>
               <div className="space-y-2 text-sm">
                 <Link to="/safety" className="block text-muted-foreground hover:text-primary transition-colors">
@@ -178,8 +178,8 @@ export const Footer: React.FC = () => {
               <Link to="/cookies" className="text-muted-foreground hover:text-primary transition-colors">
                 Cookies
               </Link>
-              <a 
-                href="mailto:support@studymarket.fr" 
+              <a
+                href="mailto:support@studymarket.fr"
                 className="text-muted-foreground hover:text-primary transition-colors inline-flex items-baseline gap-1"
               >
                 <ExternalLink className="w-3 h-3 flex-shrink-0" />

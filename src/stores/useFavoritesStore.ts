@@ -46,9 +46,6 @@ interface FavoritesStore {
   clearFavorites: () => void;
 }
 
-// Type alias pour compatibilité (utilisé par certains outils de build)
-export type FavoritesState = FavoritesStore;
-
 // Helper function to safely convert dates
 const safeToDate = (date: any): Date => {
   if (!date) return new Date();

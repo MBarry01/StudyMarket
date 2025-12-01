@@ -5,11 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Link } from 'react-router-dom';
-import { 
-  MapPin, 
-  Calendar, 
-  Star, 
-  Heart, 
+import {
+  MapPin,
+  Calendar,
+  Star,
+  Heart,
   Package,
   Shield,
   Leaf,
@@ -22,12 +22,12 @@ import {
   CheckCircle2,
   BadgeCheck
 } from 'lucide-react';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
   getDoc,
   limit,
   updateDoc,
@@ -140,26 +140,26 @@ export const ProfilePage: React.FC = () => {
 
   const handleDeleteListing = async (listing: Listing) => {
     if (!currentUser) return;
-    
+
     const confirmed = window.confirm(
       `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?\n\nCette action est irréversible.`
     );
-    
+
     if (!confirmed) return;
 
     try {
       await deleteDoc(doc(db, 'listings', listing.id));
-      
+
       // Mettre à jour la liste locale
       setUserListings(prev => prev.filter(l => l.id !== listing.id));
-      
+
       // Mettre à jour les stats
       setStats(prev => ({
         ...prev,
         totalListings: prev.totalListings - 1,
         activeListings: listing.status === 'active' ? prev.activeListings - 1 : prev.activeListings
       }));
-      
+
       toast.success('Annonce supprimée avec succès');
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
@@ -173,9 +173,9 @@ export const ProfilePage: React.FC = () => {
 
     try {
       setLoading(prev => ({ ...prev, profile: true }));
-      
+
       const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      
+
       if (userDoc.exists()) {
         const data = userDoc.data();
         console.log('🔍 ProfilePage - Données récupérées de Firestore:', data);
@@ -189,13 +189,13 @@ export const ProfilePage: React.FC = () => {
           otherFieldOfStudy: data.otherFieldOfStudy,
           graduationYear: data.graduationYear
         });
-        
+
         setProfileData({
           ...data,
           createdAt: safeToDate(data.createdAt),
           updatedAt: safeToDate(data.updatedAt)
         });
-        
+
         // Mettre à jour les états firstName et lastName pour l'édition
         if (data.firstName) setFirstName(data.firstName);
         if (data.lastName) setLastName(data.lastName);
@@ -237,32 +237,32 @@ export const ProfilePage: React.FC = () => {
 
     try {
       setLoading(prev => ({ ...prev, listings: true }));
-      
+
       // Requête simple sans orderBy pour éviter les problèmes d'index
       const listingsQuery = query(
         collection(db, 'listings'),
         where('sellerId', '==', currentUser.uid),
         limit(20) // Limiter pour améliorer les performances
       );
-      
+
       const querySnapshot = await getDocs(listingsQuery);
       const listings: Listing[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        listings.push({ 
-          id: doc.id, 
+        listings.push({
+          id: doc.id,
           ...data,
           createdAt: safeToDate(data.createdAt),
           updatedAt: safeToDate(data.updatedAt)
         } as Listing);
       });
-      
+
       // Trier côté client par date de création
       listings.sort((a, b) => safeToDate(b.createdAt).getTime() - safeToDate(a.createdAt).getTime());
-      
+
       setUserListings(listings);
-      
+
       // Calculer les stats des annonces
       const activeListings = listings.filter(listing => listing.status === 'active');
       setStats(prev => ({
@@ -270,7 +270,7 @@ export const ProfilePage: React.FC = () => {
         totalListings: listings.length,
         activeListings: activeListings.length
       }));
-      
+
     } catch (error: unknown) {
       console.error('Erreur lors du chargement des annonces:', error);
     } finally {
@@ -283,43 +283,43 @@ export const ProfilePage: React.FC = () => {
 
     try {
       setLoading(prev => ({ ...prev, reviews: true }));
-      
+
       // Requête simple sans orderBy
       const reviewsQuery = query(
         collection(db, 'reviews'),
         where('revieweeId', '==', currentUser.uid),
         limit(10) // Limiter pour améliorer les performances
       );
-      
+
       const querySnapshot = await getDocs(reviewsQuery);
       const reviews: Review[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        reviews.push({ 
-          id: doc.id, 
+        reviews.push({
+          id: doc.id,
           ...data,
           replies: Array.isArray(data.replies)
             ? data.replies.map((reply) => ({
-                ...reply,
-                createdAt: reply.createdAt instanceof Date
-                  ? reply.createdAt
-                  : (reply.createdAt && typeof reply.createdAt.toDate === 'function')
-                    ? reply.createdAt.toDate()
-                    : new Date()
-              }))
+              ...reply,
+              createdAt: reply.createdAt instanceof Date
+                ? reply.createdAt
+                : (reply.createdAt && typeof reply.createdAt.toDate === 'function')
+                  ? reply.createdAt.toDate()
+                  : new Date()
+            }))
             : [],
           likes: Array.isArray(data.likes) ? data.likes : [],
           dislikes: Array.isArray(data.dislikes) ? data.dislikes : [],
           createdAt: safeToDate(data.createdAt)
         } as Review);
       });
-      
+
       // Trier côté client par date
       reviews.sort((a, b) => safeToDate(b.createdAt).getTime() - safeToDate(a.createdAt).getTime());
-      
+
       setUserReviews(reviews);
-      
+
       // Fetch reviewer profiles
       const uniqueReviewerIds = Array.from(new Set(reviews.map(r => r.reviewerId)));
       const newProfiles: Record<string, { displayName: string; photoURL?: string }> = { ...reviewerProfiles };
@@ -338,17 +338,17 @@ export const ProfilePage: React.FC = () => {
         }
       }));
       setReviewerProfiles(newProfiles);
-      
+
       // Calculer les stats des avis
       const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
       const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
-      
+
       setStats(prev => ({
         ...prev,
         totalReviews: reviews.length,
         averageRating: Math.round(averageRating * 10) / 10
       }));
-      
+
     } catch (error: unknown) {
       console.error('Erreur lors du chargement des avis:', error);
     } finally {
@@ -361,29 +361,29 @@ export const ProfilePage: React.FC = () => {
 
     try {
       setLoading(prev => ({ ...prev, favorites: true }));
-      
+
       // Requête simple sans orderBy
       const favoritesQuery = query(
         collection(db, 'favorites'),
         where('userId', '==', currentUser.uid),
         limit(20) // Limiter pour améliorer les performances
       );
-      
+
       const querySnapshot = await getDocs(favoritesQuery);
       const favorites: Favorite[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        favorites.push({ 
-          id: doc.id, 
+        favorites.push({
+          id: doc.id,
           ...data,
           createdAt: safeToDate(data.createdAt)
         } as Favorite);
       });
-      
+
       // Trier côté client
       favorites.sort((a, b) => safeToDate(b.createdAt).getTime() - safeToDate(a.createdAt).getTime());
-      
+
       setStats(prev => ({
         ...prev,
         totalFavorites: favorites.length
@@ -396,8 +396,8 @@ export const ProfilePage: React.FC = () => {
             const listingDoc = await getDoc(doc(db, 'listings', favorite.listingId));
             if (listingDoc.exists()) {
               const data = listingDoc.data();
-              return { 
-                id: listingDoc.id, 
+              return {
+                id: listingDoc.id,
                 ...data,
                 createdAt: safeToDate(data.createdAt),
                 updatedAt: safeToDate(data.updatedAt)
@@ -422,7 +422,7 @@ export const ProfilePage: React.FC = () => {
         // Aucun favori, initialiser à un tableau vide
         setFavoriteListings([]);
       }
-      
+
     } catch (error: unknown) {
       console.error('Erreur lors du chargement des favoris:', error);
       setFavoriteListings([]);
@@ -433,17 +433,17 @@ export const ProfilePage: React.FC = () => {
 
   const formatDate = (date: unknown) => {
     if (!date) return 'Date inconnue';
-    
+
     try {
       const dateObj = safeToDate(date);
-      
+
       if (isNaN(dateObj.getTime())) {
         return 'Date invalide';
       }
-      
-      return formatDistanceToNow(dateObj, { 
-        addSuffix: true, 
-        locale: fr 
+
+      return formatDistanceToNow(dateObj, {
+        addSuffix: true,
+        locale: fr
       });
     } catch {
       return 'Date invalide';
@@ -454,9 +454,8 @@ export const ProfilePage: React.FC = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${
-          i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-        }`}
+        className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+          }`}
       />
     ));
   };
@@ -501,16 +500,16 @@ export const ProfilePage: React.FC = () => {
 
   const handleLike = async (reviewId: string) => {
     if (!currentUser) return;
-    
+
     try {
       const reviewRef = doc(db, 'reviews', reviewId);
       const review = userReviews.find(r => r.id === reviewId);
-      
+
       if (!review) return;
-      
+
       const newLikes = review.likes || [];
       const newDislikes = review.dislikes || [];
-      
+
       if (newLikes.includes(currentUser.uid)) {
         // Unlike
         await updateDoc(reviewRef, {
@@ -523,13 +522,13 @@ export const ProfilePage: React.FC = () => {
           dislikes: newDislikes.filter(id => id !== currentUser.uid)
         });
       }
-      
+
       // Update local state
       setUserReviews(prev => prev.map(r => {
         if (r.id === reviewId) {
           const updatedLikes = r.likes || [];
           const updatedDislikes = r.dislikes || [];
-          
+
           if (updatedLikes.includes(currentUser.uid)) {
             return {
               ...r,
@@ -553,16 +552,16 @@ export const ProfilePage: React.FC = () => {
 
   const handleDislike = async (reviewId: string) => {
     if (!currentUser) return;
-    
+
     try {
       const reviewRef = doc(db, 'reviews', reviewId);
       const review = userReviews.find(r => r.id === reviewId);
-      
+
       if (!review) return;
-      
+
       const newLikes = review.likes || [];
       const newDislikes = review.dislikes || [];
-      
+
       if (newDislikes.includes(currentUser.uid)) {
         // Remove dislike
         await updateDoc(reviewRef, {
@@ -575,13 +574,13 @@ export const ProfilePage: React.FC = () => {
           likes: newLikes.filter(id => id !== currentUser.uid)
         });
       }
-      
+
       // Update local state
       setUserReviews(prev => prev.map(r => {
         if (r.id === reviewId) {
           const updatedLikes = r.likes || [];
           const updatedDislikes = r.dislikes || [];
-          
+
           if (updatedDislikes.includes(currentUser.uid)) {
             return {
               ...r,
@@ -605,23 +604,23 @@ export const ProfilePage: React.FC = () => {
 
   const handleReply = async (reviewId: string) => {
     if (!currentUser || !replyText.trim()) return;
-    
+
     try {
       const reviewRef = doc(db, 'reviews', reviewId);
       const review = userReviews.find(r => r.id === reviewId);
-      
+
       if (!review) return;
-      
+
       const newReply = {
         userId: currentUser.uid,
         comment: replyText.trim(),
         createdAt: new Date()
       };
-      
+
       await updateDoc(reviewRef, {
         replies: [...(review.replies || []), newReply]
       });
-      
+
       // Update local state
       setUserReviews(prev => prev.map(r => {
         if (r.id === reviewId) {
@@ -632,7 +631,7 @@ export const ProfilePage: React.FC = () => {
         }
         return r;
       }));
-      
+
       setReplyText('');
       setReplyingTo(null);
       toast.success('Réponse envoyée');
@@ -676,30 +675,6 @@ export const ProfilePage: React.FC = () => {
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Alerte d'erreurs d'index */}
-      {/* {errors.length > 0 && (
-        <Alert className="border-blue-200 bg-blue-50">
-          <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <div className="space-y-2">
-              <p className="font-medium">⚡ Chargement optimisé activé</p>
-              <p className="text-sm">
-                Certaines fonctionnalités utilisent un mode de chargement optimisé. 
-                Les données sont triées côté client pour de meilleures performances.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open('https://console.firebase.google.com/project/annonces-app-44d27/firestore/indexes', '_blank')}
-                className="text-blue-700 border-blue-300 hover:bg-blue-100"
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Optimiser la base de données
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )} */}
-
       {/* En-tête du profil */}
       <Card>
         <CardHeader className="text-left">
@@ -914,8 +889,8 @@ export const ProfilePage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {userListings.map((listing) => (
-                    <ListingCard 
-                      key={listing.id} 
+                    <ListingCard
+                      key={listing.id}
                       listing={listing}
                       showActions={true}
                       onEdit={handleEditListing}
@@ -1164,10 +1139,10 @@ export const ProfilePage: React.FC = () => {
                   )}
                   <div className="text-sm text-muted-foreground">
                     {userProfile?.verificationStatus === 'verified'
-                      ? 'Votre compte est vérifié' 
+                      ? 'Votre compte est vérifié'
                       : userProfile?.verificationStatus === 'rejected'
-                      ? 'Votre demande a été rejetée'
-                      : 'Votre compte n\'est pas encore vérifié'}
+                        ? 'Votre demande a été rejetée'
+                        : 'Votre compte n\'est pas encore vérifié'}
                   </div>
                 </div>
                 <Button asChild className="w-full sm:w-auto">

@@ -4,26 +4,23 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 // import { listingSchema } from '../lib/validations';
-import { 
-  Upload, 
-  X, 
-  MapPin, 
-  Euro, 
-  Gift, 
-  RefreshCw, 
-  Camera, 
+import {
+  Upload,
+  X,
+  MapPin,
+  Euro,
+  Gift,
+  RefreshCw,
+  Camera,
   AlertCircle,
   Sparkles,
-  // Leaf,
   Shield,
   Clock,
-  // Tag,
   Plus,
   Minus,
   CreditCard,
   Smartphone,
   Banknote,
-  // Phone,
   Calendar,
   Home
 } from 'lucide-react';
@@ -121,7 +118,7 @@ export const CreateListingPage: React.FC = () => {
   const { createListing } = useListingStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   const [transactionType, setTransactionType] = useState<TransactionType>(() => {
     const typeParam = searchParams.get('type') as TransactionType | null;
     const catParam = searchParams.get('category');
@@ -142,7 +139,7 @@ export const CreateListingPage: React.FC = () => {
     startDate: '',
     endDate: '',
   });
-  
+
   const [images, setImages] = useState<string[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -202,42 +199,42 @@ export const CreateListingPage: React.FC = () => {
       try {
         const prefill = JSON.parse(prefillData);
         console.log('🤖 Chatbot prefill data (complete):', prefill);
-        
+
         // Category (prioritaire)
         if (prefill.category) {
           setSelectedCategory(prefill.category);
         }
-        
+
         // Title/Product name
         if (prefill.title) {
           form.setValue('title', prefill.title);
         }
-        
+
         // Description
         if (prefill.description) {
           form.setValue('description', prefill.description);
         }
-        
+
         // Type-specific fields
         if (prefill.price !== undefined && typeof prefill.price === 'number') {
           form.setValue('price', prefill.price.toString());
         }
-        
+
         if (prefill.condition) {
           form.setValue('condition', prefill.condition);
         }
-        
+
         // Payment methods (for sell)
         if (prefill.paymentMethods && Array.isArray(prefill.paymentMethods)) {
           setSelectedPaymentMethods(prefill.paymentMethods);
           form.setValue('paymentMethods', prefill.paymentMethods as any);
         }
-        
+
         // Donation reason (for gift)
         if (prefill.donationReason) {
           form.setValue('donationReason', prefill.donationReason);
         }
-        
+
         // Desired items (for swap)
         if (prefill.desiredItems) {
           if (Array.isArray(prefill.desiredItems)) {
@@ -248,28 +245,28 @@ export const CreateListingPage: React.FC = () => {
             form.setValue('desiredItems', [prefill.desiredItems] as any);
           }
         }
-        
+
         // Estimated value (for swap)
         if (prefill.estimatedValue !== undefined && typeof prefill.estimatedValue === 'number') {
           form.setValue('estimatedValue', prefill.estimatedValue.toString());
         }
-        
+
         // Hourly rate (for service)
         if (prefill.hourlyRate !== undefined && typeof prefill.hourlyRate === 'number') {
           form.setValue('hourlyRate', prefill.hourlyRate.toString());
         }
-        
+
         // Duration (for service)
         if (prefill.duration !== undefined && typeof prefill.duration === 'number') {
           setDuration([prefill.duration]);
           form.setValue('duration', prefill.duration);
         }
-        
+
         // Skills (for service)
         if (prefill.skills) {
           form.setValue('skills', prefill.skills);
         }
-        
+
         // Transaction type from URL or prefill
         const typeParam = searchParams.get('type');
         if (typeParam && ['sell', 'gift', 'swap', 'service'].includes(typeParam)) {
@@ -277,7 +274,7 @@ export const CreateListingPage: React.FC = () => {
         } else if (prefill.transactionType) {
           setTransactionType(prefill.transactionType as TransactionType);
         }
-        
+
         console.log('✅ Prefill applied:', {
           category: prefill.category,
           title: prefill.title,
@@ -285,7 +282,7 @@ export const CreateListingPage: React.FC = () => {
           hourlyRate: prefill.hourlyRate,
           transactionType: typeParam || prefill.transactionType
         });
-        
+
         // Clear prefill after use
         localStorage.removeItem('chatbot_prefill');
       } catch (error) {
@@ -332,7 +329,7 @@ export const CreateListingPage: React.FC = () => {
 
   const uploadImageToStorage = async (file: File): Promise<string> => {
     if (!currentUser) throw new Error('User not authenticated');
-    
+
     const timestamp = Date.now();
     // Obtenir l'extension du fichier
     const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -340,10 +337,10 @@ export const CreateListingPage: React.FC = () => {
     const randomNum = Math.floor(Math.random() * 10000);
     const fileName = `image_${timestamp}_${randomNum}.${extension}`;
     const storageRef = ref(storage, `listings/${currentUser.uid}/${fileName}`);
-    
+
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
-    
+
     return downloadURL;
   };
 
@@ -358,7 +355,7 @@ export const CreateListingPage: React.FC = () => {
     }
 
     setIsUploadingImages(true);
-    
+
     try {
       const validFiles = Array.from(files)
         .slice(0, 10 - images.length)
@@ -384,7 +381,7 @@ export const CreateListingPage: React.FC = () => {
 
       const uploadPromises = validFiles.map(file => uploadImageToStorage(file));
       const uploadedUrls = await Promise.all(uploadPromises);
-      
+
       setImages(prev => [...prev, ...uploadedUrls]);
       console.log(`✅ ${uploadedUrls.length} image(s) uploadée(s) avec succès`);
     } catch (error: any) {
@@ -418,10 +415,10 @@ export const CreateListingPage: React.FC = () => {
   };
 
   const handlePaymentMethodChange = (method: string, checked: boolean) => {
-    const newMethods = checked 
+    const newMethods = checked
       ? [...selectedPaymentMethods, method]
       : selectedPaymentMethods.filter(m => m !== method);
-    
+
     setSelectedPaymentMethods(newMethods);
     form.setValue('paymentMethods', newMethods as any);
   };
@@ -444,7 +441,7 @@ export const CreateListingPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const baseListingData = {
         title: data.title,
@@ -564,7 +561,7 @@ Période: ${housing.startDate || '—'} → ${housing.endDate || '—'}`,
   const isFormValid = () => {
     const errors = form.formState.errors;
     const hasRequiredFields = form.watch('title') && form.watch('description') && meetingLocation;
-    
+
     if (selectedCategory === 'housing') {
       // Logement: exiger Titre + Description + au moins 1 image
       const titleOk = !!form.watch('title');
@@ -590,7 +587,7 @@ Période: ${housing.startDate || '—'} → ${housing.endDate || '—'}`,
   return (
     <div className="min-h-screen bg-background">
       {/* Breadcrumb */}
-      <Breadcrumb 
+      <Breadcrumb
         items={[
           { label: 'Accueil', to: '/' },
           { label: 'Créer une annonce' }
@@ -599,11 +596,11 @@ Période: ${housing.startDate || '—'} → ${housing.endDate || '—'}`,
         showHome={true}
         showBackButton={true}
       />
-      
+
       <div className="create-listing-page container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl">
         {/* Styles locaux pour masquer les icônes internes des inputs date/heure sur tous navigateurs */}
         <style>
-        {`
+          {`
           .create-listing-page input[type="date"]::-webkit-calendar-picker-indicator,
           .create-listing-page input[type="time"]::-webkit-calendar-picker-indicator {
             display: none;
@@ -620,813 +617,813 @@ Période: ${housing.startDate || '—'} → ${housing.endDate || '—'}`,
             -webkit-appearance: none;
           }
         `}
-      </style>
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Créer une annonce</h1>
-        <p className="text-muted-foreground">
-          Partagez vos objets, services ou recherches avec la communauté étudiante vérifiée
-        </p>
-      </div>
+        </style>
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Créer une annonce</h1>
+          <p className="text-muted-foreground">
+            Partagez vos objets, services ou recherches avec la communauté étudiante vérifiée
+          </p>
+        </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Transaction Type Selection */}
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-foreground">
-              <Sparkles className="w-5 h-5" />
-              Type d'annonce
-            </CardTitle>
-            <CardDescription className="text-center">
-              Le formulaire s'adapte automatiquement selon votre choix
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card 
-                className={`cursor-pointer transition-all ${transactionType === 'sell' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
-                onClick={() => setTransactionType('sell')}
-              >
-                <CardContent className="p-4 text-center">
-                  <Euro className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <h3 className="font-semibold text-foreground text-center">Vendre</h3>
-                  <p className="text-xs text-muted-foreground text-center">Vendre un objet</p>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Transaction Type Selection */}
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center gap-2 text-foreground">
+                <Sparkles className="w-5 h-5" />
+                Type d'annonce
+              </CardTitle>
+              <CardDescription className="text-center">
+                Le formulaire s'adapte automatiquement selon votre choix
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card
+                  className={`cursor-pointer transition-all ${transactionType === 'sell' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+                  onClick={() => setTransactionType('sell')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <Euro className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                    <h3 className="font-semibold text-foreground text-center">Vendre</h3>
+                    <p className="text-xs text-muted-foreground text-center">Vendre un objet</p>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className={`cursor-pointer transition-all ${transactionType === 'gift' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+                  onClick={() => setTransactionType('gift')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <Gift className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                    <h3 className="font-semibold text-foreground text-center">Donner</h3>
+                    <p className="text-xs text-muted-foreground text-center">Don gratuit</p>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className={`cursor-pointer transition-all ${transactionType === 'swap' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+                  onClick={() => setTransactionType('swap')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+                    <h3 className="font-semibold text-foreground text-center">Troc</h3>
+                    <p className="text-xs text-muted-foreground text-center">Échanger des objets</p>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className={`cursor-pointer transition-all ${transactionType === 'service' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+                  onClick={() => setTransactionType('service')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <Clock className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                    <h3 className="font-semibold text-foreground text-center">Service</h3>
+                    <p className="text-xs text-muted-foreground text-center">Proposer un service</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Form */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Informations communes */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-foreground">Informations principales</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="title" className="text-foreground">Titre * (max 80 caractères)</Label>
+                    <Input
+                      id="title"
+                      placeholder={
+                        selectedCategory === 'housing'
+                          ? 'Ex: Studio 20m² meublé – Proche Sorbonne'
+                          : transactionType === 'sell' ? "Ex: MacBook Pro 13' M1 - Parfait état" :
+                            transactionType === 'gift' ? 'Ex: Vélo de ville - Don gratuit' :
+                              transactionType === 'swap' ? 'Ex: Livre de maths contre livre de physique' :
+                                'Ex: Cours particuliers de mathématiques'
+                      }
+                      {...form.register('title')}
+                      className="mt-1"
+                      maxLength={80}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span className="text-destructive">{form.formState.errors.title?.message}</span>
+                      <span>{form.watch('title')?.length || 0}/80</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description" className="text-foreground">Description détaillée * (max 1000 caractères)</Label>
+                    <Textarea
+                      id="description"
+                      placeholder={
+                        selectedCategory === 'housing'
+                          ? 'Décrivez le logement: surface, pièces, équipements, charges, transport, disponibilité...'
+                          : transactionType === 'sell' ? "Décrivez l'état, l'utilisation, la raison de la vente..." :
+                            transactionType === 'gift' ? "Décrivez l'objet et pourquoi vous le donnez..." :
+                              transactionType === 'swap' ? 'Décrivez ce que vous proposez et ce que vous recherchez...' :
+                                'Décrivez vos compétences, votre expérience, votre méthode...'
+                      }
+                      rows={6}
+                      {...form.register('description')}
+                      className="mt-1"
+                      maxLength={1000}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span className="text-destructive">{form.formState.errors.description?.message}</span>
+                      <span>{form.watch('description')?.length || 0}/1000</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card 
-                className={`cursor-pointer transition-all ${transactionType === 'gift' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
-                onClick={() => setTransactionType('gift')}
-              >
-                <CardContent className="p-4 text-center">
-                  <Gift className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                  <h3 className="font-semibold text-foreground text-center">Donner</h3>
-                  <p className="text-xs text-muted-foreground text-center">Don gratuit</p>
+              {/* Champs spécifiques selon le type */}
+              {selectedCategory === 'housing' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Home className="w-5 h-5 text-blue-600" />
+                      Informations logement
+                    </CardTitle>
+                    <CardDescription>
+                      Ces champs sont spécifiques aux annonces de location (logement & colocation)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-foreground">Type de logement *</Label>
+                        <Select value={housing.roomType} onValueChange={(v) => setHousing(prev => ({ ...prev, roomType: v }))}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Sélectionnez" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="studio">Studio</SelectItem>
+                            <SelectItem value="chambre">Chambre</SelectItem>
+                            <SelectItem value="colocation">Colocation</SelectItem>
+                            <SelectItem value="appartement">Appartement</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-foreground">Surface (m²) *</Label>
+                        <Input
+                          type="number"
+                          min={5}
+                          placeholder="25"
+                          value={housing.surface}
+                          onChange={(e) => setHousing(prev => ({ ...prev, surface: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-foreground">Loyer mensuel (€) *</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="650"
+                          value={housing.monthlyRent}
+                          onChange={(e) => setHousing(prev => ({ ...prev, monthlyRent: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox id="furnished" checked={housing.furnished} onCheckedChange={(c) => setHousing(prev => ({ ...prev, furnished: Boolean(c) }))} />
+                        <Label htmlFor="furnished" className="text-foreground">Meublé</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox id="charges" checked={housing.chargesIncluded} onCheckedChange={(c) => setHousing(prev => ({ ...prev, chargesIncluded: Boolean(c) }))} />
+                        <Label htmlFor="charges" className="text-foreground">Charges comprises</Label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-foreground font-semibold block mb-2">Période de colocation</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="colocStart" className="text-sm text-muted-foreground">De</Label>
+                          <Input
+                            id="colocStart"
+                            type="date"
+                            value={housing.startDate}
+                            onChange={(e) => setHousing(prev => ({ ...prev, startDate: e.target.value }))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="colocEnd" className="text-sm text-muted-foreground">À</Label>
+                          <Input
+                            id="colocEnd"
+                            type="date"
+                            value={housing.endDate}
+                            onChange={(e) => setHousing(prev => ({ ...prev, endDate: e.target.value }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {transactionType === 'sell' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Euro className="w-5 h-5 text-blue-600" />
+                      Informations de vente
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="price" className="text-foreground">Prix (€) *</Label>
+                        <Input
+                          id="price"
+                          type="text"
+                          placeholder="0,00"
+                          {...form.register('price')}
+                          className="mt-1"
+                        />
+                        {form.formState.errors.price && (
+                          <p className="text-sm text-destructive mt-1">
+                            {form.formState.errors.price.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="condition" className="text-foreground">État du produit *</Label>
+                        <Select onValueChange={(value) => form.setValue('condition', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Sélectionnez un état" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {conditions.map((condition) => (
+                              <SelectItem key={condition.value} value={condition.value}>
+                                <div>
+                                  <div className="font-medium text-foreground">{condition.label}</div>
+                                  <div className="text-xs text-muted-foreground">{condition.description}</div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.condition && (
+                          <p className="text-sm text-destructive mt-1">
+                            {form.formState.errors.condition.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-foreground font-semibold mb-3 block">Modes de paiement acceptés *</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                        {paymentMethods.map((method) => (
+                          <div
+                            key={method.value}
+                            className={`
+                            flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer
+                            ${selectedPaymentMethods.includes(method.value)
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                              }
+                          `}
+                            onClick={() => handlePaymentMethodChange(method.value, !selectedPaymentMethods.includes(method.value))}
+                          >
+                            <div className={`
+                            w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+                            ${selectedPaymentMethods.includes(method.value)
+                                ? 'bg-primary border-primary'
+                                : 'border-gray-300 dark:border-gray-600'
+                              }
+                          `}>
+                              {selectedPaymentMethods.includes(method.value) && (
+                                <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path d="M5 13l4 4L19 7"></path>
+                                </svg>
+                              )}
+                            </div>
+                            <Label htmlFor={method.value} className="flex items-center gap-2 cursor-pointer text-foreground flex-1">
+                              <method.icon className="w-5 h-5" />
+                              <span className="font-medium">{method.label}</span>
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedPaymentMethods.length === 0 && (
+                        <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          Sélectionnez au moins un mode de paiement
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {transactionType === 'gift' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Gift className="w-5 h-5 text-green-600" />
+                      Informations du don
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="donationReason" className="text-foreground">Motif du don * (max 140 caractères)</Label>
+                      <Textarea
+                        id="donationReason"
+                        placeholder="Ex: Je déménage, plus besoin, fin d'études..."
+                        rows={3}
+                        {...form.register('donationReason')}
+                        className="mt-1"
+                        maxLength={140}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span className="text-destructive">{form.formState.errors.donationReason?.message}</span>
+                        <span>{form.watch('donationReason')?.length || 0}/140</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {transactionType === 'swap' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <RefreshCw className="w-5 h-5 text-purple-600" />
+                      Informations d'échange
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-foreground">Objets recherchés * (minimum 1)</Label>
+                      <div className="space-y-2 mt-2">
+                        {desiredItems.filter(item => item.trim()).map((item, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input value={item} readOnly className="flex-1" />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => removeDesiredItem(index)}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Ex: Livre de physique L2"
+                            value={currentDesiredItem}
+                            onChange={(e) => setCurrentDesiredItem(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDesiredItem())}
+                            className="flex-1"
+                          />
+                          <Button type="button" onClick={addDesiredItem} disabled={!currentDesiredItem.trim()}>
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="estimatedValue" className="text-foreground">Valeur estimée (€) *</Label>
+                      <Input
+                        id="estimatedValue"
+                        type="text"
+                        placeholder="0,00"
+                        {...form.register('estimatedValue')}
+                        className="mt-1"
+                      />
+                      {form.formState.errors.estimatedValue && (
+                        <p className="text-sm text-destructive mt-1">
+                          {form.formState.errors.estimatedValue.message}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {transactionType === 'service' && selectedCategory !== 'housing' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Clock className="w-5 h-5 text-blue-600" />
+                      Informations du service
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="skills" className="text-foreground">Description des compétences *</Label>
+                      <Textarea
+                        id="skills"
+                        placeholder="Décrivez vos compétences, votre expérience, votre méthode d'enseignement..."
+                        rows={4}
+                        {...form.register('skills')}
+                        className="mt-1"
+                        maxLength={500}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span className="text-destructive">{form.formState.errors.skills?.message}</span>
+                        <span>{form.watch('skills')?.length || 0}/500</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="hourlyRate" className="text-foreground">Tarif horaire (€/h) *</Label>
+                        <Input
+                          id="hourlyRate"
+                          type="text"
+                          placeholder="15,00"
+                          {...form.register('hourlyRate')}
+                          className="mt-1"
+                        />
+                        {form.formState.errors.hourlyRate && (
+                          <p className="text-sm text-destructive mt-1">
+                            {form.formState.errors.hourlyRate.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label className="text-foreground">Durée prévue: {duration[0]}h</Label>
+                        <Slider
+                          value={duration}
+                          onValueChange={(value) => {
+                            setDuration(value);
+                            form.setValue('duration', value[0]);
+                          }}
+                          max={720}
+                          min={1}
+                          step={1}
+                          className="mt-2"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                          <span>1h</span>
+                          <span>720h</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="availability" className="text-foreground">Disponibilités (optionnel)</Label>
+                      <Input
+                        id="availability"
+                        placeholder="Ex: Lundi-Vendredi 18h-20h, Week-ends"
+                        {...form.register('availability')}
+                        className="mt-1"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Photos - optionnelles pour don, obligatoires pour vente */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Camera className="w-5 h-5" />
+                    Photos {transactionType === 'gift' ? '(optionnelles)' : '(1-10 photos)'}
+                  </CardTitle>
+                  <CardDescription>
+                    {transactionType === 'gift'
+                      ? 'Ajoutez des photos pour donner envie (optionnel)'
+                      : 'Première photo = photo principale. Max 15MB par image.'
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image}
+                          alt={`Photo ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                          onClick={() => removeImage(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                        {index === 0 && (
+                          <Badge className="absolute bottom-1 left-1 text-xs bg-primary text-primary-foreground">
+                            Principale
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+
+                    {images.length < 10 && (
+                      <label className="border-2 border-dashed border-muted-foreground/25 rounded-lg h-20 flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+                        <div className="text-center">
+                          {isUploadingImages ? (
+                            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-1" />
+                          ) : (
+                            <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {isUploadingImages ? 'Upload...' : 'Ajouter'}
+                          </span>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          disabled={isUploadingImages}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card 
-                className={`cursor-pointer transition-all ${transactionType === 'swap' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
-                onClick={() => setTransactionType('swap')}
-              >
-                <CardContent className="p-4 text-center">
-                  <RefreshCw className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                  <h3 className="font-semibold text-foreground text-center">Troc</h3>
-                  <p className="text-xs text-muted-foreground text-center">Échanger des objets</p>
-                </CardContent>
-              </Card>
+              {/* Coordonnées - variante logement vs générique */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <MapPin className="w-5 h-5" />
+                    {selectedCategory === 'housing' ? 'Coordonnées du logement' : 'Coordonnées et disponibilité'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Numéro de téléphone (optionnel) */}
+                  <div>
+                    <Label htmlFor="phone" className="text-foreground font-semibold">
+                      {selectedCategory === 'housing' ? 'Téléphone du propriétaire (optionnel)' : 'Numéro de téléphone (optionnel)'}
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+33 6 12 34 56 78"
+                      {...form.register('phone')}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedCategory === 'housing' ? 'Pour faciliter le contact avec les locataires' : 'Pour faciliter le contact avec les acheteurs'}
+                    </p>
+                  </div>
 
-              <Card 
-                className={`cursor-pointer transition-all ${transactionType === 'service' ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
-                onClick={() => setTransactionType('service')}
-              >
-                <CardContent className="p-4 text-center">
-                  <Clock className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <h3 className="font-semibold text-foreground text-center">Service</h3>
-                  <p className="text-xs text-muted-foreground text-center">Proposer un service</p>
+                  {selectedCategory !== 'housing' && (
+                    <>
+                      {/* Date de disponibilité (optionnel) */}
+                      <div>
+                        <Label htmlFor="availableDate" className="text-foreground font-semibold">
+                          Date de disponibilité (optionnel)
+                        </Label>
+                        <div className="relative mt-1">
+                          {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                          <Input
+                            id="availableDate"
+                            type="date"
+                            {...form.register('availableDate')}
+                            className="pl-10 appearance-none cursor-pointer"
+                            onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          À partir de quelle date l'article est disponible
+                        </p>
+                      </div>
+
+                      {/* Plage horaire (optionnel) */}
+                      <div>
+                        <Label className="text-foreground font-semibold block mb-2">
+                          Plage horaire de disponibilité (optionnel)
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="availableTimeStart" className="text-sm text-muted-foreground">
+                              De
+                            </Label>
+                            <div className="relative mt-1">
+                              {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                              <Input
+                                id="availableTimeStart"
+                                type="time"
+                                {...form.register('availableTimeStart')}
+                                className="pl-10 appearance-none cursor-pointer"
+                                onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="availableTimeEnd" className="text-sm text-muted-foreground">
+                              À
+                            </Label>
+                            <div className="relative mt-1">
+                              {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                              <Input
+                                id="availableTimeEnd"
+                                type="time"
+                                {...form.register('availableTimeEnd')}
+                                className="pl-10 appearance-none cursor-pointer"
+                                onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Vos horaires de disponibilité pour la remise en main propre
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  <MapLocationPicker
+                    onLocationSelect={(location) => {
+                      setMeetingLocation(location);
+                      form.setValue('meetingLocation', location.address);
+                    }}
+                    initialLocation={meetingLocation || undefined}
+                    placeholder={selectedCategory === 'housing' ? 'Cliquez sur la carte pour localiser le logement' : 'Cliquez sur la carte ou recherchez une adresse'}
+                  />
                 </CardContent>
               </Card>
             </div>
-          </CardContent>
-        </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Informations communes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-foreground">Informations principales</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="title" className="text-foreground">Titre * (max 80 caractères)</Label>
-                  <Input
-                    id="title"
-                    placeholder={
-                      selectedCategory === 'housing'
-                        ? 'Ex: Studio 20m² meublé – Proche Sorbonne'
-                        : transactionType === 'sell' ? "Ex: MacBook Pro 13' M1 - Parfait état" :
-                          transactionType === 'gift' ? 'Ex: Vélo de ville - Don gratuit' :
-                          transactionType === 'swap' ? 'Ex: Livre de maths contre livre de physique' :
-                          'Ex: Cours particuliers de mathématiques'
-                    }
-                    {...form.register('title')}
-                    className="mt-1"
-                    maxLength={80}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span className="text-destructive">{form.formState.errors.title?.message}</span>
-                    <span>{form.watch('title')?.length || 0}/80</span>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="description" className="text-foreground">Description détaillée * (max 1000 caractères)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder={
-                      selectedCategory === 'housing'
-                        ? 'Décrivez le logement: surface, pièces, équipements, charges, transport, disponibilité...'
-                        : transactionType === 'sell' ? "Décrivez l'état, l'utilisation, la raison de la vente..." :
-                          transactionType === 'gift' ? "Décrivez l'objet et pourquoi vous le donnez..." :
-                          transactionType === 'swap' ? 'Décrivez ce que vous proposez et ce que vous recherchez...' :
-                          'Décrivez vos compétences, votre expérience, votre méthode...'
-                    }
-                    rows={6}
-                    {...form.register('description')}
-                    className="mt-1"
-                    maxLength={1000}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span className="text-destructive">{form.formState.errors.description?.message}</span>
-                    <span>{form.watch('description')?.length || 0}/1000</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Champs spécifiques selon le type */}
-            {selectedCategory === 'housing' && (
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Validation en temps réel */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Home className="w-5 h-5 text-blue-600" />
-                    Informations logement
-                  </CardTitle>
-                  <CardDescription>
-                    Ces champs sont spécifiques aux annonces de location (logement & colocation)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-foreground">Type de logement *</Label>
-                      <Select value={housing.roomType} onValueChange={(v) => setHousing(prev => ({ ...prev, roomType: v }))}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Sélectionnez" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="studio">Studio</SelectItem>
-                          <SelectItem value="chambre">Chambre</SelectItem>
-                          <SelectItem value="colocation">Colocation</SelectItem>
-                          <SelectItem value="appartement">Appartement</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-foreground">Surface (m²) *</Label>
-                      <Input
-                        type="number"
-                        min={5}
-                        placeholder="25"
-                        value={housing.surface}
-                        onChange={(e) => setHousing(prev => ({ ...prev, surface: e.target.value }))}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-foreground">Loyer mensuel (€) *</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="650"
-                        value={housing.monthlyRent}
-                        onChange={(e) => setHousing(prev => ({ ...prev, monthlyRent: e.target.value }))}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="furnished" checked={housing.furnished} onCheckedChange={(c) => setHousing(prev => ({ ...prev, furnished: Boolean(c) }))} />
-                      <Label htmlFor="furnished" className="text-foreground">Meublé</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="charges" checked={housing.chargesIncluded} onCheckedChange={(c) => setHousing(prev => ({ ...prev, chargesIncluded: Boolean(c) }))} />
-                      <Label htmlFor="charges" className="text-foreground">Charges comprises</Label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-foreground font-semibold block mb-2">Période de colocation</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="colocStart" className="text-sm text-muted-foreground">De</Label>
-                        <Input
-                          id="colocStart"
-                          type="date"
-                          value={housing.startDate}
-                          onChange={(e) => setHousing(prev => ({ ...prev, startDate: e.target.value }))}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="colocEnd" className="text-sm text-muted-foreground">À</Label>
-                        <Input
-                          id="colocEnd"
-                          type="date"
-                          value={housing.endDate}
-                          onChange={(e) => setHousing(prev => ({ ...prev, endDate: e.target.value }))}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {transactionType === 'sell' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Euro className="w-5 h-5 text-blue-600" />
-                    Informations de vente
+                  <CardTitle className="flex items-center gap-2 text-sm text-foreground">
+                    <AlertCircle className="w-4 h-4" />
+                    Validation
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="price" className="text-foreground">Prix (€) *</Label>
-                      <Input
-                        id="price"
-                        type="text"
-                        placeholder="0,00"
-                        {...form.register('price')}
-                        className="mt-1"
-                      />
-                      {form.formState.errors.price && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.price.message}
-                        </p>
-                      )}
+                <CardContent>
+                  <div className="space-y-2 text-xs">
+                    <div className={`flex items-center gap-2 ${form.watch('title') && form.watch('title').length >= 5 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      <div className={`w-2 h-2 rounded-full ${form.watch('title') && form.watch('title').length >= 5 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Titre (5-80 caractères)</span>
+                    </div>
+                    <div className={`flex items-center gap-2 ${form.watch('description') && form.watch('description').length >= 20 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      <div className={`w-2 h-2 rounded-full ${form.watch('description') && form.watch('description').length >= 20 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Description (20-1000 caractères)</span>
+                    </div>
+                    <div className={`flex items-center gap-2 ${meetingLocation ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      <div className={`w-2 h-2 rounded-full ${meetingLocation ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Point de rencontre</span>
                     </div>
 
-                    <div>
-                      <Label htmlFor="condition" className="text-foreground">État du produit *</Label>
-                      <Select onValueChange={(value) => form.setValue('condition', value)}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Sélectionnez un état" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {conditions.map((condition) => (
-                            <SelectItem key={condition.value} value={condition.value}>
-                              <div>
-                                <div className="font-medium text-foreground">{condition.label}</div>
-                                <div className="text-xs text-muted-foreground">{condition.description}</div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.condition && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.condition.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                    {selectedCategory === 'housing' && (
+                      <div className={`flex items-center gap-2 ${images && images.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        <div className={`w-2 h-2 rounded-full ${images && images.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <span>Photo du logement (au moins 1)</span>
+                      </div>
+                    )}
 
-                  <div>
-                    <Label className="text-foreground font-semibold mb-3 block">Modes de paiement acceptés *</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                      {paymentMethods.map((method) => (
-                        <div 
-                          key={method.value} 
-                          className={`
-                            flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer
-                            ${selectedPaymentMethods.includes(method.value) 
-                              ? 'border-primary bg-primary/5 shadow-sm' 
-                              : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
-                            }
-                          `}
-                          onClick={() => handlePaymentMethodChange(method.value, !selectedPaymentMethods.includes(method.value))}
-                        >
-                          <div className={`
-                            w-5 h-5 rounded border-2 flex items-center justify-center transition-all
-                            ${selectedPaymentMethods.includes(method.value)
-                              ? 'bg-primary border-primary'
-                              : 'border-gray-300 dark:border-gray-600'
-                            }
-                          `}>
-                            {selectedPaymentMethods.includes(method.value) && (
-                              <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
-                                <path d="M5 13l4 4L19 7"></path>
-                              </svg>
-                            )}
-                          </div>
-                          <Label htmlFor={method.value} className="flex items-center gap-2 cursor-pointer text-foreground flex-1">
-                            <method.icon className="w-5 h-5" />
-                            <span className="font-medium">{method.label}</span>
-                          </Label>
+                    {transactionType === 'sell' && (
+                      <>
+                        <div className={`flex items-center gap-2 ${form.watch('price') ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <div className={`w-2 h-2 rounded-full ${form.watch('price') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span>Prix (≥ 1€)</span>
                         </div>
-                      ))}
-                    </div>
-                    {selectedPaymentMethods.length === 0 && (
-                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        Sélectionnez au moins un mode de paiement
-                      </p>
+                        <div className={`flex items-center gap-2 ${selectedPaymentMethods.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <div className={`w-2 h-2 rounded-full ${selectedPaymentMethods.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span>Modes de paiement</span>
+                        </div>
+                      </>
+                    )}
+
+                    {transactionType === 'gift' && (
+                      <div className={`flex items-center gap-2 ${form.watch('donationReason') && form.watch('donationReason').length >= 10 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        <div className={`w-2 h-2 rounded-full ${form.watch('donationReason') && form.watch('donationReason').length >= 10 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <span>Motif du don</span>
+                      </div>
+                    )}
+
+                    {transactionType === 'swap' && (
+                      <>
+                        <div className={`flex items-center gap-2 ${desiredItems.some(item => item.trim()) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <div className={`w-2 h-2 rounded-full ${desiredItems.some(item => item.trim()) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span>Objets recherchés</span>
+                        </div>
+                        <div className={`flex items-center gap-2 ${form.watch('estimatedValue') ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <div className={`w-2 h-2 rounded-full ${form.watch('estimatedValue') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span>Valeur estimée</span>
+                        </div>
+                      </>
+                    )}
+
+                    {transactionType === 'service' && selectedCategory !== 'housing' && (
+                      <>
+                        <div className={`flex items-center gap-2 ${form.watch('hourlyRate') ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <div className={`w-2 h-2 rounded-full ${form.watch('hourlyRate') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span>Tarif (≥ 5€/h)</span>
+                        </div>
+                        <div className={`flex items-center gap-2 ${form.watch('skills') && form.watch('skills').length >= 20 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <div className={`w-2 h-2 rounded-full ${form.watch('skills') && form.watch('skills').length >= 20 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span>Compétences</span>
+                        </div>
+                      </>
                     )}
                   </div>
                 </CardContent>
               </Card>
-            )}
 
-            {transactionType === 'gift' && (
+              {/* Safety Tips */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Gift className="w-5 h-5 text-green-600" />
-                    Informations du don
+                  <CardTitle className="flex items-center gap-2 text-sm text-foreground">
+                    <Shield className="w-4 h-4" />
+                    Conseils de sécurité
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="donationReason" className="text-foreground">Motif du don * (max 140 caractères)</Label>
-                    <Textarea
-                      id="donationReason"
-                      placeholder="Ex: Je déménage, plus besoin, fin d'études..."
-                      rows={3}
-                      {...form.register('donationReason')}
-                      className="mt-1"
-                      maxLength={140}
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span className="text-destructive">{form.formState.errors.donationReason?.message}</span>
-                      <span>{form.watch('donationReason')?.length || 0}/140</span>
+                <CardContent>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-muted-foreground">Rencontrez-vous dans un lieu public</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-muted-foreground">Vérifiez l'identité de l'autre personne</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-muted-foreground">Testez l'objet avant la transaction</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-muted-foreground">Privilégiez les paiements sécurisés</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
 
-            {transactionType === 'swap' && (
+              {/* Submit Button */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <RefreshCw className="w-5 h-5 text-purple-600" />
-                    Informations d'échange
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-foreground">Objets recherchés * (minimum 1)</Label>
-                    <div className="space-y-2 mt-2">
-                      {desiredItems.filter(item => item.trim()).map((item, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Input value={item} readOnly className="flex-1" />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => removeDesiredItem(index)}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Ex: Livre de physique L2"
-                          value={currentDesiredItem}
-                          onChange={(e) => setCurrentDesiredItem(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDesiredItem())}
-                          className="flex-1"
-                        />
-                        <Button type="button" onClick={addDesiredItem} disabled={!currentDesiredItem.trim()}>
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="estimatedValue" className="text-foreground">Valeur estimée (€) *</Label>
-                    <Input
-                      id="estimatedValue"
-                      type="text"
-                      placeholder="0,00"
-                      {...form.register('estimatedValue')}
-                      className="mt-1"
-                    />
-                    {form.formState.errors.estimatedValue && (
-                      <p className="text-sm text-destructive mt-1">
-                        {form.formState.errors.estimatedValue.message}
-                      </p>
+                <CardContent className="pt-6">
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white"
+                    disabled={isSubmitting || isUploadingImages || !isFormValid()}
+                    onClick={() => {
+                      console.log('[CreateListing] Publish button clicked', {
+                        isSubmitting,
+                        isUploadingImages,
+                        isFormValid: isFormValid(),
+                        category: selectedCategory,
+                      });
+                    }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Publication...
+                      </>
+                    ) : isUploadingImages ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Upload des images...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Publier l'annonce
+                      </>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </Button>
 
-            {transactionType === 'service' && selectedCategory !== 'housing' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                    Informations du service
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="skills" className="text-foreground">Description des compétences *</Label>
-                    <Textarea
-                      id="skills"
-                      placeholder="Décrivez vos compétences, votre expérience, votre méthode d'enseignement..."
-                      rows={4}
-                      {...form.register('skills')}
-                      className="mt-1"
-                      maxLength={500}
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span className="text-destructive">{form.formState.errors.skills?.message}</span>
-                      <span>{form.watch('skills')?.length || 0}/500</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="hourlyRate" className="text-foreground">Tarif horaire (€/h) *</Label>
-                      <Input
-                        id="hourlyRate"
-                        type="text"
-                        placeholder="15,00"
-                        {...form.register('hourlyRate')}
-                        className="mt-1"
-                      />
-                      {form.formState.errors.hourlyRate && (
-                        <p className="text-sm text-destructive mt-1">
-                          {form.formState.errors.hourlyRate.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label className="text-foreground">Durée prévue: {duration[0]}h</Label>
-                      <Slider
-                        value={duration}
-                        onValueChange={(value) => {
-                          setDuration(value);
-                          form.setValue('duration', value[0]);
-                        }}
-                        max={720}
-                        min={1}
-                        step={1}
-                        className="mt-2"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>1h</span>
-                        <span>720h</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="availability" className="text-foreground">Disponibilités (optionnel)</Label>
-                    <Input
-                      id="availability"
-                      placeholder="Ex: Lundi-Vendredi 18h-20h, Week-ends"
-                      {...form.register('availability')}
-                      className="mt-1"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Photos - optionnelles pour don, obligatoires pour vente */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Camera className="w-5 h-5" />
-                  Photos {transactionType === 'gift' ? '(optionnelles)' : '(1-10 photos)'}
-                </CardTitle>
-                <CardDescription>
-                  {transactionType === 'gift' 
-                    ? 'Ajoutez des photos pour donner envie (optionnel)'
-                    : 'Première photo = photo principale. Max 15MB par image.'
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={image}
-                        alt={`Photo ${index + 1}`}
-                        className="w-full h-20 object-cover rounded-lg"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                      {index === 0 && (
-                        <Badge className="absolute bottom-1 left-1 text-xs bg-primary text-primary-foreground">
-                          Principale
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {images.length < 10 && (
-                    <label className="border-2 border-dashed border-muted-foreground/25 rounded-lg h-20 flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
-                      <div className="text-center">
-                        {isUploadingImages ? (
-                          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-1" />
-                        ) : (
-                          <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {isUploadingImages ? 'Upload...' : 'Ajouter'}
-                        </span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={isUploadingImages}
-                      />
-                    </label>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Coordonnées - variante logement vs générique */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <MapPin className="w-5 h-5" />
-                  {selectedCategory === 'housing' ? 'Coordonnées du logement' : 'Coordonnées et disponibilité'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Numéro de téléphone (optionnel) */}
-                <div>
-                  <Label htmlFor="phone" className="text-foreground font-semibold">
-                    {selectedCategory === 'housing' ? 'Téléphone du propriétaire (optionnel)' : 'Numéro de téléphone (optionnel)'}
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+33 6 12 34 56 78"
-                    {...form.register('phone')}
-                    className="mt-1"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selectedCategory === 'housing' ? 'Pour faciliter le contact avec les locataires' : 'Pour faciliter le contact avec les acheteurs'}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {isFormValid()
+                      ? "Votre annonce sera soumise à validation et publiée après approbation."
+                      : "Complétez les champs requis pour continuer."
+                    }
                   </p>
-                </div>
-
-                {selectedCategory !== 'housing' && (
-                  <>
-                    {/* Date de disponibilité (optionnel) */}
-                    <div>
-                      <Label htmlFor="availableDate" className="text-foreground font-semibold">
-                        Date de disponibilité (optionnel)
-                      </Label>
-                      <div className="relative mt-1">
-                        {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          id="availableDate"
-                          type="date"
-                          {...form.register('availableDate')}
-                          className="pl-10 appearance-none cursor-pointer"
-                          onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
-                          min={new Date().toISOString().split('T')[0]}
-                        />
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        À partir de quelle date l'article est disponible
-                      </p>
-                    </div>
-
-                    {/* Plage horaire (optionnel) */}
-                    <div>
-                      <Label className="text-foreground font-semibold block mb-2">
-                        Plage horaire de disponibilité (optionnel)
-                      </Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor="availableTimeStart" className="text-sm text-muted-foreground">
-                            De
-                          </Label>
-                          <div className="relative mt-1">
-                            {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
-                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                            <Input
-                              id="availableTimeStart"
-                              type="time"
-                              {...form.register('availableTimeStart')}
-                              className="pl-10 appearance-none cursor-pointer"
-                              onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="availableTimeEnd" className="text-sm text-muted-foreground">
-                            À
-                          </Label>
-                          <div className="relative mt-1">
-                            {/* Icône interne du navigateur masquée via CSS global ci-dessous */}
-                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                            <Input
-                              id="availableTimeEnd"
-                              type="time"
-                              {...form.register('availableTimeEnd')}
-                              className="pl-10 appearance-none cursor-pointer"
-                              onMouseDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLInputElement).showPicker?.(); }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Vos horaires de disponibilité pour la remise en main propre
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                <MapLocationPicker
-                  onLocationSelect={(location) => {
-                    setMeetingLocation(location);
-                    form.setValue('meetingLocation', location.address);
-                  }}
-                  initialLocation={meetingLocation || undefined}
-                  placeholder={selectedCategory === 'housing' ? 'Cliquez sur la carte pour localiser le logement' : 'Cliquez sur la carte ou recherchez une adresse'}
-                />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Validation en temps réel */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm text-foreground">
-                  <AlertCircle className="w-4 h-4" />
-                  Validation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-xs">
-                  <div className={`flex items-center gap-2 ${form.watch('title') && form.watch('title').length >= 5 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    <div className={`w-2 h-2 rounded-full ${form.watch('title') && form.watch('title').length >= 5 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <span>Titre (5-80 caractères)</span>
-                  </div>
-                  <div className={`flex items-center gap-2 ${form.watch('description') && form.watch('description').length >= 20 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    <div className={`w-2 h-2 rounded-full ${form.watch('description') && form.watch('description').length >= 20 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <span>Description (20-1000 caractères)</span>
-                  </div>
-                  <div className={`flex items-center gap-2 ${meetingLocation ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    <div className={`w-2 h-2 rounded-full ${meetingLocation ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <span>Point de rencontre</span>
-                  </div>
-
-                  {selectedCategory === 'housing' && (
-                    <div className={`flex items-center gap-2 ${images && images.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                      <div className={`w-2 h-2 rounded-full ${images && images.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                      <span>Photo du logement (au moins 1)</span>
-                    </div>
-                  )}
-                  
-                  {transactionType === 'sell' && (
-                    <>
-                      <div className={`flex items-center gap-2 ${form.watch('price') ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <div className={`w-2 h-2 rounded-full ${form.watch('price') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <span>Prix (≥ 1€)</span>
-                      </div>
-                      <div className={`flex items-center gap-2 ${selectedPaymentMethods.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <div className={`w-2 h-2 rounded-full ${selectedPaymentMethods.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <span>Modes de paiement</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  {transactionType === 'gift' && (
-                    <div className={`flex items-center gap-2 ${form.watch('donationReason') && form.watch('donationReason').length >= 10 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                      <div className={`w-2 h-2 rounded-full ${form.watch('donationReason') && form.watch('donationReason').length >= 10 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                      <span>Motif du don</span>
-                    </div>
-                  )}
-                  
-                  {transactionType === 'swap' && (
-                    <>
-                      <div className={`flex items-center gap-2 ${desiredItems.some(item => item.trim()) ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <div className={`w-2 h-2 rounded-full ${desiredItems.some(item => item.trim()) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <span>Objets recherchés</span>
-                      </div>
-                      <div className={`flex items-center gap-2 ${form.watch('estimatedValue') ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <div className={`w-2 h-2 rounded-full ${form.watch('estimatedValue') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <span>Valeur estimée</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  {transactionType === 'service' && selectedCategory !== 'housing' && (
-                    <>
-                      <div className={`flex items-center gap-2 ${form.watch('hourlyRate') ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <div className={`w-2 h-2 rounded-full ${form.watch('hourlyRate') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <span>Tarif (≥ 5€/h)</span>
-                      </div>
-                      <div className={`flex items-center gap-2 ${form.watch('skills') && form.watch('skills').length >= 20 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <div className={`w-2 h-2 rounded-full ${form.watch('skills') && form.watch('skills').length >= 20 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <span>Compétences</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Safety Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm text-foreground">
-                  <Shield className="w-4 h-4" />
-                  Conseils de sécurité
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-start gap-2">
-                    <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-muted-foreground">Rencontrez-vous dans un lieu public</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-muted-foreground">Vérifiez l'identité de l'autre personne</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-muted-foreground">Testez l'objet avant la transaction</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-muted-foreground">Privilégiez les paiements sécurisés</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Submit Button */}
-            <Card>
-              <CardContent className="pt-6">
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white"
-                  disabled={isSubmitting || isUploadingImages || !isFormValid()}
-                  onClick={() => {
-                    console.log('[CreateListing] Publish button clicked', {
-                      isSubmitting,
-                      isUploadingImages,
-                      isFormValid: isFormValid(),
-                      category: selectedCategory,
-                    });
-                  }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Publication...
-                    </>
-                  ) : isUploadingImages ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Upload des images...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Publier l'annonce
-                    </>
-                  )}
-                </Button>
-                
-                <p className="text-xs text-muted-foreground mt-2">
-                  {isFormValid() 
-                    ? "Votre annonce sera soumise à validation et publiée après approbation."
-                    : "Complétez les champs requis pour continuer."
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </form>
+        </form>
       </div>
     </div>
   );
