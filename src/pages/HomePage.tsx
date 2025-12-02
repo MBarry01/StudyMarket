@@ -285,28 +285,17 @@ export const HomePage: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-950">
 
-
-
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-lg sm:rounded-xl overflow-hidden mb-8">
 
         <div className="container mx-auto text-center max-w-4xl">
-          <div className="flex items-center justify-center mb-3 sm:mb-4 lg:mb-6">
-            <Badge className="bg-green-100 text-green-800 border-green-200 px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 text-xs sm:text-sm">
-              <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Communauté 100% étudiants vérifiés</span>
-              <span className="sm:hidden">Étudiants vérifiés</span>
-            </Badge>
-          </div>
-
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-2 text-center">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 lg:mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-2 text-center mt-0 sm:mt-8">
             La marketplace des étudiants
           </h1>
           <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 sm:mb-6 lg:mb-8 max-w-2xl mx-auto px-2 text-center">
             Achetez, vendez, donnez et échangez entre étudiants certifiés de votre région.
             Sécurisé, écologique et pensé pour la vie étudiante.
           </p>
-
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8">
